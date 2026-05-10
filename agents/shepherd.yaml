@@ -1,0 +1,26 @@
+# shepherd — strategic scan + recommend next priorities across the project.
+#
+# conductor IS the dispatcher; shepherd becomes a "scan + recommend"
+# agent invoked when user asks "what should I work on next?"
+
+name: shepherd
+kind: subagent
+persistent: false
+model: sonnet-4.6            # judgment about priorities
+
+permissions: acceptEdits     # may write a fresh coord.md to results/<task_id>/
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write]
+timeout_hours: 1
+
+system_prompt_file: prompts/shepherd.md
+
+cost_budget:
+  expected_tokens: 20000
+  max_usd_per_day: 1.50

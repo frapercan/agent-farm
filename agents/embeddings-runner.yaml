@@ -1,0 +1,27 @@
+# embeddings-runner — long batch jobs computing protein embeddings via PROTEA /jobs.
+#
+# One-shot (persistent: false). Spawned in tmux, runs `claude -p` headless,
+# dispatches batches to running PROTEA stack, polls progress, writes results.
+# No worktree (operates over HTTP API). Most cost is the LLM doing dispatch +
+# polling decisions; actual embedding compute happens on PROTEA workers.
+
+name: embeddings-runner
+kind: headless
+persistent: false
+model: haiku-4.5             # mechanical: validate FASTA, dispatch, poll, report
+permissions: bypassPermissions
+
+worktree:
+  base_branch: origin/develop
+  cleanup: none              # operates against PROTEA HTTP API
+
+service: {}                  # not persistent
+
+tools_allowed: [Bash, Read, Write]
+timeout_hours: 24            # massive FASTAs can take half a day
+
+system_prompt_file: prompts/embeddings-runner.md
+
+cost_budget:
+  expected_tokens: 8000      # mostly polling + reporting
+  max_usd_per_day: 3.00      # advisory cap

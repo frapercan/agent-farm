@@ -1,0 +1,29 @@
+# playwright-platform — e2e test the PROTEA platform UI (Next.js app at apps/web/).
+#
+# Reuses the existing playwright config + spec files in
+# ~/Thesis2/repositories/PROTEA/apps/web/{playwright.config.ts, e2e/}.
+# Targets the live deploy (protea.ngrok.app/en/, the Next.js platform root)
+# by overriding baseURL. Sphinx docs at /sphinx/ and thesis.pdf are NOT
+# covered here — they're separate surfaces.
+
+name: playwright-platform
+kind: subagent
+persistent: false
+model: haiku-4.5             # mostly mechanical: run npx playwright, read JSON report
+
+permissions: acceptEdits     # may npm install playwright deps
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 1
+
+system_prompt_file: prompts/playwright-platform.md
+
+cost_budget:
+  expected_tokens: 12000
+  max_usd_per_day: 1.00

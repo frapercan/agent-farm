@@ -1,0 +1,26 @@
+# ux-reviewer — audits UX of the PROTEA docs portal (or new frontend if exists).
+#
+# kind=subagent. Read-only review pass. Sonnet-tier judgment.
+# Pairs with frontend-designer (which IMPLEMENTS the recommendations).
+
+name: ux-reviewer
+kind: subagent
+persistent: false
+model: sonnet-4.6            # judgment: information hierarchy, readability, flow
+
+permissions: acceptEdits     # may install playwright/lighthouse for measurement
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write]
+timeout_hours: 2
+
+system_prompt_file: prompts/ux-reviewer.md
+
+cost_budget:
+  expected_tokens: 30000     # screenshots + analysis
+  max_usd_per_day: 2.00

@@ -1,0 +1,27 @@
+# Runtime state
+state/tasks.sqlite
+state/tasks.sqlite-journal
+state/tasks.sqlite-wal
+state/tasks.sqlite-shm
+
+# Per-task artifacts
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Editor / OS
+.~lock.*
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Virtual environments
+.venv/
+venv/
+
+# Logs
+*.log

@@ -1,0 +1,26 @@
+# frontend-designer — implements UX recommendations from ux-reviewer.
+#
+# kind=subagent. Opus-tier (creative + judgment-heavy). Edits Sphinx
+# templates, CSS, or frontend stack code in ephemeral worktree, opens PR.
+
+name: frontend-designer
+kind: subagent
+persistent: false
+model: opus-4.7              # creative + correctness on visual stuff
+
+permissions: acceptEdits     # writes to worktree only
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral         # PR creates a branch; worktree dies after push
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 4
+
+system_prompt_file: prompts/frontend-designer.md
+
+cost_budget:
+  expected_tokens: 80000     # opus, real implementation work
+  max_usd_per_day: 8.00

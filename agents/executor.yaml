@@ -1,0 +1,30 @@
+# executor — implement one slice of the master plan §24, open PR.
+#
+# kind=subagent. The heaviest agent in the zoo. Picks one slice, plans,
+# implements in ephemeral worktree, opens PR. Returns summary with PR URL.
+#
+# v2 agent references it for the canonical mission/constraints rather than
+# duplicating, then layers v2-specific lifecycle (single invocation, ephemeral
+# worktree, return summary).
+
+name: executor
+kind: subagent
+persistent: false
+model: opus-4.7              # creative + correctness; this agent OPENS PRs
+
+permissions: acceptEdits     # writes only inside ephemeral worktree
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 4             # one slice should fit in 4h or it's too big
+
+system_prompt_file: prompts/executor.md
+
+cost_budget:
+  expected_tokens: 120000    # opus + real implementation
+  max_usd_per_day: 12.00     # 1-2 slices/day

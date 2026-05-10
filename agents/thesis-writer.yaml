@@ -1,0 +1,24 @@
+# thesis-writer — sync ~/Thesis2/thesis/ (LaTeX manuscript) with código + experiments + ADRs.
+
+name: thesis-writer
+kind: subagent
+persistent: false
+model: sonnet-4.6            # academic prose quality
+
+permissions: acceptEdits
+
+worktree:
+  repo: ~/Thesis2/thesis     # thesis repo, NOT PROTEA
+  base_branch: origin/main  # thesis repo uses 'main', not 'develop'
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 4
+
+system_prompt_file: prompts/thesis-writer.md
+
+cost_budget:
+  expected_tokens: 60000
+  max_usd_per_day: 5.00

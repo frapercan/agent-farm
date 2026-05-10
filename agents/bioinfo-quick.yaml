@@ -1,0 +1,29 @@
+# bioinfo-quick — propose + run the next experiment in protea-reranker-lab.
+#
+# kind=subagent. Reads lab state (latest registries, EXPERIMENTS.md, MEMORY),
+# proposes the next slice (which K, which feature, which baseline to beat),
+# spawns a LightGBM training run via the lab's existing scripts, summarizes
+# Fmax results vs prior baseline.
+
+name: bioinfo-quick
+kind: subagent
+persistent: false
+model: sonnet-4.6            # judgment: which experiment is informative
+
+permissions: acceptEdits     # may edit lab configs, scripts; no destructive ops
+
+worktree:
+  repo: ~/Thesis2/repositories/protea-reranker-lab  # lab repo, NOT PROTEA
+  base_branch: origin/main                          # lab uses 'main'
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 4             # one experiment cycle (LightGBM ~10-30 min + analysis)
+
+system_prompt_file: prompts/bioinfo-quick.md
+
+cost_budget:
+  expected_tokens: 25000     # judgment-heavy
+  max_usd_per_day: 5.00

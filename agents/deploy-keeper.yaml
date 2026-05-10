@@ -1,0 +1,32 @@
+# deploy-keeper — keep protea.ngrok.app serving HEAD of origin/develop.
+#
+# Architecture: bash supervisor loops forever, calls tick.sh every poll_interval.
+# Tick is mostly bash (idempotent redeploy + ngrok ensure, both inherited from
+# the prompt at system_prompt_file. Happy path = $0 LLM cost.
+
+name: deploy-keeper
+kind: headless
+persistent: true
+model: haiku-4.5             # only invoked on failures, mechanical analysis
+permissions: bypassPermissions  # trusted; redeploys + ngrok mgmt require shell
+
+worktree:
+  base_branch: origin/develop
+  cleanup: none              # uses existing deploy worktree (~/Thesis2/worktrees/deploy)
+                             # for Docker/npm cache reuse — DO NOT ephemeralize
+
+service:
+  poll_interval: 5m
+  triggers:
+    - new_commit_on:origin/develop
+    - ngrok_tunnel_down
+    - manual
+
+tools_allowed: [Bash, Read, Write]
+timeout_hours: 0             # persistent, never times out
+
+system_prompt_file: prompts/deploy-keeper.md
+
+cost_budget:
+  expected_tokens: 0         # happy path: $0. Failure path: ~3-5k tokens (haiku)
+  max_usd_per_day: 0.50      # advisory cap; if breached, supervisor pauses and notifies

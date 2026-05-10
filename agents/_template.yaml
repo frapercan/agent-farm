@@ -1,0 +1,47 @@
+# agent-farm/agents/_template.yaml — copy + fill to define a new agent type.
+# Filename MUST match `name`. e.g. agents/playwright-docs.yaml → name: playwright-docs.
+
+name: example-agent          # required, kebab-case, matches filename without .yaml
+kind: subagent               # subagent | headless
+                             # - subagent: short LLM task via Agent tool, returns summary
+                             # - headless: long/persistent process via `claude -p` in tmux
+
+persistent: false            # only meaningful for kind=headless
+                             # true  → service loop (re-tick after each cycle)
+                             # false → one-shot batch job, exit on completion
+
+model: sonnet-4.6            # haiku-4.5 | sonnet-4.6 | opus-4.7
+                             # haiku for mechanical work, sonnet for judgment, opus for hard
+                             # Cost ratio (input): haiku $1, sonnet $3, opus $15 per Mtok.
+
+permissions: acceptEdits     # default | acceptEdits | bypassPermissions
+                             # bypassPermissions only for trusted, sandboxed agents
+
+worktree:
+  repo: ~/Thesis2/repositories/PROTEA   # default. Override for lab/thesis agents.
+  base_branch: origin/develop           # what to branch from (origin/main for lab+thesis)
+  cleanup: ephemeral                    # ephemeral | per_action | none
+                                        # - ephemeral: 1 worktree per task, deleted on exit
+                                        # - per_action: agent creates a fresh worktree per action,
+                                        #   not one bound to its lifetime (deploy-keeper pattern)
+                                        # - none: no worktree at all (pure read-only or shell-only)
+
+# Persistent service config — only read if persistent=true and kind=headless.
+service:
+  poll_interval: 5m            # bash supervisor sleeps this between ticks
+  triggers: []                 # human-readable list; supervisor implements them
+                               # examples: new_commit_on:origin/develop, ngrok_tunnel_down
+
+tools_allowed: []              # empty = all default tools; otherwise restrict
+                               # examples: [Bash, Read, Write] for batch; [Read] for review
+
+timeout_hours: 0               # 0 = no hard timeout (only for persistent services)
+
+# System prompt: either inline `system_prompt` (small) or `system_prompt_file`
+# pointing to prompts/<name>.md (preferred for anything > 5 lines).
+system_prompt_file: prompts/example-agent.md
+
+# Cost budget hint for the conductor (advisory, not enforced).
+cost_budget:
+  expected_tokens: 5000        # rough order-of-magnitude per invocation
+  max_usd_per_day: 1.00        # advisory cap per agent type

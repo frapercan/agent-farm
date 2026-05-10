@@ -1,0 +1,26 @@
+# janitor — keep CI green + PR queue moving across the 7-repo PROTEA stack.
+#
+# kind=subagent, haiku. Triggered when user sees red CI badges or stale PRs
+# and wants the trivial cleanup pass.
+
+name: janitor
+kind: subagent
+persistent: false
+model: haiku-4.5
+
+permissions: acceptEdits
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 2
+
+system_prompt_file: prompts/janitor.md
+
+cost_budget:
+  expected_tokens: 30000
+  max_usd_per_day: 2.00

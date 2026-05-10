@@ -1,0 +1,23 @@
+# doc-writer — keep Sphinx docs ↔ código in sync; write ADRs for new decisions.
+
+name: doc-writer
+kind: subagent
+persistent: false
+model: sonnet-4.6            # writing quality matters
+
+permissions: acceptEdits
+
+worktree:
+  base_branch: origin/develop
+  cleanup: ephemeral
+
+service: {}
+
+tools_allowed: [Bash, Read, Write, Edit]
+timeout_hours: 3
+
+system_prompt_file: prompts/doc-writer.md
+
+cost_budget:
+  expected_tokens: 50000
+  max_usd_per_day: 4.00
