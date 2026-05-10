@@ -105,9 +105,9 @@ priority: P0
 tags: [research, lineage, training]
 ```
 
-Active study per memory; lab plan
-`~/Thesis/loop/plans/lab-runner-20260508T203252.md` superseded by this
-slice.
+Active study. Reranker design: 13 train pairs (12 historical + v220-v226
+new), eval window v226-v230, single prediction_set per submission, lab
+Fmax internal + cafa-evaluator f_micro_w as the LAFA-aligned metric.
 
 ### LR.2 — GeOKG embeddings vs anc2vec
 
