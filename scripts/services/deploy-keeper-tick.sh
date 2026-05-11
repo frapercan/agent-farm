@@ -13,7 +13,7 @@ TASK_ID="${TASK_ID:?TASK_ID env required}"
 # shellcheck source=../lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
 
-V1="$HOME/Thesis/loop"
+LIB="$ROOT/scripts/services/lib"
 
 # 0) prereq sanity (docker/postgres/rabbit)
 if ! docker info >/dev/null 2>&1; then
@@ -36,7 +36,7 @@ if ! ss -ltn 2>/dev/null | grep -q ':5672 '; then
 fi
 
 # 1) redeploy (idempotent; exit 0 noop, 10 redeployed, 20/30/40 failure)
-bash "$V1/protea_redeploy.sh"
+bash "$LIB/protea_redeploy.sh"
 RC=$?
 case "$RC" in
   0)  heartbeat "$TASK_ID" info "redeploy noop (already on tip)" ;;
@@ -59,7 +59,7 @@ case "$RC" in
 esac
 
 # 2) ngrok ensure (idempotent; exit 0 up, 1 failed)
-bash "$V1/protea_ngrok_ensure.sh"
+bash "$LIB/protea_ngrok_ensure.sh"
 RC=$?
 if [[ "$RC" -ne 0 ]]; then
   heartbeat "$TASK_ID" error "ngrok ensure failed (exit $RC)"

@@ -3,6 +3,7 @@ state/tasks.sqlite
 state/tasks.sqlite-journal
 state/tasks.sqlite-wal
 state/tasks.sqlite-shm
+state/logs/
 
 # Per-task artifacts
 results/
