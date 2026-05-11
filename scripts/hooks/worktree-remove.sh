@@ -22,7 +22,7 @@ WT=$(printf '%s' "$STDIN_JSON" | python3 -c "import sys,json; d=json.load(sys.st
 
 # Identify which repo owns this worktree
 OWNER=""
-for r in "$HOME/Thesis/repositories/PROTEA" "$HOME/Thesis/repositories/protea-reranker-lab" "$HOME/Thesis/thesis"; do
+for r in "$HOME/Thesis2/repositories/PROTEA" "$HOME/Thesis2/repositories/protea-reranker-lab" "$HOME/Thesis2/thesis"; do
   if git -C "$r" worktree list --porcelain 2>/dev/null | grep -q "^worktree $WT$"; then
     OWNER="$r"
     break

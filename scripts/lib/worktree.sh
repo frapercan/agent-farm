@@ -34,7 +34,7 @@ wt_remove() {
 
   # Find which repo registered this worktree if not provided
   if [[ -z "$repo" ]]; then
-    for r in "$HOME/Thesis/repositories/PROTEA" "$HOME/Thesis"; do
+    for r in "$HOME/Thesis2/repositories/PROTEA" "$HOME/Thesis2"; do
       if git -C "$r" worktree list --porcelain 2>/dev/null | grep -q "^worktree $wt$"; then
         repo="$r"; break
       fi

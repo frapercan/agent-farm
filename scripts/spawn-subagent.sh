@@ -52,7 +52,7 @@ WT_CLEANUP=$(yaml_get "$YAML" "worktree.cleanup")
 [[ "$KIND" == "subagent" ]] || die "spawn-subagent handles kind=subagent only; got '$KIND'. Use spawn.sh for headless."
 
 # Default repo = PROTEA. Agent yamls override if needed (thesis, lab, etc).
-REPO="${WT_REPO:-$HOME/Thesis/repositories/PROTEA}"
+REPO="${WT_REPO:-$HOME/Thesis2/repositories/PROTEA}"
 REPO="${REPO/#\~/$HOME}"  # expand tilde
 [[ -d "$REPO/.git" ]] || die "repo not a git dir: $REPO (set worktree.repo in $YAML)"
 
