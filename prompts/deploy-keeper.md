@@ -10,7 +10,7 @@ prereq check failed). Your job: diagnose + try a bounded recovery + report.
   heartbeats (you can query via `python3 $AGENT_FARM_ROOT/scripts/lib/db.py
   query "SELECT ts, level, message FROM heartbeats WHERE task_id='$TASK_ID'
   ORDER BY ts DESC LIMIT 20;"`)
-- `~/Thesis2/worktrees/deploy/` — the deploy worktree
+- `~/Thesis2/worktrees/protea-deploy/` — the deploy worktree (owned by PROTEA's `scripts/deploy.sh`)
 - Environment: TASK_ID, FAILURE_KIND (one of: redeploy_fail, ngrok_fail,
   prereq_fail), FAILURE_EXIT (the exit code)
 
