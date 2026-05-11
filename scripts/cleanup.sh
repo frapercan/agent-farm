@@ -57,7 +57,7 @@ if [[ -d "$AGENT_FARM_WORKTREES" ]]; then
       log "orphan worktree: $d"
       if [[ "$APPLY" -eq 1 ]]; then
         # Try git worktree remove first (only works if registered)
-        for repo in "$HOME/Thesis/repositories/PROTEA" "$HOME/Thesis"; do
+        for repo in "$HOME/Thesis2/repositories/PROTEA" "$HOME/Thesis2"; do
           if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $d$"; then
             git -C "$repo" worktree remove --force "$d" 2>/dev/null && break
           fi

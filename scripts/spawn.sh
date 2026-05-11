@@ -37,7 +37,7 @@ TASK_ID=$(make_task_id "$AGENT")
 
 # Ensure tmux session exists
 if ! tmux has-session -t "$AGENT_FARM_TMUX_SESSION" 2>/dev/null; then
-  tmux new-session -d -s "$AGENT_FARM_TMUX_SESSION" -n bootstrap -c "$HOME/Thesis"
+  tmux new-session -d -s "$AGENT_FARM_TMUX_SESSION" -n bootstrap -c "$HOME/Thesis2"
 fi
 
 # Insert pending task
@@ -49,7 +49,7 @@ if [[ "$PERSISTENT_INT" -eq 1 ]]; then
   SUPERVISOR="$ROOT/scripts/services/${AGENT}-supervisor.sh"
   [[ -x "$SUPERVISOR" ]] || die "supervisor missing or not executable: $SUPERVISOR"
   WINDOW="$TASK_ID"
-  tmux new-window -t "$AGENT_FARM_TMUX_SESSION" -n "$WINDOW" -c "$HOME/Thesis" \
+  tmux new-window -t "$AGENT_FARM_TMUX_SESSION" -n "$WINDOW" -c "$HOME/Thesis2" \
     "TASK_ID='$TASK_ID' AGENT_FARM_ROOT='$ROOT' bash '$SUPERVISOR'; echo 'supervisor exited; press enter to close'; read"
   task_set_started "$TASK_ID" "" "$AGENT_FARM_TMUX_SESSION:$WINDOW" ""
   heartbeat "$TASK_ID" info "supervisor launched in tmux window $WINDOW"
@@ -63,7 +63,7 @@ else
   if [[ "$WT_CLEANUP" == "ephemeral" ]]; then
     mkdir -p "$AGENT_FARM_WORKTREES"
     WT_PATH="$AGENT_FARM_WORKTREES/$TASK_ID"
-    # NOTE: assumes a git repo exists at $HOME/Thesis or PROTEA. Caller's
+    # NOTE: assumes a git repo exists at $HOME/Thesis2 or PROTEA. Caller's
     # responsibility to be in the right git context. For now we skip the
     # actual `git worktree add` here and let the agent do it if needed.
     # Future: make worktree creation declarative via spec.repo.
@@ -79,7 +79,7 @@ else
     *)                 PERM_FLAG="" ;;
   esac
 
-  tmux new-window -t "$AGENT_FARM_TMUX_SESSION" -n "$WINDOW" -c "$HOME/Thesis" \
+  tmux new-window -t "$AGENT_FARM_TMUX_SESSION" -n "$WINDOW" -c "$HOME/Thesis2" \
     "claude -p \"$CMD_PROMPT\" $PERM_FLAG --output-format stream-json --verbose; echo 'exited; press enter'; read"
   task_set_started "$TASK_ID" "$WT_PATH" "$AGENT_FARM_TMUX_SESSION:$WINDOW" ""
   heartbeat "$TASK_ID" info "claude -p launched in tmux window $WINDOW"

@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
-REPO="${AGENT_FARM_DEFAULT_REPO:-$HOME/Thesis/repositories/PROTEA}"
+REPO="${AGENT_FARM_DEFAULT_REPO:-$HOME/Thesis2/repositories/PROTEA}"
 BASE="${AGENT_FARM_DEFAULT_BASE:-origin/develop}"
 WORKTREES_BASE="${AGENT_FARM_WORKTREES:-$HOME/Thesis2/worktrees}"
 

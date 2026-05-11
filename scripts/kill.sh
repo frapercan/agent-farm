@@ -36,9 +36,9 @@ fi
 if [[ -n "$WT" && -d "$WT" ]]; then
   # Be careful: only remove if path is under our managed dir
   if [[ "$WT" == "$AGENT_FARM_WORKTREES"/* ]]; then
-    if git -C "$HOME/Thesis/repositories/PROTEA" worktree list --porcelain 2>/dev/null \
+    if git -C "$HOME/Thesis2/repositories/PROTEA" worktree list --porcelain 2>/dev/null \
         | grep -q "^worktree $WT$"; then
-      git -C "$HOME/Thesis/repositories/PROTEA" worktree remove --force "$WT" 2>/dev/null || true
+      git -C "$HOME/Thesis2/repositories/PROTEA" worktree remove --force "$WT" 2>/dev/null || true
     fi
     rm -rf "$WT" 2>/dev/null || true
     log "removed worktree $WT"

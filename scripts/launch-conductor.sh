@@ -33,7 +33,7 @@ esac
 
 # 2. ensure tmux session
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
-  tmux new-session -d -s "$SESSION" -n bootstrap -c "$HOME/Thesis"
+  tmux new-session -d -s "$SESSION" -n bootstrap -c "$HOME/Thesis2"
   echo "Created tmux session '$SESSION'"
 fi
 
@@ -42,7 +42,7 @@ if tmux list-windows -t "$SESSION" -F '#W' | grep -qx 'conductor'; then
   echo "Window '$SESSION:conductor' already exists; skipping."
   echo "(to change autoyes mode: kill the window + relaunch)"
 else
-  tmux new-window -t "$SESSION" -n conductor -c "$HOME/Thesis" "claude $CLAUDE_FLAGS"
+  tmux new-window -t "$SESSION" -n conductor -c "$HOME/Thesis2" "claude $CLAUDE_FLAGS"
   echo "Spawned 'conductor' window with claude (mode: $MODE_DESC)."
 fi
 
