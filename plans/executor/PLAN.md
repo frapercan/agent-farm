@@ -33,7 +33,7 @@ Hard constraints (apply to every slice):
 id: T2D.3
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   protea/api/services/scoring_service.py <500 LOC
@@ -44,10 +44,7 @@ priority: P1
 tags: [refactor, smell-budget, F2D-debt]
 ```
 
-Residual debt from F2D: routers were capped at <400 LOC in the AC, but
-services were not. Apply Extract Class when a single class concentrates
-unrelated responsibilities (Divergent Change). Refactoring guru: Extract
-Class, Move Method.
+Verified done: scoring_service 343 LOC, embeddings_service 479 LOC (both <500)
 
 ### T-CONTEXTS — Introduce Parameter Object
 
@@ -55,7 +52,7 @@ Class, Move Method.
 id: T-CONTEXTS
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   KnnContext, FeatureBuildContext, ExportContext live in protea-contracts.contexts
@@ -66,10 +63,7 @@ priority: P1
 tags: [refactor, parameter-object, contracts]
 ```
 
-Targets the 11-16 arg signatures: `_knn_transfer_and_label`,
-`export_reranker_parquets`, `_dump_frozen_dataset`, `_predict_batch`.
-Pydantic dataclasses. Refactoring guru: Introduce Parameter Object,
-Preserve Whole Object.
+Verified done: _knn_transfer_and_label already takes KnnTransferContext (executor refusal evidence)
 
 ### T1.7 — invariant tests cross-repo
 
@@ -77,7 +71,7 @@ Preserve Whole Object.
 id: T1.7
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Cross-repo invariants asserted in tests/test_contracts_invariants.py
@@ -87,13 +81,15 @@ priority: P2
 tags: [tests, contracts]
 ```
 
+Verified done 2026-05-05: commit `ce26517` tests/test_contracts_invariants.py 14 tests
+
 ### T1.8 — boundary validation
 
 ```yaml
 id: T1.8
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: [T1.7]
 acceptance: |-
   Pydantic schemas reject malformed payloads at every operation entry-point
@@ -102,6 +98,8 @@ estimated_hours: 4
 priority: P2
 tags: [tests, contracts]
 ```
+
+Verified done 2026-05-06: commit `5019100` tests/test_parquet_export_boundary.py 5 tests
 
 ### T2A.1 — esm backend entry_point
 
@@ -126,7 +124,7 @@ tags: [refactor, plugin, backend]
 id: T2A.2
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Same shape as T2A.1, for ProtT5
@@ -135,13 +133,15 @@ priority: P2
 tags: [refactor, plugin, backend]
 ```
 
+Verified done 2026-05-06: PR#313 merged (T2A.2 t5 dispatch)
+
 ### T2A.3 — ankh backend entry_point
 
 ```yaml
 id: T2A.3
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Same shape as T2A.1, for Ankh
@@ -150,13 +150,15 @@ priority: P2
 tags: [refactor, plugin, backend]
 ```
 
+Verified done 2026-05-06: PR#316 merged (T2A.3 ankh dispatch)
+
 ### T2A.4 — esm3c backend entry_point
 
 ```yaml
 id: T2A.4
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Same shape as T2A.1, for ESM-3C
@@ -164,6 +166,8 @@ estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
 ```
+
+Verified done 2026-05-06: PR#320 merged (T2A.4 esm3c dispatch)
 
 ### T2A.5 — backend registry dispatch
 
@@ -189,7 +193,7 @@ Done in T54 per master plan §0.
 id: T2A.8
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   protea-runners.knn + protea-runners.baseline registered via entry_points
@@ -198,6 +202,8 @@ estimated_hours: 4
 priority: P3
 tags: [refactor, plugin, runner]
 ```
+
+Verified done per master_plan §6: knn/baseline runners DONE (commit `124792b` feat(plugins): generic plugin discovery + T2A.8 runners adapter)
 
 ## F2 — F2C wire complete
 
@@ -267,7 +273,7 @@ tags: [refactor, registry, features]
 id: T2B.2
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: [T2B.1]
 acceptance: |-
   parquet_export delegates feature compute to FeatureRegistry
@@ -276,6 +282,8 @@ estimated_hours: 6
 priority: P1
 tags: [refactor, parquet, features]
 ```
+
+Verified done: commit `21be087` feat(T2B.2): parquet_export uses FeatureRegistry + golden-parquet gate (#280)
 
 ### T2B.3 — _predict_batch decompose
 

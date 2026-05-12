@@ -43,7 +43,7 @@ tags: [readme, repo-stack]
 id: F7.2
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   ADRs 001-008 (numbered) renamed to D01-D08 OR documented as historical
@@ -54,13 +54,15 @@ priority: P3
 tags: [adr]
 ```
 
+Verified done: PR#309 merged (2026-05-12)
+
 ### F7.3 — runbooks per critical operation
 
 ```yaml
 id: F7.3
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Runbook for: stale job reaper, ngrok deploy recovery, DLQ triage,
@@ -71,13 +73,15 @@ priority: P2
 tags: [runbooks, ops]
 ```
 
+Verified done: PR#293 + PR#295 merged (2026-05-11)
+
 ### F7.4 — plugin author guide
 
 ```yaml
 id: F7.4
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   How to write a new backend / runner / source plugin: scaffold, contracts,
@@ -88,13 +92,15 @@ priority: P2
 tags: [plugin, guide]
 ```
 
+Verified done: PR#287 merged (2026-05-11)
+
 ### F7.5 — insights appendix (lessons learned)
 
 ```yaml
 id: F7.5
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   docs/source/insights.rst with the gotchas surfaced during F-EXP campaign
@@ -103,6 +109,8 @@ estimated_hours: 6
 priority: P3
 tags: [insights, narrative]
 ```
+
+Verified done: PR#298 merged (2026-05-11)
 
 ### F7.6 — observability runbook (post T5.x)
 
@@ -148,7 +156,7 @@ Blocked on executor T-OPS.10.
 id: DS.1
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every `--` and `—` in docs/source/ replaced per house style
@@ -159,13 +167,15 @@ priority: P2
 tags: [style, em-dash]
 ```
 
+Verified done: PR#285 merged (2026-05-11)
+
 ### DS.2 — code reference drift gate
 
 ```yaml
 id: DS.2
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   CI fails when docs reference a symbol that doesn't exist in code
@@ -175,13 +185,15 @@ priority: P2
 tags: [drift, ci]
 ```
 
+Verified done: PR#286 merged (2026-05-11)
+
 ### DS.3 — OpenAPI cross-reference
 
 ```yaml
 id: DS.3
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   docs/source/api/ pages cross-link to OpenAPI spec entries
@@ -191,6 +203,8 @@ priority: P2
 tags: [api, drift]
 ```
 
+Verified done: PR#289 merged (2026-05-12)
+
 ## DR — Reference material
 
 ### DR.1 — autodoc coverage audit
@@ -199,7 +213,7 @@ tags: [api, drift]
 id: DR.1
 phase: DR
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every public symbol in protea/core/ + protea/api/ has a docstring rendered
@@ -209,13 +223,15 @@ priority: P2
 tags: [autodoc]
 ```
 
+Verified done: PR#291 merged (2026-05-11)
+
 ### DR.2 — glossary
 
 ```yaml
 id: DR.2
 phase: DR
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   docs/source/glossary.rst defines key terms (PLM, KNN, K, GO, aspect,
@@ -225,13 +241,15 @@ priority: P3
 tags: [glossary]
 ```
 
+Verified done: PR#301 merged (2026-05-12)
+
 ### DR.3 — architecture diagrams update
 
 ```yaml
 id: DR.3
 phase: DR
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Mermaid + plantuml diagrams updated to reflect F2D services layer +
@@ -240,3 +258,5 @@ estimated_hours: 4
 priority: P3
 tags: [architecture, diagrams]
 ```
+
+Verified done: PR#308 merged (2026-05-12)
