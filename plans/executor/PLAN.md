@@ -406,17 +406,31 @@ D3 accepted; requires DB migration window.
 
 ```yaml
 id: T3.5
+Done 2026-05-12 via PR #340 (merged).
 phase: F4
+Done 2026-05-12 via PR #340 (merged).
 loop: executor
-status: pending
+Done 2026-05-12 via PR #340 (merged).
+status: done
+Done 2026-05-12 via PR #340 (merged).
 deps: []
+Done 2026-05-12 via PR #340 (merged).
 acceptance: |-
+Done 2026-05-12 via PR #340 (merged).
   Every PG index audited; redundant indexes dropped via migration
+Done 2026-05-12 via PR #340 (merged).
   Frequent slow queries (>500ms in dev) covered by an index
+Done 2026-05-12 via PR #340 (merged).
 estimated_hours: 4
+Done 2026-05-12 via PR #340 (merged).
 priority: P3
+Done 2026-05-12 via PR #340 (merged).
 tags: [migration, performance]
+Done 2026-05-12 via PR #340 (merged).
 ```
+Done 2026-05-12 via PR #340 (merged).
+
+Done 2026-05-12 via PR #340 (merged).
 
 ### T3.6 — nullables audit
 
@@ -578,17 +592,31 @@ tags: [observability, grafana]
 
 ```yaml
 id: T5.4
+Done 2026-05-12 via PR #339 (merged).
 phase: F5
+Done 2026-05-12 via PR #339 (merged).
 loop: executor
-status: pending
+Done 2026-05-12 via PR #339 (merged).
+status: done
+Done 2026-05-12 via PR #339 (merged).
 deps: []
+Done 2026-05-12 via PR #339 (merged).
 acceptance: |-
+Done 2026-05-12 via PR #339 (merged).
   All container logs ship to Loki via loki-docker-driver
+Done 2026-05-12 via PR #339 (merged).
   Grafana dashboard queries log streams by container/service
+Done 2026-05-12 via PR #339 (merged).
 estimated_hours: 4
+Done 2026-05-12 via PR #339 (merged).
 priority: P3
+Done 2026-05-12 via PR #339 (merged).
 tags: [observability, loki]
+Done 2026-05-12 via PR #339 (merged).
 ```
+Done 2026-05-12 via PR #339 (merged).
+
+Done 2026-05-12 via PR #339 (merged).
 
 ### T5.5 — CORS allowlist
 
