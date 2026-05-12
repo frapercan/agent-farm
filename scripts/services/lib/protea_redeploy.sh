@@ -46,7 +46,11 @@ git fetch --quiet origin develop || { log "ERR fetch failed"; exit 30; }
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/develop)
 
-if [[ "$FORCE" -eq 0 && "$LOCAL" == "$REMOTE" && "$siblings_advanced" -eq 0 ]]; then
+BOOTSTRAP=0
+[[ ! -x "$DEPLOY_PATH/.venv/bin/uvicorn" ]] && BOOTSTRAP=1
+[[ ! -d "$DEPLOY_PATH/apps/web/node_modules" || ! -d "$DEPLOY_PATH/apps/web/.next" ]] && BOOTSTRAP=1
+
+if [[ "$FORCE" -eq 0 && "$BOOTSTRAP" -eq 0 && "$LOCAL" == "$REMOTE" && "$siblings_advanced" -eq 0 ]]; then
   log "noop on $REMOTE"
   exit 0
 fi
@@ -57,7 +61,12 @@ SIB_TAG=""; [[ "$siblings_advanced" -eq 1 && "$LOCAL" == "$REMOTE" ]] && SIB_TAG
 log "redeploy $(git rev-parse --short "$LOCAL") to $(git rev-parse --short "$REMOTE") (${FORCE_TAG}${SIB_TAG})files=$(echo "$CHANGED" | wc -l)"
 
 ARGS=()
-if [[ "$LOCAL" == "$REMOTE" ]]; then
+if [[ "$BOOTSTRAP" -eq 1 ]]; then
+  # Fresh deploy worktree (no uvicorn in .venv). Force a full deploy
+  # so deps install and frontend builds at least once before the
+  # incremental-skip heuristics below kick in on subsequent ticks.
+  log "bootstrap: $DEPLOY_PATH/.venv has no uvicorn; full deploy (deps + build)"
+elif [[ "$LOCAL" == "$REMOTE" ]]; then
   # PROTEA didn't move, only siblings did. Skip deps and frontend rebuild;
   # only the docs build matters and deploy.sh runs that unconditionally.
   ARGS+=(--no-deps --no-build)
@@ -71,7 +80,7 @@ else
 fi
 
 log "deploy.sh origin/develop ${ARGS[*]}"
-if PROTEA_SIBLINGS_DIR="$SIBLINGS_DIR" bash scripts/deploy.sh origin/develop "${ARGS[@]}" >>"$LOG_FILE" 2>&1; then
+if PROTEA_DEPLOY_PATH="$DEPLOY_PATH" PROTEA_SIBLINGS_DIR="$SIBLINGS_DIR" bash scripts/deploy.sh origin/develop "${ARGS[@]}" >>"$LOG_FILE" 2>&1; then
   log "OK now on $(git rev-parse --short HEAD)"
   exit 10
 else

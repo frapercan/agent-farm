@@ -12,8 +12,11 @@ permissions: bypassPermissions  # trusted; redeploys + ngrok mgmt require shell
 
 worktree:
   base_branch: origin/develop
-  cleanup: none              # uses existing deploy worktree (~/Thesis2/worktrees/protea-deploy)
-                             # for Docker/npm cache reuse, DO NOT ephemeralize
+  cleanup: none              # uses existing deploy worktree, for Docker/npm
+                             # cache reuse. DO NOT ephemeralize.
+  path: ~/Thesis2/worktrees/protea-deploy
+                             # stable path; cleanup.sh + worktree-remove hook
+                             # read this to protect against accidental removal.
 
 service:
   poll_interval: 5m

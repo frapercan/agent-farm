@@ -24,7 +24,12 @@ worktree:
                                         # - ephemeral: 1 worktree per task, deleted on exit
                                         # - per_action: agent creates a fresh worktree per action,
                                         #   not one bound to its lifetime (deploy-keeper pattern)
-                                        # - none: no worktree at all (pure read-only or shell-only)
+                                        # - none: no worktree at all, or uses a stable external
+                                        #   worktree (declare its path below to protect it)
+  # path: ~/Thesis2/worktrees/<stable>  # ONLY for cleanup: none agents that use an external
+                                        # stable worktree (e.g. deploy-keeper -> protea-deploy).
+                                        # cleanup.sh + worktree-remove hook protect this path
+                                        # from accidental removal.
 
 # Persistent service config — only read if persistent=true and kind=headless.
 service:
