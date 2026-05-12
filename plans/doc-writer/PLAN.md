@@ -43,7 +43,7 @@ tags: [readme, repo-stack]
 id: F7.2
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   ADRs 001-008 (numbered) renamed to D01-D08 OR documented as historical
@@ -53,6 +53,8 @@ estimated_hours: 6
 priority: P3
 tags: [adr]
 ```
+
+Verified done: PR#309 merged (2026-05-12)
 
 ### F7.3 — runbooks per critical operation
 
@@ -72,13 +74,15 @@ priority: P2
 tags: [runbooks, ops]
 ```
 
+Verified done: PR#293 + PR#295 merged (2026-05-11)
+
 ### F7.4 — plugin author guide
 
 ```yaml
 id: F7.4
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   How to write a new backend / runner / source plugin: scaffold, contracts,
@@ -88,6 +92,8 @@ estimated_hours: 8
 priority: P2
 tags: [plugin, guide]
 ```
+
+Verified done: PR#287 merged (2026-05-11)
 
 ### F7.5 — insights appendix (lessons learned)
 
@@ -105,6 +111,8 @@ estimated_hours: 6
 priority: P3
 tags: [insights, narrative]
 ```
+
+Verified done: PR#298 merged (2026-05-11)
 
 ### F7.6 — observability runbook (post T5.x)
 
@@ -150,7 +158,7 @@ Blocked on executor T-OPS.10.
 id: DS.1
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every `--` and `—` in docs/source/ replaced per house style
@@ -160,6 +168,8 @@ estimated_hours: 3
 priority: P2
 tags: [style, em-dash]
 ```
+
+Verified done: PR#285 merged (2026-05-11)
 
 ### DS.2 — code reference drift gate
 
@@ -178,6 +188,8 @@ priority: P2
 tags: [drift, ci]
 ```
 
+Verified done: PR#286 merged (2026-05-11)
+
 ### DS.3 — OpenAPI cross-reference
 
 ```yaml
@@ -194,6 +206,8 @@ estimated_hours: 4
 priority: P2
 tags: [api, drift]
 ```
+
+Verified done: PR#289 merged (2026-05-12)
 
 ## DR — Reference material
 
@@ -214,6 +228,8 @@ priority: P2
 tags: [autodoc]
 ```
 
+Verified done: PR#291 merged (2026-05-11)
+
 ### DR.2 — glossary
 
 ```yaml
@@ -231,6 +247,8 @@ priority: P3
 tags: [glossary]
 ```
 
+Verified done: PR#301 merged (2026-05-12)
+
 ### DR.3 — architecture diagrams update
 
 ```yaml
@@ -247,3 +265,5 @@ estimated_hours: 4
 priority: P3
 tags: [architecture, diagrams]
 ```
+
+Verified done: PR#308 merged (2026-05-12)
