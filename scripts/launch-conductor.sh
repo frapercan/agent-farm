@@ -38,20 +38,37 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
 fi
 
 # 3. ensure conductor window
+SPAWNED_NEW=0
 if tmux list-windows -t "$SESSION" -F '#W' | grep -qx 'conductor'; then
-  echo "Window '$SESSION:conductor' already exists; skipping."
+  echo "Window '$SESSION:conductor' already exists; skipping spawn."
   echo "(to change autoyes mode: kill the window + relaunch)"
 else
   tmux new-window -t "$SESSION" -n conductor -c "$HOME/Thesis2" "claude $CLAUDE_FLAGS"
+  SPAWNED_NEW=1
   echo "Spawned 'conductor' window with claude (mode: $MODE_DESC)."
 fi
 
 # 4. drop bootstrap placeholder
 tmux kill-window -t "$SESSION:bootstrap" 2>/dev/null || true
 
+# 5. auto-paste the bootstrap prompt into a freshly spawned conductor.
+# Skipped for already-existing windows so we don't double-paste.
+# AGENT_FARM_AUTOBOOTSTRAP=0 disables this if you want manual control.
+AUTOBOOTSTRAP="${AGENT_FARM_AUTOBOOTSTRAP:-1}"
+if [[ "$SPAWNED_NEW" -eq 1 && "$AUTOBOOTSTRAP" == "1" ]]; then
+  echo "Waiting 8s for claude to come up, then auto-pasting bootstrap-autowork..."
+  sleep 8
+  # send-keys can't pass a multiline message reliably; instead, tell claude
+  # to read the file. The conductor.md + bootstrap-autowork.md both live in
+  # known paths.
+  BOOTSTRAP_MSG='Lee ~/Thesis2/agent-farm/prompts/conductor.md y luego ~/Thesis2/agent-farm/prompts/bootstrap-autowork.md. Operá como conductor de agent-farm siguiendo la rutina de 4 threads. Ejecutá el boot sequence ahora y reportame al final.'
+  tmux send-keys -t "$SESSION:conductor" "$BOOTSTRAP_MSG" Enter
+  echo "Bootstrap pasted. Attach with: tmux attach -t $SESSION"
+fi
+
 cat <<EOF
 
-Conductor ready (autoyes: $MODE_DESC).
+Conductor ready (autoyes: $MODE_DESC, autobootstrap: $AUTOBOOTSTRAP).
 
   Attach:        tmux attach -t $SESSION
   List windows:  tmux list-windows -t $SESSION
@@ -62,9 +79,11 @@ Change autoyes mode (kills + respawns conductor):
   tmux kill-window -t $SESSION:conductor
   AGENT_FARM_AUTOYES=accept bash $ROOT/scripts/launch-conductor.sh
 
-Inside the conductor session, paste:
+Disable autobootstrap (manual paste):
+  AGENT_FARM_AUTOBOOTSTRAP=0 bash $ROOT/scripts/launch-conductor.sh
 
-  Lee ~/Thesis2/agent-farm/prompts/conductor.md y operá como conductor de agent-farm.
-  Mostrame qué agentes hay disponibles y proponé qué arrancar primero.
+Manual bootstrap (if you skipped autopaste or want to re-prime):
+
+  Lee ~/Thesis2/agent-farm/prompts/conductor.md y luego ~/Thesis2/agent-farm/prompts/bootstrap-autowork.md. Operá como conductor de agent-farm siguiendo la rutina de 4 threads. Ejecutá el boot sequence ahora y reportame al final.
 
 EOF

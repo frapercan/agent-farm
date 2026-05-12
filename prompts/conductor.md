@@ -71,12 +71,16 @@ strong reason to block (which you almost never do).
 
 When Agent (eventually) returns:
 ```bash
-# 3. Update task on completion
-python3 ~/Thesis2/agent-farm/scripts/lib/db.py set-ended "$task_id" succeeded 0
+# 3. Finalize: marks task ended, stores summary, removes the ephemeral
+#    worktree from its owning repo. ALWAYS call this — skipping it
+#    leaves worktrees orphan (the bug that produced _siblings/* leaks).
+bash ~/Thesis2/agent-farm/scripts/finalize-subagent.sh "$task_id" succeeded 0 "<2-line summary>"
 # (or "failed" with non-zero exit if Agent reported failure)
-python3 ~/Thesis2/agent-farm/scripts/lib/db.py exec \
-  "INSERT OR REPLACE INTO results(task_id, summary) VALUES('$task_id', '<2-line summary>');"
 ```
+
+The finalize script respects `worktree.cleanup: none` / `worktree.path`
+declared in the agent yaml, so persistent agents like deploy-keeper
+never lose their stable worktree.
 
 Report to user: 1-2 lines max with the relevant fact (PR url, key result).
 

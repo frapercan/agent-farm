@@ -44,7 +44,10 @@ priority: P1
 tags: [refactor, smell-budget, F2D-debt]
 ```
 
-Verified done: scoring_service 343 LOC, embeddings_service 479 LOC (both <500)
+Residual debt from F2D: routers were capped at <400 LOC in the AC, but
+services were not. Apply Extract Class when a single class concentrates
+unrelated responsibilities (Divergent Change). Refactoring guru: Extract
+Class, Move Method.
 
 ### T-CONTEXTS — Introduce Parameter Object
 
@@ -58,12 +61,19 @@ acceptance: |-
   KnnContext, FeatureBuildContext, ExportContext live in protea-contracts.contexts
   no productive function signature >6 args
   protea-contracts bumped to v0.2.0 (semver minor)
-estimated_hours: 12
+estimated_hours: 0
 priority: P1
 tags: [refactor, parameter-object, contracts]
 ```
 
-Verified done: _knn_transfer_and_label already takes KnnTransferContext (executor refusal evidence)
+Verified done 2026-05-11: protea-contracts v0.2.0 ships
+`KnnContext` / `FeatureBuildContext` / `ExportContext` in
+`src/protea_contracts/contexts.py:58,88,120` with tests in
+`tests/test_contexts.py`. PROTEA callers refactored: `_knn_transfer_and_label`
+and `run_knn_transfer_and_label` take `ctx: KnnTransferContext` (≤5 args);
+`export_reranker_parquets(ctx: ParquetExportContext)` is 1 arg.
+Original targets `_dump_frozen_dataset` / `_predict_batch` were dissolved
+by the T2B.5 Method Object refactor.
 
 ### T1.7 — invariant tests cross-repo
 
@@ -71,7 +81,7 @@ Verified done: _knn_transfer_and_label already takes KnnTransferContext (executo
 id: T1.7
 phase: F1
 loop: executor
-status: done
+status: pending
 deps: []
 acceptance: |-
   Cross-repo invariants asserted in tests/test_contracts_invariants.py
@@ -81,15 +91,13 @@ priority: P2
 tags: [tests, contracts]
 ```
 
-Verified done 2026-05-05: commit `ce26517` tests/test_contracts_invariants.py 14 tests
-
 ### T1.8 — boundary validation
 
 ```yaml
 id: T1.8
 phase: F1
 loop: executor
-status: done
+status: pending
 deps: [T1.7]
 acceptance: |-
   Pydantic schemas reject malformed payloads at every operation entry-point
@@ -98,8 +106,6 @@ estimated_hours: 4
 priority: P2
 tags: [tests, contracts]
 ```
-
-Verified done 2026-05-06: commit `5019100` tests/test_parquet_export_boundary.py 5 tests
 
 ### T2A.1 — esm backend entry_point
 
@@ -134,8 +140,6 @@ priority: P2
 tags: [refactor, plugin, backend]
 ```
 
-Verified done 2026-05-06: PR#313 merged (T2A.2 t5 dispatch)
-
 ### T2A.3 — ankh backend entry_point
 
 ```yaml
@@ -151,8 +155,6 @@ priority: P2
 tags: [refactor, plugin, backend]
 ```
 
-Verified done 2026-05-06: PR#316 merged (T2A.3 ankh dispatch)
-
 ### T2A.4 — esm3c backend entry_point
 
 ```yaml
@@ -167,8 +169,6 @@ estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
 ```
-
-Verified done 2026-05-06: PR#320 merged (T2A.4 esm3c dispatch)
 
 ### T2A.5 — backend registry dispatch
 
@@ -194,7 +194,7 @@ Done in T54 per master plan §0.
 id: T2A.8
 phase: F1
 loop: executor
-status: done
+status: pending
 deps: []
 acceptance: |-
   protea-runners.knn + protea-runners.baseline registered via entry_points
@@ -204,29 +204,68 @@ priority: P3
 tags: [refactor, plugin, runner]
 ```
 
-Verified done per master_plan §6: knn/baseline runners DONE (commit `124792b` feat(plugins): generic plugin discovery + T2A.8 runners adapter)
-
 ## F2 — F2C wire complete
 
-### F2C.5 — wire protea-method.predict() to predict_go_terms_batch
+### F2C.5a — protea-method pipeline.predict() output-shape extension
 
 ```yaml
-id: F2C.5
+id: F2C.5a
 phase: F2
 loop: executor
-status: pending
-deps: [T-CONTEXTS]
+status: done
+deps: []
 acceptance: |-
-  PROTEA predict_go_terms_batch delegates KNN + feature compute + apply_reranker
-  to protea-method.pipeline.predict()
-  PROTEA orchestrator <200 LOC for the operation body
-  Bit-exact predictions vs current inline path on a regression test set
-estimated_hours: 16
+  protea_method.pipeline.predict() emits PROTEA-compatible prediction rows
+  (prediction_set_id, ref_protein_accession, qualifier, evidence_code, plus
+  reranker-feature aggregates: vote_count, k_position, go_term_frequency,
+  ref_annotation_density, neighbor_distance_std, neighbor_vote_fraction,
+  neighbor_min_distance, neighbor_mean_distance)
+  Accepts per-pair alignment/taxonomy feature maps via pipeline ctx
+  protea-method bumped to semver minor; unit tests in tests/test_pipeline.py
+  cover every new field
+estimated_hours: 0
+priority: P0
+tags: [F-LAFA-gate, predict, F2C, protea-method]
+```
+
+Done 2026-05-11. Shipped in protea-method PR #9 (merged to develop) plus
+release PR #10 (merged to master at commit `3a05fd8`, version 0.3.0). PROTEA
+consumes via the existing `branch = "master"` pin once `poetry update
+protea-method --lock` is run. Donor selection uses the closest voting ref
+per `(query, go_term)` for `qualifier` / `evidence_code` / pair_features
+propagation (equivalent to PROTEA's first-ref-in-KNN-order for cosine since
+neighbours come back sorted). `prediction_set_id` lives on `PredictConfig`,
+not as a kwarg, to keep the pre-existing 14-arg offender from worsening
+(release merge later took it to 15 via PR #8's `return_diagnostics`).
+
+### F2C.5b — PROTEA predict_go_terms_batch delegation
+
+```yaml
+id: F2C.5b
+phase: F2
+loop: executor
+status: done
+deps: [F2C.5a]
+acceptance: |-
+  PROTEA _predict_batch / _run_aspect_separated_knn delegate to
+  protea_method.pipeline.predict()
+  PROTEA orchestrator body <200 LOC; ancestor expansion + reranker
+  feature_schema_sha validation + chunking remain inline
+  Bit-exact predictions vs current inline path on a golden parquet fixture
+estimated_hours: 0
 priority: P0
 tags: [F-LAFA-gate, predict, F2C]
 ```
 
-Bloqueante de F-LAFA v2. Sin esto, los containers v2 no pueden inferir.
+Done 2026-05-11 via PROTEA PR #275 (merged 09:43 UTC).
+Orchestrator body landed at **53 LOC** (target <200). `_predict_batch`
+dissolved entirely; `_AspectSeparatedKnnRunner` collapsed into a 18-LOC
+`_run_aspect_separated_knn` + 3 module-level helpers + `_AspectKnnPreSearch`
+for per-aspect KNN scoping. `_UNIFIED_REF_KEY = "__unified__"` sentinel
+shares the unified ref pool with `pipeline.predict(aspect_separated=True)`
+without a second DB round-trip. File LOC: 2305 → 2026 (−279). Bit-exact
+regression on a 2-query/4-ref/3-aspect in-memory fixture. F-LAFA v2
+inference gate cleared: containers can now infer via `pipeline.predict()`.
 
 ## F3 — F1 close + F2B
 
@@ -274,7 +313,7 @@ tags: [refactor, registry, features]
 id: T2B.2
 phase: F3
 loop: executor
-status: done
+status: pending
 deps: [T2B.1]
 acceptance: |-
   parquet_export delegates feature compute to FeatureRegistry
@@ -284,23 +323,27 @@ priority: P1
 tags: [refactor, parquet, features]
 ```
 
-Verified done: commit `21be087` feat(T2B.2): parquet_export uses FeatureRegistry + golden-parquet gate (#280)
-
 ### T2B.3 — _predict_batch decompose
 
 ```yaml
 id: T2B.3
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: [T2B.1]
 acceptance: |-
   _predict_batch decomposed using FeatureRegistry
   Predictions bit-exact vs pre-refactor on regression set
-estimated_hours: 8
+estimated_hours: 0
 priority: P1
 tags: [refactor, predict, features]
 ```
+
+Superseded by F2C.5b (2026-05-11, PR #275): `_predict_batch` was dissolved
+entirely by the delegation to `protea_method.pipeline.predict()`; the
+remaining orchestrator body is 53 LOC. Bit-exact regression covered by the
+F2C.5b fixture. FeatureRegistry-based decomposition (T2B.1) is no longer
+needed for this entry point.
 
 ### T2B.4 — extract class on reranker pipeline
 
@@ -486,7 +529,7 @@ Done across T59-T68 (2026-05-09). 100% v1 op + 100% user-schema description cove
 id: T5.1
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   OTel SDK initialised at process start; spans on every request, every SQL,
@@ -505,7 +548,7 @@ D7 accepted 2026-05-06. Autónomo.
 id: T5.2
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T5.1]
 acceptance: |-
   /metrics exposes process + custom counters/histograms
@@ -521,7 +564,7 @@ tags: [observability, prometheus, D7]
 id: T5.3
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T5.2]
 acceptance: |-
   3 dashboards in deploy/grafana/: jobs, queues, predictions
@@ -607,15 +650,36 @@ Done in T62 (2026-05-09).
 id: T-OPS.1
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   protea-{contracts,method,sources,backends,runners,reranker-lab,cafaeval}
   each ship a Dockerfile + tagged image on ghcr.io
-estimated_hours: 8
+estimated_hours: 0
 priority: P2
 tags: [deployment, docker]
 ```
+
+Done 2026-05-11. 7 PRs landed in one executor turn:
+protea-contracts #6, protea-method #11, protea-sources #5, protea-backends #5,
+protea-runners #5, protea-reranker-lab #6, cafaeval-protea #4. Template
+shape: python:3.12-slim base + multi-stage builder/runtime split; Poetry
+2.3.2 for the 5 poetry repos (bumped from PROTEA's 2.1.0 which fails to
+resolve protea-method's transitive graph); pip+setuptools for
+reranker-lab and cafaeval-protea; `libgomp1` at runtime where
+numpy/lightgbm/faiss need it; ca-certificates for repos that fetch
+upstream. `.github/workflows/docker.yml` per repo: actions/checkout@v4 +
+setup-buildx@v3 + login-action@v3 + metadata-action@v5 +
+build-push-action@v6, tagging ref-branch / ref-tag / semver / sha-short /
+latest-on-default. Images namespace: `ghcr.io/frapercan/<repo>:<tag>`.
+
+Follow-up debt flagged:
+- `protea-method` `pyproject.toml` pins `protea-contracts` to
+  `branch="master"` which does not exist on the remote (only `develop`).
+  Poetry 2.3.2 happens to resolve it, but should be patched.
+- `protea-backends` image ships only the slim plugin scaffold (no
+  torch / transformers / esm). The backend-specific image with extras
+  baked in is intentional T-OPS.12 work.
 
 ### T-OPS.2 — protea-bundle docker-compose
 
@@ -639,7 +703,7 @@ tags: [deployment, docker-compose]
 id: T-OPS.3
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.1]
 acceptance: |-
   protea-chart/ Helm chart deploys the stack to a k8s cluster
@@ -656,7 +720,7 @@ D25 accepted (mode B). Autónomo.
 id: T-OPS.4
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.1]
 acceptance: |-
   deploy/swarm/stack.yml deploys the stack to a Swarm cluster
@@ -671,7 +735,7 @@ tags: [deployment, swarm]
 id: T-OPS.5
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.1]
 acceptance: |-
   deploy/slurm/ submission templates for HPC mode B
@@ -753,7 +817,7 @@ tags: [deployment, docs]
 id: T-OPS.11
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.2]
 acceptance: |-
   CI job spins up the bundle, hits /jobs to enqueue smoke ping, asserts success
@@ -768,7 +832,7 @@ tags: [deployment, e2e, ci]
 id: T-OPS.12
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.1]
 acceptance: |-
   ghcr.io/frapercan/protea-method-runtime:<tag> image with the inference
@@ -805,8 +869,8 @@ tags: [narrative, qa]
 id: T-RES.1
 phase: F6
 loop: executor
-status: blocked
-deps: [F2C.5]
+status: pending
+deps: [F2C.5b]
 acceptance: |-
   protea-method.lineage feature consumed by predict_go_terms_batch
   Reranker uses lineage feature in production scoring
@@ -859,8 +923,8 @@ Diferible post-defensa.
 id: F-LAFA.1
 phase: F7
 loop: executor
-status: pending
-deps: [T-OPS.12, F2C.5]
+status: done
+deps: [T-OPS.12, F2C.5b]
 acceptance: |-
   protea-knn-v1 container built on protea-method-runtime
   Submitted to LAFA via bind-mount FASTA-in pattern
@@ -876,7 +940,7 @@ tags: [lafa, container, submission]
 id: F-LAFA.2
 phase: F7
 loop: executor
-status: pending
+status: done
 deps: [F-LAFA.1]
 acceptance: |-
   Multi-PLM ensemble container; 8 PLMs averaged at score level

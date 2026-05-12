@@ -20,9 +20,17 @@ WT=$(printf '%s' "$STDIN_JSON" | python3 -c "import sys,json; d=json.load(sys.st
 [[ -z "$WT" ]] && { echo "WorktreeRemove hook: no worktree_path in input" >&2; exit 0; }
 [[ ! -d "$WT" ]] && exit 0  # already gone
 
-# Identify which repo owns this worktree
+# Identify which repo owns this worktree by scanning every git repo under
+# ~/Thesis2/repositories/ plus thesis. Earlier versions hardcoded only PROTEA
+# + reranker-lab + thesis, which orphaned sibling-repo worktrees.
 OWNER=""
-for r in "$HOME/Thesis2/repositories/PROTEA" "$HOME/Thesis2/repositories/protea-reranker-lab" "$HOME/Thesis2/thesis"; do
+CANDIDATES=()
+for d in "$HOME/Thesis2/repositories"/*; do
+  [[ -d "$d/.git" ]] && CANDIDATES+=("$d")
+done
+[[ -d "$HOME/Thesis2/thesis/.git" ]] && CANDIDATES+=("$HOME/Thesis2/thesis")
+
+for r in "${CANDIDATES[@]}"; do
   if git -C "$r" worktree list --porcelain 2>/dev/null | grep -q "^worktree $WT$"; then
     OWNER="$r"
     break
