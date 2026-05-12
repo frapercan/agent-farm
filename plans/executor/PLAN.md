@@ -44,10 +44,7 @@ priority: P1
 tags: [refactor, smell-budget, F2D-debt]
 ```
 
-Residual debt from F2D: routers were capped at <400 LOC in the AC, but
-services were not. Apply Extract Class when a single class concentrates
-unrelated responsibilities (Divergent Change). Refactoring guru: Extract
-Class, Move Method.
+Merged PR #344 2026-05-12.
 
 ### T-CONTEXTS — Introduce Parameter Object
 
@@ -438,7 +435,7 @@ Done 2026-05-12 via PR #340 (merged).
 id: T3.6
 phase: F4
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every nullable column reviewed; spurious NULLs constrained via NOT NULL
@@ -447,6 +444,8 @@ estimated_hours: 4
 priority: P3
 tags: [migration, schema-quality]
 ```
+
+Merged PR #347 2026-05-12.
 
 ### T3.8 — ExperimentRun ORM
 
@@ -571,6 +570,8 @@ estimated_hours: 6
 priority: P2
 tags: [observability, prometheus, D7]
 ```
+
+Merged PR #346 2026-05-12 (redo, was PR #338 originally).
 
 ### T5.3 — Grafana dashboards
 
@@ -778,7 +779,7 @@ tags: [deployment, slurm, hpc]
 id: T-OPS.6
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   All env vars documented in protea/config/settings.py with descriptions
@@ -787,6 +788,8 @@ estimated_hours: 4
 priority: P2
 tags: [config, deployment]
 ```
+
+Merged PR #345 2026-05-12.
 
 ### T-OPS.7 — sops + age install
 
