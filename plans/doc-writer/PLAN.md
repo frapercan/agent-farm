@@ -60,12 +60,13 @@ tags: [adr]
 id: F7.3
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Runbook for: stale job reaper, ngrok deploy recovery, DLQ triage,
   embedding worker OOM diagnostic, schema_sha v2 backfill
   Located in docs/source/runbooks/
+  (delivered via PR #293 on 2026-05-11; supplemented by PR #295 on 2026-05-11)
 estimated_hours: 8
 priority: P2
 tags: [runbooks, ops]
@@ -94,11 +95,12 @@ tags: [plugin, guide]
 id: F7.5
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   docs/source/insights.rst with the gotchas surfaced during F-EXP campaign
   Cross-references thesis chapter 6 + relevant ADRs
+  (delivered via PR #298 on 2026-05-11)
 estimated_hours: 6
 priority: P3
 tags: [insights, narrative]
@@ -165,11 +167,12 @@ tags: [style, em-dash]
 id: DS.2
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   CI fails when docs reference a symbol that doesn't exist in code
   (e.g. via sphinx :py:func: roles)
+  (delivered via PR #286 on 2026-05-11)
 estimated_hours: 4
 priority: P2
 tags: [drift, ci]
@@ -181,11 +184,12 @@ tags: [drift, ci]
 id: DS.3
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   docs/source/api/ pages cross-link to OpenAPI spec entries
   Drift detected by openapi-drift workflow
+  (delivered via PR #289 on 2026-05-12)
 estimated_hours: 4
 priority: P2
 tags: [api, drift]
@@ -199,11 +203,12 @@ tags: [api, drift]
 id: DR.1
 phase: DR
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every public symbol in protea/core/ + protea/api/ has a docstring rendered
   by autodoc; missing docstrings logged + filed
+  (delivered via PR #291 on 2026-05-11)
 estimated_hours: 8
 priority: P2
 tags: [autodoc]
@@ -215,11 +220,12 @@ tags: [autodoc]
 id: DR.2
 phase: DR
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   docs/source/glossary.rst defines key terms (PLM, KNN, K, GO, aspect,
   reconciled, prediction set, query set, eval set, schema_sha, ...)
+  (delivered via PR #301 on 2026-05-12)
 estimated_hours: 3
 priority: P3
 tags: [glossary]
@@ -231,11 +237,12 @@ tags: [glossary]
 id: DR.3
 phase: DR
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Mermaid + plantuml diagrams updated to reflect F2D services layer +
   protea-contracts split
+  (delivered via PR #308 on 2026-05-12)
 estimated_hours: 4
 priority: P3
 tags: [architecture, diagrams]

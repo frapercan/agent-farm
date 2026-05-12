@@ -109,12 +109,13 @@ tags: [tests, contracts]
 id: T2A.1
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   protea-backends.esm registers protea.backend.esm via entry_points
   PROTEA compute_embeddings dispatches to plugin (not inline if-branch)
   Bit-exact embeddings vs the inline implementation on a 100-protein smoke set
+  (delivered via PR #312 on 2026-05-12)
 estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
@@ -561,18 +562,19 @@ Done in T61.
 id: T5.6
 phase: F5
 loop: executor
-status: blocked
+status: done
 deps: []
 acceptance: |-
   ApiKey ORM + Bearer middleware + slowapi rate limit
   oauth2-proxy in deploy/nginx/ for human OIDC
+  (delivered via PR #296 (T5.6a API key) and PR #303 (T5.6b Bearer JWT) on 2026-05-11..2026-05-12)
 estimated_hours: 12
 priority: P1
 requires_human: true
 tags: [security, authn, D6]
 ```
 
-D6 accepted; security-sensitive code paths need human review.
+D6 accepted; merged on 2026-05-11..2026-05-12 after human review.
 
 ### T5.7 — pip-audit + bandit blocking CI
 
@@ -613,10 +615,11 @@ tags: [deployment, docker]
 id: T-OPS.2
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.1]
 acceptance: |-
   Single docker-compose.bundle.yml spins up the full stack from images
+  (delivered via PR #290 on 2026-05-11)
 estimated_hours: 6
 priority: P2
 tags: [deployment, docker-compose]
@@ -881,11 +884,12 @@ tags: [lafa, container, multi-plm]
 id: F-LAFA.3
 phase: F7
 loop: executor
-status: pending
+status: done
 deps: [F-LAFA.2, T-RES.1]
 acceptance: |-
   v18 reranker + lineage feature shipping in container
   Submitted to LAFA only if lineage proves better than baseline
+  (delivered via PR #305 on 2026-05-12)
 estimated_hours: 8
 priority: P1
 tags: [lafa, container, reranker, lineage]
