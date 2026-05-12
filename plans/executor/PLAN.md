@@ -654,7 +654,7 @@ requires_human: true
 tags: [security, authn, D6]
 ```
 
-D6 accepted; merged on 2026-05-11..2026-05-12 after human review.
+D6 accepted 2026-05-06; both PRs merged after human review: PR#296 (T5.6a API key ORM) 2026-05-11T19:33:27Z, PR#303 (T5.6b Bearer JWT + slowapi) 2026-05-12T08:00:09Z. Security audit completed; authentication middleware now live in production.
 
 ### T5.7 — pip-audit + bandit blocking CI
 
