@@ -1092,3 +1092,53 @@ estimated_hours: 8
 priority: P2
 tags: [tests, coverage]
 ```
+
+### T-INFRA.NACK — basic_nack on operation cancel/failure
+
+```yaml
+id: T-INFRA.NACK
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  When an operation raises (cancellation, exception, or worker-side termination),
+  the consumer in protea/infrastructure/queue/consumer.py issues basic_nack
+  (or basic_reject) on the AMQP delivery instead of leaving it unacked.
+  Today the message stays "unacked" in RabbitMQ until the channel times out
+  (default 30 min via PRECONDITION_FAILED, then it requeues), which with
+  prefetch=1 deadlocks the queue: the live worker cannot pull new messages
+  until the stale unack clears.
+  Concretely: catch the exception path in OperationConsumer._on_message and
+  QueueConsumer._on_message; on Job.status == CANCELLED OR on any unhandled
+  exception, ch.basic_nack(delivery_tag, requeue=False) so the message is
+  dropped from the queue. RetryLaterError keeps its existing requeue=True
+  semantics. Add a regression test that submits a cancelled job and asserts
+  the queue depth returns to zero within 5 s without manual purge.
+estimated_hours: 4
+priority: P1
+tags: [infra, queue, reliability]
+```
+
+### T-INFRA.EVAL-SET-UNIQUE — pair uniqueness on EvaluationSet
+
+```yaml
+id: T-INFRA.EVAL-SET-UNIQUE
+phase: F3
+loop: executor
+status: in_progress
+deps: []
+acceptance: |-
+  evaluation_set table has a UNIQUE constraint on
+  (old_annotation_set_id, new_annotation_set_id) via Alembic migration.
+  generate_evaluation_set operation becomes idempotent: on duplicate pair,
+  return the existing id instead of inserting an orphan.
+  Today's incident (2026-05-13): 2 duplicate rows for (v226→v230) pair
+  caused training_dump_helpers.py:746 .one_or_none() to raise
+  MultipleResultsFound after ~3.5 h of completed compute on LB.1 v226.
+  Manual orphan delete done; this slice prevents recurrence.
+estimated_hours: 4
+priority: P1
+tags: [infra, schema, idempotency]
+```
+
