@@ -78,7 +78,7 @@ by the T2B.5 Method Object refactor.
 id: T1.7
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Cross-repo invariants asserted in tests/test_contracts_invariants.py
@@ -88,13 +88,15 @@ priority: P2
 tags: [tests, contracts]
 ```
 
+Shipped via PR #371 2026-05-15.
+
 ### T1.8 — boundary validation
 
 ```yaml
 id: T1.8
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: [T1.7]
 acceptance: |-
   Pydantic schemas reject malformed payloads at every operation entry-point
@@ -103,6 +105,8 @@ estimated_hours: 4
 priority: P2
 tags: [tests, contracts]
 ```
+
+Shipped via PR #372 2026-05-15.
 
 ### T2A.1 — esm backend entry_point
 
@@ -191,7 +195,7 @@ Done in T54 per master plan §0.
 id: T2A.8
 phase: F1
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   protea-runners.knn + protea-runners.baseline registered via entry_points
@@ -200,6 +204,89 @@ estimated_hours: 4
 priority: P3
 tags: [refactor, plugin, runner]
 ```
+
+Shipped pre-session via PROTEA #240/#243 + protea-runners 48e2770.
+
+### T-CI.DEPLOY-SKIP — Companion skip-job so deploy slice check satisfies required-status on non-deploy PRs
+
+```yaml
+id: T-CI.DEPLOY-SKIP
+phase: F1
+loop: executor
+status: done
+deps: []
+target_repo: PROTEA
+target_branch: develop
+acceptance: |-
+  Required check `deploy slice builds and smokes` reports success on a PR
+  that touches ONLY paths outside the deploy-e2e.yml filter
+  (e.g. apps/web/** only, README only, agent-farm only).
+  Existing trigger behaviour preserved: a PR that touches Dockerfile,
+  protea/**, docker/**, alembic/**, scripts/worker.py,
+  scripts/test_deploy_e2e.sh, poetry.lock, pyproject.toml, or
+  .github/workflows/deploy-e2e.yml still runs the full 25-min Docker E2E.
+  Implementation strategy: add a companion job (same workflow or new
+  workflow file) that triggers via `paths-ignore` mirroring the existing
+  paths filter, has the same job name `deploy slice builds and smokes`,
+  and is a no-op (`run: echo "skip: no deploy-relevant paths changed"`).
+  Local CI green; PR opened against develop; check shows green on the
+  fix PR itself (which DOES touch the workflow file so the full E2E runs).
+context: |-
+  Discovered 2026-05-15 via PR #369 (T-WEB.LOADING). Branch protection on
+  develop requires `deploy slice builds and smokes`, but `deploy-e2e.yml`
+  has a `paths:` filter excluding `apps/web/**`. Any frontend-only or
+  docs-only PR stalls on "Expected - Waiting for status to be reported"
+  forever. PR #369 is the live blocker; this slice unblocks it AND every
+  future non-deploy PR.
+  Canonical GitHub Actions pattern: two triggers with mirrored
+  paths / paths-ignore producing the same check context name. The
+  required-status gate accepts either run.
+  Keep diff tiny: one new workflow file (or one new job) plus minimal
+  YAML. NO refactor of the existing deploy-e2e.yml job.
+estimated_hours: 1
+priority: P0
+tags: [ci, github-actions, branch-protection, unblocker]
+```
+
+Shipped via PR #370 2026-05-15.
+
+### T-WEB.LOADING — Next.js loading.tsx for navigation feedback
+
+```yaml
+id: T-WEB.LOADING
+phase: F1
+loop: executor
+status: done
+deps: []
+target_repo: PROTEA
+target_branch: develop
+acceptance: |-
+  apps/web/app/[locale]/loading.tsx exists and renders a Skeleton scaffold
+  (heading + main content block) using the existing Skeleton component
+  Manual verification: navigating from one [locale]/* page to another
+  shows the Suspense skeleton instantly (no frozen previous page) under
+  the production build (npm run build && npm start)
+  Local CI green: npm run lint + npm run typecheck + npm run test
+  PR opened against develop, branch protection respected, no co-author
+  trailer, no force-push
+context: |-
+  User reported 2026-05-15 that first navigation to /es/benchmark, /es/evaluation
+  and similar routes feels frozen for 1-3s. Root cause: every page under
+  apps/web/app/[locale]/ is a "use client" component fetching via useEffect,
+  so the inner Skeleton (e.g. benchmark/page.tsx:289-294) only mounts after
+  the route chunk downloads, parses and hydrates. App Router shows a
+  loading.tsx INSTANTLY via auto-Suspense; a single file at the [locale]/
+  segment covers every child route via segment inheritance, optional
+  per-segment overrides if a child needs a different shape.
+  Backend latency itself is acceptable per the user; only the feedback gap
+  needs fixing. Keep the change tiny and focused, no refactor of the existing
+  client-side data flow.
+estimated_hours: 2
+priority: P2
+tags: [frontend, web, ux, next-app-router]
+```
+
+Shipped via PR #369 2026-05-15.
 
 ## F2 — F2C wire complete
 
