@@ -46,7 +46,7 @@ Hard constraints:
 id: TC.1
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Motivation grounded in functional annotation gap + CAFA 6 results
@@ -58,13 +58,15 @@ priority: P2
 tags: [chapter-1, introduction]
 ```
 
+Shipped pre-session (per shepherd 2026-05-15 git audit).
+
 ### TC.2 — chapter 2 biological background depth check
 
 ```yaml
 id: TC.2
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   GO ontology + aspects + IEA evidence codes covered
@@ -75,13 +77,15 @@ priority: P3
 tags: [chapter-2, background]
 ```
 
+Shipped via thesis PR #36 2026-05-15.
+
 ### TC.3 — chapter 3 related work expansion
 
 ```yaml
 id: TC.3
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   CAFA history + winners + their methods
@@ -93,13 +97,15 @@ priority: P2
 tags: [chapter-3, related-work]
 ```
 
+Shipped pre-session (per shepherd 2026-05-15 git audit).
+
 ### TC.4 — chapter 4 system design sync with F2D + F2C
 
 ```yaml
 id: TC.4
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   System diagram reflects F2D services layer
@@ -111,13 +117,15 @@ priority: P1
 tags: [chapter-4, design, drift-prone]
 ```
 
+Shipped pre-session (per shepherd 2026-05-15 git audit).
+
 ### TC.5 — chapter 5 implementation sync (drift hotspot)
 
 ```yaml
 id: TC.5
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.4]
 acceptance: |-
   Module names + endpoints + ORM models match current code
@@ -128,13 +136,15 @@ priority: P1
 tags: [chapter-5, implementation, drift-prone]
 ```
 
+Shipped pre-session (per shepherd 2026-05-15 git audit).
+
 ### TC.6 — chapter 6 evaluation refresh
 
 ```yaml
 id: TC.6
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   All cafaeval Fmax / coverage / AuPRC numbers updated to leakage-free baseline
@@ -147,13 +157,15 @@ priority: P1
 tags: [chapter-6, evaluation, drift-prone, lab-numbers]
 ```
 
+Shipped pre-session (per shepherd 2026-05-15 git audit).
+
 ### TC.7 — chapter 7 conclusion + future work
 
 ```yaml
 id: TC.7
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.1, TC.6]
 acceptance: |-
   Conclusion mirrors thesis statement of chapter 1
@@ -164,6 +176,8 @@ estimated_hours: 4
 priority: P2
 tags: [chapter-7, conclusion]
 ```
+
+Shipped via thesis PR #35 2026-05-15.
 
 ### TC.8 — appendix A regeneration
 
@@ -205,7 +219,7 @@ tags: [appendix-B]
 id: TA.1
 phase: TA
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.6]
 acceptance: |-
   Abstract opens with the gap, names PROTEA, gives 1-2 headline numbers
@@ -217,13 +231,15 @@ priority: P1
 tags: [abstract, frontmatter]
 ```
 
+Shipped pre-session (per shepherd 2026-05-15 git audit).
+
 ### TA.2 — title page + supervisors block
 
 ```yaml
 id: TA.2
 phase: TA
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Author name exact: Francisco Miguel Pérez Canales
@@ -233,6 +249,8 @@ estimated_hours: 1
 priority: P1
 tags: [title-page, frontmatter]
 ```
+
+Shipped pre-session (per shepherd 2026-05-15 git audit).
 
 ### TA.3 — acknowledgements
 
@@ -258,7 +276,7 @@ tags: [acknowledgements, frontmatter]
 id: TB.1
 phase: TB
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every \cite resolves; no dangling refs in pdflatex log
@@ -269,13 +287,15 @@ priority: P1
 tags: [bib]
 ```
 
+Shipped via thesis PR #37 2026-05-15.
+
 ### TB.2 — DOI + URL backfill
 
 ```yaml
 id: TB.2
 phase: TB
 loop: thesis-writer
-status: pending
+status: done
 deps: [TB.1]
 acceptance: |-
   Every entry has a DOI or stable URL
@@ -283,6 +303,8 @@ estimated_hours: 4
 priority: P3
 tags: [bib]
 ```
+
+Shipped via thesis PR #38 2026-05-15.
 
 ## TX — Cross-cutting
 
@@ -292,7 +314,7 @@ tags: [bib]
 id: TX.1
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Zero `---` / `--` / `—` in chapters/*.tex (per memory feedback_no_em_dashes)
@@ -301,6 +323,8 @@ estimated_hours: 2
 priority: P1
 tags: [style, em-dash]
 ```
+
+Shipped pre-session (per shepherd 2026-05-15 git audit).
 
 ### TX.2 — figures regeneration from real data
 
