@@ -55,7 +55,14 @@ override; never use it as an agent).
 
 ## Sweep checklist (one pass)
 
-1. **List open PRs** across the 7 repos:
+1. **Systemic red-check pre-flight** (FARM-1.5, NON-NEGOTIABLE). Before
+   triaging individual PRs, run:
+   ```bash
+   python3 "$AGENT_FARM_ROOT/scripts/lib/redcheck-systemic.py" --pretty
+   ```
+   If the output flags any check, STOP. See the "Systemic red-check
+   carve-out" section below.
+2. **List open PRs** across the 7 repos:
    ```bash
    for r in PROTEA protea-contracts protea-method protea-sources \
             protea-runners protea-backends protea-reranker-lab; do
@@ -63,17 +70,65 @@ override; never use it as an agent).
        number,title,mergeStateStatus,labels,statusCheckRollup
    done
    ```
-2. **Triage each PR**:
+3. **Triage each PR**:
    - `BLOCKED` from a CI fail you can fix trivially (lint, format, unused
      import, missing newline, em-dash, smell budget) → fix in your worktree
-     + push to that PR's branch
+     + push to that PR's branch. Re-check the systemic carve-out before
+     EACH push: a single trivial fix may be safe, the same one across
+     three PRs is the loop the carve-out was designed to break.
    - `BLOCKED` from a real test failure → leave alone, note in summary
    - `BEHIND` (needs rebase against develop) → `gh pr update <num>` if no
      conflict; otherwise leave + note
    - `CLEAN + approved + waiting >24h` → flag for user (they may want to
      merge or there's a conflict you can't see)
-3. **Stale branch sweep**: list branches not touched in >30 days where
+4. **Stale branch sweep**: list branches not touched in >30 days where
    the PR is closed; recommend (don't auto-delete) cleanup.
+
+## Systemic red-check carve-out (FARM-1.5, NON-NEGOTIABLE)
+
+Memory: [[feedback_janitor_systemic_redcheck_carveout]]. When a required
+check is red on >=3 open PRs across the stack, the failure is
+infra-systemic (workflow misconfig, dependency outage, secrets
+expiration). Pushing trivial fixes to each PR is the wrong response: it
+burns tokens, does not address the root cause, and produces a flurry
+of dirty commits that obscure the actual fix.
+
+The pre-flight in step 1 of the sweep checklist runs:
+
+```bash
+python3 "$AGENT_FARM_ROOT/scripts/lib/redcheck-systemic.py" --pretty
+```
+
+`redcheck-systemic.py` queries open PRs across the canonical stack (the
+table in `scripts/lib/pr_base.py`), groups failing checks by name, and
+flags any check whose failure list has at least three PRs. JSON output
+on stdout is `{}` when nothing is systemic; non-empty output means stop.
+
+When the helper flags a systemic failure, your behaviour is:
+
+1. **Do NOT push fixes to any individual PR.** Even a one-line trivial
+   change is forbidden until the systemic root cause is resolved.
+2. Write a heartbeat tagged `[systemic]` carrying the check name and
+   the affected PR list:
+   ```bash
+   python3 "$AGENT_FARM_ROOT/scripts/lib/db.py" heartbeat "$TASK_ID" \
+     warn "[systemic] <check_name> red on N PRs: <slugs>"
+   ```
+3. Open (or update) a meta-issue on the agent-farm repo so the
+   conductor can route a scoped executor:
+   ```bash
+   gh issue create -R frapercan/agent-farm \
+     --title "Systemic CI failure: <check_name>" \
+     --body  "..."
+   ```
+4. Stop. Do not move on to the rest of the sweep until the human
+   acknowledges. Only an executor with explicit scope may push a
+   systemic fix. The conductor decides who fixes it; an admin override
+   is only justified for the systemic-fix PR itself, never for a
+   janitor "drive-by" patch on an unrelated PR.
+
+If the helper is empty, proceed with the rest of the checklist
+normally.
 
 ## Hard constraints
 
