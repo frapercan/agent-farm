@@ -1151,14 +1151,14 @@ note: "2026-05-16 janitor: still pending; no merged PR found; depends on F6.2"
 id: F6.4
 phase: F8
 loop: executor
-status: pending
+status: done
 deps: [T1.7]
 acceptance: |-
   Each plugin repo's CI runs contract tests against protea-contracts pinned version
 estimated_hours: 6
 priority: P2
 tags: [tests, contracts, plugin]
-note: "2026-05-16 janitor: still pending; no merged PR found; T1.7 gate cleared 2026-05-15"
+note: "2026-05-16 janitor plugin-scan: shipped via protea-runners#9 (2026-05-15) + protea-sources#13 (2026-05-15) + protea-backends#20 (2026-05-15)"
 ```
 
 ### F6.5 — Playwright E2E

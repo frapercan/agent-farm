@@ -35,6 +35,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P2
 tags: [readme, repo-stack]
+note: "2026-05-16 janitor plugin-scan: protea-runners#7 + protea-sources#11 + protea-backends#18 + protea-contracts#11 + protea-method#14 + protea-reranker-lab#8 + cafaeval-protea#5 (all 2026-05-15 or earlier)"
 ```
 
 ### F7.2 — ADR sweep & numbering harmonisation
