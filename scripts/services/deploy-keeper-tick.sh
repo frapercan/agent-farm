@@ -35,6 +35,25 @@ if ! ss -ltn 2>/dev/null | grep -q ':5672 '; then
   exit 1
 fi
 
+# 0b) postgres schema preflight (FARM-1.7).
+# If the public schema has dropped to a single table (typically just
+# alembic_version) the underlying docker volume has likely been wiped
+# again (cf. project_db_volume_landmine memory + 2026-05-11 incident).
+# Emit a P0/critical heartbeat so the supervisor + human paging picks
+# it up. We do NOT exit non-zero here: redeploy/ngrok recovery can
+# still run usefully on a wiped DB, and the heartbeat is the signal.
+PG_PUBLIC_TABLES=$(docker exec -i protea-postgres-1 \
+  psql -U protea -d protea -tAc \
+  "SELECT count(*) FROM pg_tables WHERE schemaname='public'" \
+  2>/dev/null | tr -d '[:space:]' || true)
+if [[ "$PG_PUBLIC_TABLES" == "1" ]]; then
+  heartbeat "$TASK_ID" critical \
+    "P0: pg_tables(public)=1 (only alembic_version). Volume wipe suspected. See agent-farm/state/logs/volume_audit.log and docs/runbook-pg-volume-recovery.md"
+elif [[ "$PG_PUBLIC_TABLES" == "0" ]]; then
+  heartbeat "$TASK_ID" critical \
+    "P0: pg_tables(public)=0. Schema empty. See docs/runbook-pg-volume-recovery.md"
+fi
+
 # 1) redeploy (idempotent; exit 0 noop, 10 redeployed, 20/30/40 failure)
 bash "$LIB/protea_redeploy.sh"
 RC=$?

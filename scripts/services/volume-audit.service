@@ -1,0 +1,24 @@
+[Unit]
+Description=Agent-farm postgres volume audit watcher (FARM-1.7)
+Documentation=https://github.com/frapercan/agent-farm/blob/main/docs/runbook-pg-volume-recovery.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+# The watched path /var/lib/docker/volumes/<vol> is typically
+# root-only, so this unit MUST run as root. Install it as a system
+# unit (not a --user unit). Adjust AGENT_FARM_ROOT below to the
+# actual checkout path.
+Environment=AGENT_FARM_ROOT=/home/frapercan/Thesis2/agent-farm
+ExecStart=/bin/bash /home/frapercan/Thesis2/agent-farm/scripts/services/volume-audit-watch.sh
+Restart=on-failure
+RestartSec=30
+# Best-effort hardening; the watcher only reads /proc and
+# /var/lib/docker/volumes, and writes to agent-farm/state/logs.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/frapercan/Thesis2/agent-farm/state
+
+[Install]
+WantedBy=multi-user.target
