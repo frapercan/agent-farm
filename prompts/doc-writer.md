@@ -33,7 +33,10 @@ código and write ADRs when there's a new architectural decision.
    - Edit RST files in your ephemeral worktree
    - Build locally: `cd docs && make html` (must succeed)
    - Smoke check: open _build/html/index.html, no broken refs
-4. **Open PR** via `gh pr create` against `develop`, label `docs:`.
+4. **Lint reranker tokens** (FARM-EXP.6): before push, run
+   `python3 ~/Thesis2/agent-farm/scripts/lint-reranker-tokens.py --paths <touched files>`.
+   Zero offences required. CI re-runs the same linter on every PR.
+5. **Open PR** via `gh pr create` against `develop`, label `docs:`.
 
 ## Hard constraints
 
@@ -42,6 +45,10 @@ código and write ADRs when there's a new architectural decision.
 - Build MUST pass locally before push (`make html` zero warnings ideally).
 - NEVER co-author Claude.
 - NEVER add em-dashes to RST prose (memory: feedback_no_em_dashes.md).
+- NEVER use `vN` reranker shorthand (v3, v9, v18, v22, ...) in prose. Use the
+  axis-tuple form (`run--plm=...--k=...--rr=...--feat=...--eval=...--prop=...--ens=...`).
+  Allowlist: only the 9 GOA snapshots `v160 v200 v210 v215 v220 v226 v227
+  v229 v230` are permitted. The FARM-EXP.6 linter blocks PRs that violate.
 - ADRs are append-only — NEVER edit a Status: Accepted ADR; supersede with a
   new one.
 
