@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # deploy-keeper-supervisor.sh — persistent loop that runs deploy-keeper-tick.sh
-# every poll_interval. On tick failure, escalate to `claude -p` with the
-# deploy-keeper.md prompt (haiku, bounded recovery).
+# every poll_interval. On tick failure (FAIL_KIND != prereq_fail) the
+# supervisor escalates to a janitor subagent via spawn-subagent.sh and
+# keeps polling (it does NOT block on the janitor). prereq_fail failures
+# are logged + the supervisor backs off; the user is the recovery path
+# for daemon-level issues.
 #
 # Spawned by spawn.sh in tmux session. Reads:
 #   TASK_ID   — task UUID (set by spawn.sh)
@@ -25,6 +28,31 @@ heartbeat "$TASK_ID" info "supervisor up; poll_interval=${POLL_INTERVAL_SEC}s"
 # Trap: on shutdown, mark task ended cleanly
 trap 'heartbeat "$TASK_ID" info "supervisor stopping (signal)"; task_set_ended "$TASK_ID" "killed" 130; exit 0' INT TERM
 
+# escalate_to_janitor <fail_kind> — spawn a janitor subagent (haiku, via
+# scripts/spawn-subagent.sh) to investigate the failure. We do NOT block
+# on the janitor; spawn-subagent.sh inserts a pending task row and prints
+# K=V env so we can record the janitor's task_id back into our own
+# heartbeats. The janitor's own task spec will steer it to read the
+# deploy-keeper heartbeats and act (PR fix, rerun, notify).
+escalate_to_janitor() {
+  local fail_kind="$1"
+  local spawn_args
+  spawn_args=$(jq -Rn \
+    --arg task "deploy-keeper-rescue" \
+    --arg msg "deploy-keeper $fail_kind fail, see heartbeats for task $TASK_ID" \
+    --arg src_task "$TASK_ID" \
+    '{task: $task, failure_kind: $msg, source_task_id: $src_task}')
+  local spawn_out
+  if ! spawn_out=$(bash "$ROOT/scripts/spawn-subagent.sh" janitor "$spawn_args" 2>&1); then
+    heartbeat "$TASK_ID" error "janitor spawn failed: $spawn_out"
+    return 1
+  fi
+  local janitor_task
+  janitor_task=$(printf '%s\n' "$spawn_out" | grep -oP '^task_id=\K\S+' | head -1)
+  heartbeat "$TASK_ID" info "escalated to janitor task_id=${janitor_task:-unknown} fail_kind=$fail_kind"
+  return 0
+}
+
 CONSECUTIVE_FAILS=0
 
 while true; do
@@ -37,42 +65,22 @@ while true; do
     CONSECUTIVE_FAILS=$((CONSECUTIVE_FAILS + 1))
     heartbeat "$TASK_ID" warn "tick failed (consecutive=$CONSECUTIVE_FAILS)"
 
-    # Escalate to claude -p for failure analysis (haiku, bounded)
+    FAIL_ENV="/tmp/deploy-keeper-last-fail.env"
+    FAIL_KIND="unknown"
+    FAIL_EXIT="unknown"
+    if [[ -f "$FAIL_ENV" ]]; then
+      # shellcheck disable=SC1090
+      source "$FAIL_ENV"
+    fi
+
     if [[ "$CONSECUTIVE_FAILS" -le "$MAX_CONSECUTIVE_FAILURES" ]]; then
-      FAIL_ENV="/tmp/deploy-keeper-last-fail.env"
-      if [[ -f "$FAIL_ENV" ]]; then
-        # shellcheck disable=SC1090
-        source "$FAIL_ENV"
-        heartbeat "$TASK_ID" info "escalating to claude -p; FAIL_KIND=${FAIL_KIND:-?} FAIL_EXIT=${FAIL_EXIT:-?}"
-
-        PROMPT="$(cat "$ROOT/prompts/deploy-keeper.md")
----
-Current failure context:
-- TASK_ID=$TASK_ID
-- FAILURE_KIND=${FAIL_KIND:-unknown}
-- FAILURE_EXIT=${FAIL_EXIT:-unknown}
-- AGENT_FARM_ROOT=$ROOT
-
-Investigate and apply at most ONE bounded recovery as per the table.
-Then heartbeat the outcome and exit 0 (recovered) or 1 (notified human).
-"
-
-        # Run claude headless. --dangerously-skip-permissions because deploy-keeper
-        # is sandboxed and trusted. Output captured to log for forensics.
-        LOGDIR="$ROOT/results/$TASK_ID"
-        mkdir -p "$LOGDIR"
-        ANALYSIS_LOG="$LOGDIR/analysis-$(date +%s).log"
-        if claude -p "$PROMPT" \
-            --dangerously-skip-permissions \
-            --model haiku-4.5 \
-            > "$ANALYSIS_LOG" 2>&1; then
-          heartbeat "$TASK_ID" info "claude recovery succeeded (see $ANALYSIS_LOG)"
-          CONSECUTIVE_FAILS=0
-        else
-          heartbeat "$TASK_ID" error "claude recovery failed (see $ANALYSIS_LOG)"
-        fi
+      if [[ "${FAIL_KIND:-unknown}" == "prereq_fail" ]]; then
+        # Daemon-level prereq fail (docker down etc); the user is the
+        # recovery path. Do NOT spawn a janitor for these — there is
+        # nothing a janitor can safely do at the daemon layer.
+        heartbeat "$TASK_ID" error "prereq_fail (FAIL_EXIT=${FAIL_EXIT:-?}); no janitor escalation"
       else
-        heartbeat "$TASK_ID" warn "no fail env at $FAIL_ENV, skipping escalation"
+        escalate_to_janitor "${FAIL_KIND:-unknown}" || true
       fi
     else
       heartbeat "$TASK_ID" error "consecutive failures >= $MAX_CONSECUTIVE_FAILURES; pausing ${PAUSE_AFTER_PAUSE_SEC}s"

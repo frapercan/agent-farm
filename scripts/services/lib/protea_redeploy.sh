@@ -29,6 +29,37 @@ FORCE=0
 ts() { date -Is; }
 log() { printf '[%s] %s\n' "$(ts)" "$*" | tee -a "$LOG_FILE"; }
 
+# Self-seed .env.local with the JWT secret + supporting envs. manage.sh
+# starts uvicorn via _start_bg (setsid + &) which needs vars EXPORTED,
+# not just shell-local; PROTEA's scripts/deploy.sh does `set -a;
+# source .env.local; set +a` so plain KEY=VAL lines also work, but the
+# file must exist with sane content. Idempotent: if `export
+# PROTEA_JWT_SECRET=` is already present we leave the file alone.
+# Otherwise regenerate, preserving any existing secret value if found
+# (e.g. file missing the `export ` prefix).
+ensure_env_local() {
+  local f="$DEPLOY_PATH/.env.local"
+  if [[ -f "$f" ]] && grep -q '^export PROTEA_JWT_SECRET=' "$f"; then
+    return 0
+  fi
+  local existing_secret=""
+  if [[ -f "$f" ]]; then
+    existing_secret=$(grep -oP '^(?:export )?PROTEA_JWT_SECRET=[\"]?\K[A-Fa-f0-9]+' "$f" 2>/dev/null | head -1 || true)
+  fi
+  local secret="${existing_secret:-$(openssl rand -hex 32)}"
+  {
+    printf 'export PROTEA_JWT_SECRET=%s\n' "$secret"
+    printf 'export PROTEA_AUTHN_REQUIRED=true\n'
+    printf 'export PROTEA_ADMIN_TOKEN=protea-admin\n'
+  } > "$f"
+  chmod 600 "$f"
+  if [[ -n "$existing_secret" ]]; then
+    log "seeded $f (preserved existing secret)"
+  else
+    log "seeded $f (generated new secret)"
+  fi
+}
+
 # 1) Refresh sibling worktrees first. If any of them advanced we want
 # the deploy to rebuild the docs even if PROTEA itself is on tip.
 PROTEA_SIBLINGS_DIR="$SIBLINGS_DIR" bash "$SCRIPT_DIR/protea_refresh_siblings.sh" >/dev/null
@@ -41,6 +72,8 @@ esac
 
 cd "$DEPLOY_PATH" || { log "ERR cd $DEPLOY_PATH"; exit 30; }
 
+ensure_env_local
+
 git fetch --quiet origin develop || { log "ERR fetch failed"; exit 30; }
 
 LOCAL=$(git rev-parse HEAD)
@@ -49,6 +82,14 @@ REMOTE=$(git rev-parse origin/develop)
 BOOTSTRAP=0
 [[ ! -x "$DEPLOY_PATH/.venv/bin/uvicorn" ]] && BOOTSTRAP=1
 [[ ! -d "$DEPLOY_PATH/apps/web/node_modules" || ! -d "$DEPLOY_PATH/apps/web/.next" ]] && BOOTSTRAP=1
+# Recover from "manage.sh crashed mid-tick, stack down" without waiting
+# for a new commit. If the api isn't returning 200 on /jobs, force a
+# full redeploy. -m 3 + --fail keeps this cheap on the happy path.
+PROTEA_API_HEALTH_URL="${PROTEA_API_HEALTH_URL:-http://localhost:8000/jobs}"
+if ! curl -sf -m 3 -o /dev/null "$PROTEA_API_HEALTH_URL"; then
+  log "api healthcheck ${PROTEA_API_HEALTH_URL} non-200; forcing BOOTSTRAP"
+  BOOTSTRAP=1
+fi
 
 if [[ "$FORCE" -eq 0 && "$BOOTSTRAP" -eq 0 && "$LOCAL" == "$REMOTE" && "$siblings_advanced" -eq 0 ]]; then
   log "noop on $REMOTE"

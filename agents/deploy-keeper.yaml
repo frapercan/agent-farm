@@ -1,13 +1,15 @@
 # deploy-keeper — keep protea.ngrok.app serving HEAD of origin/develop.
 #
-# Architecture: bash supervisor loops forever, calls tick.sh every poll_interval.
-# Tick is mostly bash (idempotent redeploy + ngrok ensure, both inherited from
-# the prompt at system_prompt_file. Happy path = $0 LLM cost.
+# Architecture: bash supervisor loops forever, calls tick.sh every
+# poll_interval. The supervisor itself is NEVER invoked as an LLM:
+# happy path is pure bash, and on non-prereq failure it spawns a
+# janitor subagent (via scripts/spawn-subagent.sh) which handles the
+# diagnosis + recovery. Lifetime LLM cost of deploy-keeper itself is $0.
 
 name: deploy-keeper
 kind: headless
 persistent: true
-model: haiku-4.5             # only invoked on failures, mechanical analysis
+model: haiku-4.5             # nominal model; supervisor never spawns it
 permissions: bypassPermissions  # trusted; redeploys + ngrok mgmt require shell
 
 worktree:
@@ -29,7 +31,11 @@ tools_allowed: [Bash, Read, Write]
 timeout_hours: 0             # persistent, never times out
 
 system_prompt_file: prompts/deploy-keeper.md
+                             # placeholder only; supervisor never reads
+                             # this file to spawn an LLM. Retained so
+                             # spawn.sh's yaml-load doesn't break.
 
 cost_budget:
-  expected_tokens: 0         # happy path: $0. Failure path: ~3-5k tokens (haiku)
-  max_usd_per_day: 0.50      # advisory cap; if breached, supervisor pauses and notifies
+  expected_tokens: 0         # supervisor is pure bash; janitor escalation
+                             # cost is billed against janitor's budget
+  max_usd_per_day: 0.00      # deploy-keeper itself never spends
