@@ -41,6 +41,14 @@ if ! git -C "$REPO" worktree add -b "$BRANCH" "$WT" "$BASE" 2>&1 1>/dev/null; th
   exit 1
 fi
 
+# FARM-1.1: install enforcement git-hooks bundle into the new worktree.
+# Installer prints to stderr only, preserving this hook's stdout contract.
+INSTALL_HOOKS="$ROOT/scripts/lib/install-hooks.sh"
+if [[ -x "$INSTALL_HOOKS" ]]; then
+  bash "$INSTALL_HOOKS" "$WT" 2>>/tmp/install-hooks.log || \
+    echo "WorktreeCreate hook: install-hooks failed (non-fatal); see /tmp/install-hooks.log" >&2
+fi
+
 # Required: print absolute path on stdout
 printf '%s\n' "$WT"
 exit 0
