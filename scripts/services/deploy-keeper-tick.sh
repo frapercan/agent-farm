@@ -100,6 +100,55 @@ elif [[ "$PG_PUBLIC_TABLES" == "0" ]]; then
     "P0: pg_tables(public)=0. Schema empty. See docs/runbook-pg-volume-recovery.md"
 fi
 
+# 0c) Persist the count to a TSV history log + 50%-drop guard (FARM-1.7).
+# The 0/1 guards above catch a full wipe. A partial drop (e.g. someone
+# DROP'd 20 of 40 tables) would slip past them. Compare against the
+# most recent prior reading; if the new count is <50% of the prior
+# count and there has been no schema migration commit on develop since
+# that reading, emit a P0 heartbeat.
+if [[ -n "$PG_PUBLIC_TABLES" && "$PG_PUBLIC_TABLES" =~ ^[0-9]+$ ]]; then
+  PG_HIST_LOG="$ROOT/state/logs/pg_table_history.log"
+  mkdir -p "$(dirname "$PG_HIST_LOG")"
+  NOW_ISO_TICK=$(date -Iseconds)
+  # Read the most recent prior row before appending this tick.
+  PREV_LINE=""
+  if [[ -f "$PG_HIST_LOG" ]]; then
+    PREV_LINE=$(tac "$PG_HIST_LOG" 2>/dev/null \
+      | awk -F'\t' '$2 ~ /^[0-9]+$/ {print; exit}')
+  fi
+  printf '%s\t%s\n' "$NOW_ISO_TICK" "$PG_PUBLIC_TABLES" >> "$PG_HIST_LOG"
+
+  if [[ -n "$PREV_LINE" ]]; then
+    PREV_ISO=$(printf '%s' "$PREV_LINE" | awk -F'\t' '{print $1}')
+    PREV_COUNT=$(printf '%s' "$PREV_LINE" | awk -F'\t' '{print $2}')
+    if [[ "$PREV_COUNT" =~ ^[0-9]+$ ]] && (( PREV_COUNT > 0 )); then
+      HALF=$(( PREV_COUNT / 2 ))
+      if (( PG_PUBLIC_TABLES < HALF )); then
+        # Did a schema migration land on PROTEA develop between
+        # PREV_ISO and now? If yes the drop is plausibly intentional;
+        # downgrade to a warn so we still leave a trail but don't
+        # page. If not, P0.
+        MIG_HITS=0
+        PROTEA_REPO="$HOME/Thesis2/repositories/PROTEA"
+        if [[ -d "$PROTEA_REPO/.git" ]]; then
+          MIG_HITS=$(git -C "$PROTEA_REPO" log \
+            --since="$PREV_ISO" \
+            --pretty=oneline \
+            -- 'protea/infrastructure/alembic/versions' 2>/dev/null \
+            | wc -l | tr -d '[:space:]')
+        fi
+        if [[ "$MIG_HITS" == "0" ]]; then
+          heartbeat "$TASK_ID" critical \
+            "P0: pg_tables(public)=$PG_PUBLIC_TABLES dropped from $PREV_COUNT (since $PREV_ISO) with no migration on develop. See state/logs/pg_table_history.log + docs/runbook-pg-volume-recovery.md"
+        else
+          heartbeat "$TASK_ID" warn \
+            "pg_tables(public)=$PG_PUBLIC_TABLES dropped from $PREV_COUNT but $MIG_HITS migration commit(s) since $PREV_ISO; assuming intentional"
+        fi
+      fi
+    fi
+  fi
+fi
+
 # 1) redeploy (idempotent; exit 0 noop, 10 redeployed, 20/30/40 failure)
 bash "$LIB/protea_redeploy.sh"
 RC=$?

@@ -12,7 +12,7 @@ landmine first observed on 2026-05-11 (see
 
 ## Detection
 
-There are three signals to watch.
+There are four signals to watch.
 
 ### deploy-keeper-tick preflight heartbeat
 
@@ -30,6 +30,21 @@ Sample heartbeat row:
 P0: pg_tables(public)=1 (only alembic_version). Volume wipe suspected.
 See agent-farm/state/logs/volume_audit.log and docs/runbook-pg-volume-recovery.md
 ```
+
+### pg_table_history.log + 50%-drop guard
+
+Every tick also appends `<iso8601>\t<count>` to
+`state/logs/pg_table_history.log`. If the latest reading is below 50%
+of the prior reading, the tick checks whether the PROTEA develop
+branch has any Alembic migration commits since the prior reading:
+
+  * no migration commits since prior -> P0 heartbeat
+    ("pg_tables(public)=X dropped from Y with no migration on develop").
+  * one or more migrations -> a `warn`-level heartbeat documenting the
+    drop, but no page (the drop is assumed intentional).
+
+This catches partial wipes (e.g. someone `DROP TABLE`'d half the
+schema) that would slip past the 0/1 guard.
 
 ### volume_audit.log
 
@@ -62,6 +77,35 @@ docker daemon executes from kernel context. What it can capture:
 For events that have no candidates, correlate with shell history,
 `/var/log/audit/audit.log` (if auditd is installed), and the
 deploy-keeper supervisor logs.
+
+### volume_sizes.log (du-based watcher)
+
+`scripts/services/volume-watcher.sh` runs as the user under cron (every
+15 min recommended). Each tick measures the byte size of every watched
+docker volume (`protea_postgres_data`, `protea_minio_data`,
+`protea_rabbitmq_data` by default) via `du -sb` and appends one row
+per volume to `state/logs/volume_sizes.log` in the format:
+
+```
+<iso8601>\t<volume>\t<bytes>\t<prev_bytes>\t<ratio>\t<status>
+```
+
+`status` is one of `first-reading`, `ok`, `shrink-alert`, `missing`,
+`unreadable`. If the new reading is below `SHRINK_RATIO` (default
+`0.10`, i.e. a >=90% shrink) the watcher also emits a critical
+heartbeat. This is intentionally coarser than the inotify watcher
+above but does not need root or `inotify-tools` and survives any
+restart of the live postgres container.
+
+Sample cron entry (not auto-installed):
+
+```cron
+# FARM-1.7 -- postgres / minio / rabbitmq volume size watcher.
+*/15 * * * * cd $HOME/Thesis2/agent-farm && \
+  AGENT_TASK_ID=volume-watcher \
+  bash scripts/services/volume-watcher.sh \
+  >> state/logs/volume_sizes.cron.log 2>&1
+```
 
 ### restore_drill.log
 
@@ -143,10 +187,25 @@ cd ~/Thesis2/agent-farm
 bash scripts/restore-drill.sh
 ```
 
+Inspect the plan without running the drill:
+
+```bash
+bash scripts/restore-drill.sh --dry-run
+```
+
+Restore a specific dump (e.g. a forensic copy under a different
+filename pattern):
+
+```bash
+bash scripts/restore-drill.sh --backup /path/to/protea-incident.dump
+```
+
 Defaults: container `protea-pg-drill`, host port 15433, pulls the
 newest `~/Thesis2/backups/protea-*.dump`. The script never touches
 the live `protea-postgres-1` container. Wall time for a 26 GB dump
-is 60-90 minutes on the workstation as of 2026-05-12.
+is 60-90 minutes on the workstation as of 2026-05-12. The smoke gate
+fails the drill if the restored DB has fewer than 29 public tables
+(override with `DRILL_MIN_TABLES=N`).
 
 Smoke checks performed on the restored DB:
 
