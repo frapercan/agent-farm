@@ -1,0 +1,59 @@
+name: Reranker-token lint (reusable)
+
+# Reject `vN` reranker shorthand in publishable prose. Callers wire
+# this via `workflow_call` from their own pull_request workflow; the
+# linter ships in this repo and the caller checkout is the prose to
+# scan. Allowlist (the 9 GOA snapshots) lives in the linter script —
+# this workflow does not duplicate it.
+#
+# Slice: FARM-EXP.6 (farm-platform loop).
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: >
+          Space-separated paths (files or directories) to scan in the
+          caller checkout. Empty means: let the linter pick its
+          defaults (docs/, chapters/, READMEs, ...).
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Checkout linter from agent-farm
+        uses: actions/checkout@v4
+        with:
+          repository: frapercan/agent-farm
+          ref: main
+          path: .agent-farm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run reranker-token linter
+        env:
+          PATHS_INPUT: ${{ inputs.paths }}
+        run: |
+          set -euo pipefail
+          script=".agent-farm/scripts/lint-reranker-tokens.py"
+          if [ -n "${PATHS_INPUT}" ]; then
+            # word-split intentional: the input is a space-separated list
+            # shellcheck disable=SC2086
+            python3 "${script}" --paths ${PATHS_INPUT}
+          else
+            python3 "${script}"
+          fi
