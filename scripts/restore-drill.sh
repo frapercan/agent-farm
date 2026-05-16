@@ -43,24 +43,93 @@ BACKUP_DIR="${BACKUP_DIR:-$HOME/Thesis2/backups}"
 DUMP_GLOB="${DUMP_GLOB:-protea-*.dump}"
 LOG_FILE="${LOG_FILE:-$ROOT/state/logs/restore_drill.log}"
 
+# CLI flags (FARM-1.7 v2).
+#
+#   --dry-run            describe the drill plan without launching docker
+#                        or touching the backup. Exits 0 if a candidate
+#                        dump exists, 2 if no dump matches DUMP_GLOB.
+#   --backup PATH        bypass DUMP_GLOB / BACKUP_DIR and use the given
+#                        dump file. Fails fast if the file is missing.
+#   -h | --help          print usage and exit 0.
+DRY_RUN=0
+EXPLICIT_BACKUP=""
+
+print_usage() {
+  cat <<'USAGE' >&2
+restore-drill.sh -- spins a throwaway postgres container, pg_restore's
+the latest ~/Thesis2/backups/protea-*.dump, verifies pg_tables >=29,
+then cleans up. Designed to cron weekly.
+
+Usage:
+  restore-drill.sh                    full drill (default behaviour)
+  restore-drill.sh --dry-run          print the drill plan only
+  restore-drill.sh --backup PATH      restore from an explicit dump
+  restore-drill.sh -h | --help        this message
+
+Env overrides: DRILL_CONTAINER DRILL_PORT PG_IMAGE DB_NAME DB_USER
+DB_PASS BACKUP_DIR DUMP_GLOB LOG_FILE  (see header comment for defaults).
+USAGE
+}
+
+while (( $# > 0 )); do
+  case "$1" in
+    --dry-run) DRY_RUN=1; shift ;;
+    --backup)
+      [[ $# -ge 2 ]] || { echo "[restore-drill] --backup needs PATH" >&2; exit 1; }
+      EXPLICIT_BACKUP="$2"; shift 2 ;;
+    --backup=*) EXPLICIT_BACKUP="${1#--backup=}"; shift ;;
+    -h|--help) print_usage; exit 0 ;;
+    *) echo "[restore-drill] unknown arg: $1" >&2; print_usage; exit 1 ;;
+  esac
+done
+
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log() { printf '[restore-drill] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 # --- pre-flight ------------------------------------------------------------
-command -v docker >/dev/null 2>&1 || die "docker not on PATH"
-[[ -d "$BACKUP_DIR" ]] || die "backup dir missing: $BACKUP_DIR"
+# docker is required for a real drill but NOT for --dry-run.
+if (( DRY_RUN == 0 )); then
+  command -v docker >/dev/null 2>&1 || die "docker not on PATH"
+fi
 
-# Locate latest dump matching DUMP_GLOB (mtime, newest first).
-LATEST_DUMP=$(find "$BACKUP_DIR" -maxdepth 1 -type f -name "$DUMP_GLOB" -printf '%T@ %p\n' \
-              | sort -nr | head -n1 | cut -d' ' -f2-)
-if [[ -z "$LATEST_DUMP" ]]; then
-  die "no dump matching $DUMP_GLOB in $BACKUP_DIR"
+# Resolve the dump file. --backup wins; otherwise BACKUP_DIR + DUMP_GLOB.
+if [[ -n "$EXPLICIT_BACKUP" ]]; then
+  [[ -f "$EXPLICIT_BACKUP" ]] || die "--backup file missing: $EXPLICIT_BACKUP"
+  LATEST_DUMP="$EXPLICIT_BACKUP"
+else
+  [[ -d "$BACKUP_DIR" ]] || die "backup dir missing: $BACKUP_DIR"
+  # Locate latest dump matching DUMP_GLOB (mtime, newest first).
+  LATEST_DUMP=$(find "$BACKUP_DIR" -maxdepth 1 -type f -name "$DUMP_GLOB" -printf '%T@ %p\n' \
+                | sort -nr | head -n1 | cut -d' ' -f2-)
+  if [[ -z "$LATEST_DUMP" ]]; then
+    if (( DRY_RUN == 1 )); then
+      log "DRY-RUN: no dump matching $DUMP_GLOB in $BACKUP_DIR"
+      exit 2
+    fi
+    die "no dump matching $DUMP_GLOB in $BACKUP_DIR"
+  fi
 fi
 DUMP_BASENAME=$(basename "$LATEST_DUMP")
-DUMP_SIZE=$(du -h "$LATEST_DUMP" | cut -f1)
-log "latest dump: $LATEST_DUMP ($DUMP_SIZE)"
+DUMP_SIZE=$(du -h "$LATEST_DUMP" 2>/dev/null | cut -f1 || echo "?")
+log "selected dump: $LATEST_DUMP ($DUMP_SIZE)"
+
+if (( DRY_RUN == 1 )); then
+  cat <<EOF >&2
+[restore-drill] DRY-RUN plan:
+  container : $DRILL_CONTAINER
+  port      : $DRILL_PORT
+  image     : $PG_IMAGE
+  database  : $DB_NAME (user=$DB_USER)
+  dump      : $LATEST_DUMP ($DUMP_SIZE)
+  log file  : $LOG_FILE
+  smoke     : pg_tables(public) >= 29, count(protein) > 0, vector ext present
+  on success: container removed, "ok" row written to log
+  on failure: container removed, "smoke-failed" or "failed" row written
+EOF
+  exit 0
+fi
 
 # Refuse to clash with a real postgres on the same port.
 if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE ":${DRILL_PORT}\$"; then
@@ -169,8 +238,10 @@ VECTOR_EXT=$(psql_scalar "SELECT extname FROM pg_extension WHERE extname='vector
 log "smoke: pg_tables=$PG_TABLES protein_rows=$PROTEIN_ROWS vector_ext=$VECTOR_EXT"
 
 OK=1
-if [[ -z "$PG_TABLES" || "$PG_TABLES" == "?" || "$PG_TABLES" -le 1 ]]; then
-  log "FAIL: only $PG_TABLES public table(s) restored (expected many)"
+# Threshold derived from FARM-1.7 spec (>=29 tables in a healthy restore).
+MIN_TABLES="${DRILL_MIN_TABLES:-29}"
+if [[ -z "$PG_TABLES" || "$PG_TABLES" == "?" || "$PG_TABLES" -lt "$MIN_TABLES" ]]; then
+  log "FAIL: only $PG_TABLES public table(s) restored (expected >=$MIN_TABLES)"
   OK=0
 fi
 if [[ -z "$PROTEIN_ROWS" || "$PROTEIN_ROWS" == "?" || "$PROTEIN_ROWS" -le 0 ]]; then
