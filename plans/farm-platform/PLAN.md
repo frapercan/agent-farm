@@ -1227,6 +1227,10 @@ happen before the benchmark phase starts.
 (`plans/lab-runner/` exists, no agent) + `context/feature-inventory.md
 §1.7` (bioinfo-quick is the closest match). Suggested agent: executor.
 
+Resolution (2026-05-16): chose path B per ADR D32. `plans/lab-runner/`
+renamed to `plans/bioinfo-quick/`; all 12 slice `loop:` fields updated;
+no new agent created.
+
 ### FARM-FEAT.6 — Generic persistent-service factory
 
 ```yaml
@@ -1489,8 +1493,7 @@ replaces them with a uniform axis-tuple cell list.
 **Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #2
 + §"What the transversal re-benchmark would cover" (cell count
 arithmetic 8 x 2 x 4 x 4 x 2 = 512 unconstrained, ~120 constrained).
-Suggested agent: lab-runner (or bioinfo-quick if FARM-FEAT.5 chose
-the rename path).
+Suggested agent: bioinfo-quick (FARM-FEAT.5 resolved via the rename path).
 
 ### FARM-EXP.3 — bootstrap_cis.py grouping by axis
 
@@ -1520,7 +1523,7 @@ script computes a single global CI per cell.
 1. Chapter 6 LaTeX integration (covered by FARM-EXP.11).
 
 **Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #3.
-Suggested agent: lab-runner.
+Suggested agent: bioinfo-quick.
 
 ### FARM-EXP.4 — Champion tracking auto-updater
 
@@ -1550,7 +1553,7 @@ exists as a memory note; programmatic update keeps it canonical.
 1. UI surface for champions (deferred).
 
 **Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #4.
-Suggested agent: lab-runner.
+Suggested agent: bioinfo-quick.
 
 ### FARM-EXP.5 — feature_schema_sha guard on PROTEA scoring router
 
@@ -1652,7 +1655,7 @@ is measurable.
 
 **Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #8
 (8-PLM ensemble re-benchmarking blind spot). Suggested agent:
-lab-runner.
+bioinfo-quick.
 
 ### FARM-EXP.8 — Constrained 120-cell grid execution
 
@@ -1688,7 +1691,7 @@ incremental progress visible.
 
 **Notes**: Cites `context/experiment-axis-map.md §"What the
 transversal re-benchmark would cover"` (cell count + compute estimate
-+ storage estimate 12-60 GB). Suggested agent: lab-runner.
++ storage estimate 12-60 GB). Suggested agent: bioinfo-quick.
 
 ### FARM-EXP.9 — Re-run pre-leakage pre-computed cells on bench-v1-K5-filtered
 
@@ -1721,7 +1724,7 @@ scratch; ~80-100 cells already trained.
 **Notes**: Cites `context/experiment-axis-map.md §"Pre-computed cells
 in snapshot"` + thesis Tab `tab:improvement` warning that
 bench-v1-K5 and bench-v1-K5-filtered rows are not comparable.
-Suggested agent: lab-runner.
+Suggested agent: bioinfo-quick.
 
 ### FARM-EXP.10 — Selective rerank resurrection: recompute, not archaeology
 
@@ -1755,7 +1758,7 @@ policy via live codebase).
 
 **Notes**: Decision per ADR D34: when historical records conflict with
 current data, recompute on the current bench rather than reverse-engineer
-old config. Suggested agent: lab-runner.
+old config. Suggested agent: bioinfo-quick.
 
 ### FARM-EXP.11 — Per-aspect results table for thesis chapter 6
 

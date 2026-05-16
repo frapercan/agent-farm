@@ -1051,12 +1051,12 @@ status: pending
 deps: [T-RES.1]
 acceptance: |-
   GeOKG GO embeddings integrated as alternative to anc2vec
-  Lab benchmark report (lab-runner T-LR-GeOKG) decides default
+  Lab benchmark report (bioinfo-quick T-LR-GeOKG) decides default
 estimated_hours: 16
 priority: P2
 requires_human: true
 tags: [research, embeddings, go]
-note: "2026-05-16 janitor: still pending; no merged PR found; awaiting lab-runner decision"
+note: "2026-05-16 janitor: still pending; no merged PR found; awaiting bioinfo-quick decision"
 ```
 
 ### T-RES.3 — ensemble multi-K
