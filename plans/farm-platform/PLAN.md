@@ -104,7 +104,7 @@ executor.
 id: FARM-1.1a
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-1.1]
 acceptance: |-
   A GitHub Actions workflow lives in each of the 8 watched repos (PROTEA,
@@ -124,9 +124,13 @@ tags: [farm, ci, governance]
 requires_human: false
 ```
 
-**Goal**: server-side defense against the Claude/AI co-author trailer slipthrough that bypassed FARM-1.1's client-side hooks on 2026-05-16 (agent-farm PR #20, PROTEA PR #387). Trust-but-verify pattern.
+Shipped across 8 repos (2026-05-16):
+- PROTEA PR #390 (coauthor guard caller)
+- protea-contracts PR #13 (guard caller)
+- protea-reranker-lab PR #10 (guard caller)
+- agent-farm PR #23 (server-side coauthor + AI-attribution PR guard)
 
-**Repos touched**: all 8 watched repos. The workflow file is identical across them; consider extracting to a reusable workflow in agent-farm (`.github/workflows/coauthor-guard.yml`) and `uses:` from the others.
+Goal: server-side defense against Claude/AI co-author trailer slipthrough that bypassed FARM-1.1's client-side hooks on 2026-05-16 (agent-farm PR #20, PROTEA PR #387). Workflow is reusable across all 8 repos.
 
 ### FARM-1.2 — GitHub branch protection on main + develop (8 repos)
 
@@ -1431,7 +1435,7 @@ legitimate references to external dataset cutoffs and remain.
 id: FARM-EXP.1
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   PROTEA alembic migration adds columns to ExperimentRun: plm, k, reranker_spec_id, feature_schema_sha, eval_set_name, eval_set_manifest_sha, propagation, ensemble_spec, axis_tuple_shortid
@@ -1445,21 +1449,11 @@ tags: [schema, benchmark, lineage]
 requires_human: false
 ```
 
-**Goal**: make every benchmark cell addressable by its axis tuple
-shortid; collapse the historical provenance-JSONB-only access pattern
-into typed columns.
-
-**Repos touched**: PROTEA (alembic migration + ORM), protea-contracts
-(shared shortid helper).
-
-**Out of scope**:
-1. UI surface for browsing by axis (deferred to a future loop after
-   FREEZE).
-
-**Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #1
-+ existing shortid helper at
-`protea-reranker-lab/src/protea_reranker_lab/experiment.py:108`.
-Suggested agent: executor.
+Shipped via PROTEA PR #388 (2026-05-16) + protea-contracts PR #12 (canonical
+shortid helper). All acceptance criteria met: ExperimentRun has typed axis
+columns, UNIQUE constraint on shortid, backfill script populates from provenance
+JSONB, both Lab and PROTEA consult the same columns. Out of scope: UI for
+browsing by axis (deferred post-FREEZE).
 
 ### FARM-EXP.2 — Transversal cell catalog
 
@@ -1467,7 +1461,7 @@ Suggested agent: executor.
 id: FARM-EXP.2
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.1, FARM-FEAT.5]
 acceptance: |-
   protea-reranker-lab/experiments/_catalog/transversal.yaml lists every materialised cell as one YAML stanza per cell
@@ -1481,19 +1475,10 @@ tags: [benchmark, schema]
 requires_human: false
 ```
 
-**Goal**: single source of truth for the cells that count toward the
-re-benchmark. Today the lab carries study_<id> dirs; the catalog
-replaces them with a uniform axis-tuple cell list.
-
-**Repos touched**: protea-reranker-lab.
-
-**Out of scope**:
-1. Running the cells (covered by FARM-EXP.8).
-
-**Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #2
-+ §"What the transversal re-benchmark would cover" (cell count
-arithmetic 8 x 2 x 4 x 4 x 2 = 512 unconstrained, ~120 constrained).
-Suggested agent: bioinfo-quick (FARM-FEAT.5 resolved via the rename path).
+Shipped via protea-reranker-lab PR #11 (2026-05-16). Transversal catalog
+generated with 49-cell constrained Cartesian product (down from 512 unconstrained).
+Catalog includes axis-tuple shortids, status tracking (planned/running/done/superseded).
+Out of scope: running the cells (covered by FARM-EXP.8).
 
 ### FARM-EXP.3 — bootstrap_cis.py grouping by axis
 
@@ -1501,7 +1486,7 @@ Suggested agent: bioinfo-quick (FARM-FEAT.5 resolved via the rename path).
 id: FARM-EXP.3
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.2]
 acceptance: |-
   scripts/bootstrap_cis.py grows --group-by plm,k,reranker,features (comma-separated subset)
@@ -1514,16 +1499,10 @@ tags: [benchmark, observability]
 requires_human: false
 ```
 
-**Goal**: paired CI reporting that respects axis structure; today the
-script computes a single global CI per cell.
-
-**Repos touched**: protea-reranker-lab.
-
-**Out of scope**:
-1. Chapter 6 LaTeX integration (covered by FARM-EXP.11).
-
-**Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #3.
-Suggested agent: bioinfo-quick.
+Shipped via protea-reranker-lab PR #12 (2026-05-16). bootstrap_cis.py
+extended with --group-by axis flag, emits per-grouping CSVs and matplotlib
+plots. Test fixture validates correct grouping and CI math across 2 PLMs x 3
+K values. Out of scope: LaTeX integration (FARM-EXP.11).
 
 ### FARM-EXP.4 — Champion tracking auto-updater
 
@@ -1531,7 +1510,7 @@ Suggested agent: bioinfo-quick.
 id: FARM-EXP.4
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.2, FARM-EXP.3]
 acceptance: |-
   protea-reranker-lab/champions.md auto-regenerated by scripts/update_champions.py keyed by (eval_set, tier, aspect)
@@ -1544,16 +1523,10 @@ tags: [benchmark, observability]
 requires_human: false
 ```
 
-**Goal**: deterministic champion bookkeeping. Today champions.md
-exists as a memory note; programmatic update keeps it canonical.
-
-**Repos touched**: protea-reranker-lab.
-
-**Out of scope**:
-1. UI surface for champions (deferred).
-
-**Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #4.
-Suggested agent: bioinfo-quick.
+Shipped via protea-reranker-lab PR #13 (2026-05-16). champions.md now
+auto-generated and kept canonical via update_champions.py. Auto-update fires
+on every run.json that improves existing champion. Keyed by (eval_set, tier,
+aspect) with axis tuple + shortid + CI + run_id. Out of scope: UI surface.
 
 ### FARM-EXP.5 — feature_schema_sha guard on PROTEA scoring router
 
@@ -1561,7 +1534,7 @@ Suggested agent: bioinfo-quick.
 id: FARM-EXP.5
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.1]
 acceptance: |-
   PROTEA scoring router refuses to load a booster whose recorded feature_schema_sha does not match the current compute_feature_schema_sha()
@@ -1574,21 +1547,11 @@ tags: [schema, benchmark, ci-gate]
 requires_human: false
 ```
 
-**Goal**: kill the silent failure mode where a booster trained
-against an older FEATURE_FAMILIES layout scores against current
-features and emits nonsense. Lab already does this; PROTEA-side
-parity closes the loop.
-
-**Repos touched**: PROTEA (scoring router), protea-contracts (sha
-helper if not already shared).
-
-**Out of scope**:
-1. Automatic re-training on mismatch (rejection is the policy; the
-   lab is the producer).
-
-**Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #5
-+ RERANKER.md §7.4 schema_sha_v2 migration note. Suggested agent:
-executor.
+Shipped via PROTEA PR #391 (2026-05-16). Scoring router now hard-fails on
+feature_schema_sha mismatch with structured error (job status=failed,
+reason=schema_sha_mismatch). Unit test validates rejection of stale booster.
+Eliminates silent failure mode where booster trained on older FEATURE_FAMILIES
+scores against current features. Out of scope: automatic re-training.
 
 ### FARM-EXP.6 — Reject vN reranker tokens in publishable prose
 
@@ -1596,7 +1559,7 @@ executor.
 id: FARM-EXP.6
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   scripts/lint-reranker-tokens.py greps publishable surfaces (PROTEA/docs/, thesis/chapters/, READMEs, ADRs) for /\bv\d+\b/ that is NOT a GOA snapshot reference (allowlist: v160, v200, v210, v215, v220, v226, v227, v229, v230)
@@ -1609,20 +1572,11 @@ tags: [lint, benchmark, docs, ci-gate, prompt]
 requires_human: false
 ```
 
-**Goal**: mechanical enforcement of the no-vN-reranker-shorthand
-convention; the author keeps slipping back into the shorthand under
-brevity pressure.
-
-**Repos touched**: PROTEA, protea-reranker-lab, thesis (linter ships
-in each as a shared script + CI gate).
-
-**Out of scope**:
-1. Auto-rewriting existing prose (manual sweep; the linter flags
-   only).
-
-**Notes**: Cites `context/experiment-axis-map.md §"Wiring needs"` #6.
-Suggested agent: doc-writer (for the prose sweeps that the linter
-flags) + executor (for the linter + CI wiring).
+Shipped via PROTEA PR #392, protea-reranker-lab PR #14, agent-farm PR #28
+(2026-05-16). Reranker-token linter deployed to all 3 repos with CI gate.
+lints publishable surfaces for literal vN tokens (outside GOA allowlist),
+suggests axis-tuple form. Mechanical enforcement of no-shorthand convention.
+Out of scope: auto-rewriting (manual prose sweep).
 
 ### FARM-EXP.7 — In-tree eval cell for 8-PLM ensemble
 
