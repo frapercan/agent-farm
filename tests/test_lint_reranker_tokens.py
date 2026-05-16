@@ -110,6 +110,66 @@ class TestScanFile:
         # That is three offences with tokens v18, v18, v9.
         assert tokens == ["v18", "v18", "v9"]
 
+    # -- Q1: semver carve-out ------------------------------------------------
+
+    def test_semver_file_is_clean(self) -> None:
+        """Tokens like v2.1.13 and v0.3.0 must not fire."""
+        offences = linter.scan_file(FIXTURES / "clean_semver.md")
+        assert offences == [], offences
+
+    def test_semver_inline(self) -> None:
+        """Unit-level check: the carve-out fires for .digit suffix."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Using eggNOG-mapper v2.1.13 for annotations.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_bare_v2_still_flagged(self) -> None:
+        """A bare ``v2`` (no .digit following) must still be flagged."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("The re-ranker v2 model was used.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            tokens = [t for _, _, t in offences]
+            assert "v2" in tokens
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    # -- Q2: bench-dataset carve-out -----------------------------------------
+
+    def test_bench_dataset_file_is_clean(self) -> None:
+        """Tokens like bench-v1-K5 must not fire."""
+        offences = linter.scan_file(FIXTURES / "clean_bench_dataset.md")
+        assert offences == [], offences
+
+    def test_bench_prefix_inline(self) -> None:
+        """Unit-level check: the carve-out fires for bench- prefix."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Dataset bench-v1-K5-filtered was used.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_bare_v1_after_non_bench_still_flagged(self) -> None:
+        """A bare ``v1`` not preceded by bench- must still be flagged."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Re-ranker v1 trains on per-aspect data.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            tokens = [t for _, _, t in offences]
+            assert "v1" in tokens
+        finally:
+            tmp.unlink(missing_ok=True)
+
 
 # ---------------------------------------------------------------------------
 # Default-target walk + extension filter
