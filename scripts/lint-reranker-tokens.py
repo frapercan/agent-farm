@@ -11,12 +11,19 @@ form for naming a reranker is the axis-tuple notation defined in
 
 This linter scans publishable prose (Sphinx docs, thesis chapters,
 READMEs, ADRs) for the regex ``\\bv\\d+\\b`` and flags every match
-that is NOT a GOA snapshot reference. The GOA snapshot allowlist is
-the only legitimate use of the `vN` shape:
+that is NOT in an explicit allowlist. Three token classes are allowed:
 
-    v160, v200, v210, v215, v220, v226, v227, v229, v230
+1. GOA snapshot identifiers: v160, v200, v210, v215, v220, v226, v227,
+   v229, v230
+2. Semver prefixes: any token immediately followed by ``.digit``
+   (e.g. ``v0.3.0``, ``v2.1.13``).  These are package/tool release
+   strings, not reranker shorthands.
+3. Dataset-name prefixes: any token immediately preceded by ``bench-``
+   (e.g. ``bench-v1-K5-filtered``).  Dataset names use a fixed
+   ``bench-vN`` scheme that is not a reranker shorthand.
 
-Slice: FARM-EXP.6 (farm-platform loop).
+Slice: FARM-EXP.6 (farm-platform loop); policy carve-outs Q1 (semver)
+and Q2 (bench-vN) added in FIX-47-linter-policy.
 
 Exit codes:
     0 — clean (no offences)
@@ -161,7 +168,22 @@ def scan_file(path: Path) -> list[tuple[int, int, str]]:
     for line_no, line in enumerate(text.splitlines(), start=1):
         for match in TOKEN_RE.finditer(line):
             token = match.group(0)
+            # GOA snapshot allowlist.
             if token in GOA_ALLOWLIST:
+                continue
+            # Q1: semver carve-out.  Skip tokens where the match is
+            # immediately followed by a dot and at least one digit,
+            # e.g. ``v0.3.0``, ``v2.1.13``.  These are release-version
+            # strings, not reranker shorthands.
+            suffix = line[match.end():]
+            if suffix and suffix[0] == "." and len(suffix) > 1 and suffix[1].isdigit():
+                continue
+            # Q2: bench-dataset carve-out.  Skip tokens where the match
+            # is immediately preceded by ``bench-``, e.g. the ``v1`` in
+            # ``bench-v1-K5-filtered``.  Dataset names follow a fixed
+            # ``bench-vN`` scheme that is not a reranker shorthand.
+            prefix = line[: match.start()]
+            if prefix.endswith("bench-"):
                 continue
             offences.append((line_no, match.start() + 1, token))
     return offences
