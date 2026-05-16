@@ -1,0 +1,126 @@
+name: Feature-producer coverage (reusable)
+
+# FARM-1.10 reusable workflow: exercise every payload feature-flag
+# combination in the caller repo's dump producer DAG and assert it
+# yields a superset of `protea_contracts.ALL_FEATURES`. Catches
+# canonical-feature drift at PR time (1-second CI red) instead of
+# after multi-hour KNN compute (the 2026-05-13 lineage incident).
+#
+# Caller wiring example (in caller `.github/workflows/pull_request.yml`):
+#
+#   jobs:
+#     feature-producer-coverage:
+#       uses: frapercan/agent-farm/.github/workflows/feature-producer-coverage.yml@main
+#       with:
+#         features-module: protea_contracts.feature_schema.ALL_FEATURES
+#         simulator-module: protea.core.coverage_sim.simulate
+#         payload-module: protea.core.operations.export_research_dataset.ExportResearchDatasetPayload
+#         install-cmd: poetry install --with dev
+#
+# The caller is responsible for shipping a `simulate(flags) -> set[str]`
+# callable that walks its own dump producer DAG. The harness only knows
+# the contract; it does not import PROTEA itself.
+#
+# Slice: FARM-1.10 (farm-platform loop).
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python toolchain version for the runner."
+        required: false
+        type: string
+        default: "3.12"
+      features-module:
+        description: >
+          Dotted path to the ALL_FEATURES iterable (e.g.
+          `protea_contracts.feature_schema.ALL_FEATURES`).
+        required: true
+        type: string
+      simulator-module:
+        description: >
+          Dotted path to a callable
+          `simulate(flags: dict[str, bool]) -> Iterable[str]`
+          provided by the caller repo.
+        required: true
+        type: string
+      payload-module:
+        description: >
+          Optional dotted path to a Pydantic BaseModel whose bool
+          fields are the dump-path flags. If empty, `flags` is used.
+        required: false
+        type: string
+        default: ""
+      flags:
+        description: >
+          Optional space-separated explicit list of bool flag names
+          (used when no payload model is available).
+        required: false
+        type: string
+        default: ""
+      install-cmd:
+        description: >
+          Shell command executed in the caller checkout to install the
+          caller package and its deps so the `--simulator-module`
+          import resolves. Default `pip install -e .` works for
+          plain-pyproject layouts; PROTEA uses Poetry.
+        required: false
+        type: string
+        default: "pip install -e ."
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Checkout coverage harness from agent-farm
+        uses: actions/checkout@v4
+        with:
+          repository: frapercan/agent-farm
+          ref: main
+          path: .agent-farm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install caller package
+        env:
+          INSTALL_CMD: ${{ inputs.install-cmd }}
+        run: |
+          set -euo pipefail
+          # word-split intentional: install-cmd is a shell phrase.
+          # shellcheck disable=SC2086
+          eval ${INSTALL_CMD}
+
+      - name: Run feature-producer coverage scan
+        env:
+          FEATURES_MODULE: ${{ inputs.features-module }}
+          SIMULATOR_MODULE: ${{ inputs.simulator-module }}
+          PAYLOAD_MODULE: ${{ inputs.payload-module }}
+          FLAGS_INPUT: ${{ inputs.flags }}
+        run: |
+          set -euo pipefail
+          script=".agent-farm/scripts/lib/feature_producer_coverage.py"
+          args=(
+            --features-module "${FEATURES_MODULE}"
+            --simulator-module "${SIMULATOR_MODULE}"
+          )
+          if [ -n "${PAYLOAD_MODULE}" ]; then
+            args+=(--payload-module "${PAYLOAD_MODULE}")
+          elif [ -n "${FLAGS_INPUT}" ]; then
+            # word-split intentional: FLAGS_INPUT is space-separated.
+            # shellcheck disable=SC2086
+            args+=(--flags ${FLAGS_INPUT})
+          else
+            args+=(--flags)
+          fi
+          python3 "${script}" "${args[@]}"
