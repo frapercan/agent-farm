@@ -1125,7 +1125,7 @@ note: "2026-05-16 janitor reconcile: shipped via PR #374 (2026-05-15)"
 id: F6.2
 phase: F8
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Property tests on contract payloads + scoring + parquet roundtrip
@@ -1133,7 +1133,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P3
 tags: [tests, hypothesis]
-note: "2026-05-16 janitor: still pending; no merged PR found"
+note: "2026-05-16 janitor reconcile: shipped via PR #377 (2026-05-16T10:41:07Z)"
 ```
 
 ### F6.3 — mutation testing (cosmic-ray)
@@ -1142,14 +1142,14 @@ note: "2026-05-16 janitor: still pending; no merged PR found"
 id: F6.3
 phase: F8
 loop: executor
-status: pending
+status: done
 deps: [F6.2]
 acceptance: |-
   cosmic-ray run on protea/core/ with mutation score documented
 estimated_hours: 8
 priority: P3
 tags: [tests, mutation]
-note: "2026-05-16 janitor: still pending; no merged PR found; depends on F6.2"
+note: "2026-05-16 janitor reconcile: shipped via PR #383 (2026-05-16T10:52:08Z)"
 ```
 
 ### F6.4 — contract tests across plugin repos
@@ -1174,7 +1174,7 @@ note: "2026-05-16 janitor plugin-scan: shipped via protea-runners#9 (2026-05-15)
 id: F6.5
 phase: F8
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Playwright suite in apps/web/ covers every critical user flow
@@ -1182,7 +1182,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P2
 tags: [tests, e2e, playwright]
-note: "2026-05-16 janitor: still pending; no merged PR found"
+note: "2026-05-16 janitor reconcile: F6.5a via PR #379 (2026-05-16T10:04:16Z); F6.5b via PR #380 (2026-05-16T10:10:15Z); F6.5c via PR #381 (2026-05-16T10:19:52Z); F6.5d via PR #382 (2026-05-16T10:32:05Z)"
 ```
 
 ### F6.6 — coverage targets ≥85%
