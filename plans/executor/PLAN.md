@@ -377,6 +377,34 @@ tags: [migration, alembic]
 D10 accepted 2026-05-06; blocked on Alembic on live DB + backfill
 verification window.
 
+### FIX-EXP-RUN-ENUM — ExperimentRun status enum case mismatch
+
+```yaml
+id: FIX-EXP-RUN-ENUM
+phase: F3
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  ORM Enum(ExperimentRunStatus) maps cleanly to the DB lowercase values
+  ('planned', 'running', 'succeeded', 'failed', 'killed').
+  A regression test inserts a row via plain session.add(ExperimentRun(...))
+  and selects it back, with no LookupError / InvalidTextRepresentation.
+  The FARM-EXP.1 backfill script's sqlalchemy.text workaround can be
+  replaced by ORM idioms without breakage (verify by re-running it).
+estimated_hours: 2
+priority: P0
+tags: [orm, schema, bug-fix]
+requires_human: false
+```
+
+Unblocks F-EXP-RESET slices (FARM-EXP.2 onwards) that need to read/write
+ExperimentRun rows via the ORM path. The bug is latent because no live
+deployment currently inserts ExperimentRun via the ORM; F-EXP-RESET will be
+the first consumer. Bias toward resolution (a): ORM-side `values_callable`
+on the Enum column to send `.value` (lowercase) not `.name`. Least invasive,
+no migration or data rewrite. Memory: `[[project_experimentrun_enum_bug]]`.
+
 ### T2B.1 — FeatureRegistry implementation
 
 ```yaml
