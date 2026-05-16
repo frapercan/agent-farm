@@ -1,0 +1,8 @@
+name: Pull request checks
+
+on:
+  pull_request:
+
+jobs:
+  coauthor-guard:
+    uses: ./.github/workflows/coauthor-guard.yml
