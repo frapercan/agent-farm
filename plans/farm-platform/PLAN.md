@@ -98,6 +98,36 @@ explicitly names this insertion point. Memory:
 `project_plugin_push_direct_main_incident.md`. Suggested agent:
 executor.
 
+### FARM-1.1a — Server-side coauthor/AI-attribution CI guard
+
+```yaml
+id: FARM-1.1a
+phase: F-FARM-1
+loop: farm-platform
+status: pending
+deps: [FARM-1.1]
+acceptance: |-
+  A GitHub Actions workflow lives in each of the 8 watched repos (PROTEA,
+  protea-contracts, protea-method, protea-sources, protea-runners,
+  protea-backends, protea-reranker-lab, agent-farm).
+  The workflow runs on every pull_request event, walks every commit
+  introduced by the PR, and fails the check if any commit message contains
+  (case-insensitive):
+    - Co-Authored-By: trailers naming Claude / Anthropic / noreply emails
+    - "Generated with Claude" or "by Anthropic" prose attribution
+    - bare leading "Claude (Code|Opus|Sonnet|Haiku)" attribution lines
+  The workflow is a required check on the default branch protection so a
+  red result blocks merge. Memory reference: feedback_farm_1_1_hook_bypass.
+estimated_hours: 3
+priority: P0
+tags: [farm, ci, governance]
+requires_human: false
+```
+
+**Goal**: server-side defense against the Claude/AI co-author trailer slipthrough that bypassed FARM-1.1's client-side hooks on 2026-05-16 (agent-farm PR #20, PROTEA PR #387). Trust-but-verify pattern.
+
+**Repos touched**: all 8 watched repos. The workflow file is identical across them; consider extracting to a reusable workflow in agent-farm (`.github/workflows/coauthor-guard.yml`) and `uses:` from the others.
+
 ### FARM-1.2 — GitHub branch protection on main + develop (8 repos)
 
 ```yaml
