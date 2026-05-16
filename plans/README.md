@@ -13,7 +13,7 @@ plans/
 ├── PLAN.md               # AUTO-GENERATED master index — do not edit by hand
 ├── render.py             # build PLAN.md from per-loop plans
 ├── executor/PLAN.md      # technical implementation slices (PROTEA + LAFA)
-├── lab-runner/PLAN.md    # research / experiment slices
+├── bioinfo-quick/PLAN.md # research / experiment slices (lab runner loop)
 ├── doc-writer/PLAN.md    # docs initiatives (Sphinx, ADRs, runbooks)
 └── thesis-writer/PLAN.md # LaTeX manuscript chapter slices
 ```
@@ -55,7 +55,7 @@ links to ADRs, anything an agent or human needs to do the slice well.
 |---|---|---|
 | `id` | string | unique across the whole plan store; convention `<area>.<n>` (e.g. `T2D.3`, `F-LAFA.7`) |
 | `phase` | string | grouping bucket; per-loop convention (e.g. executor uses `F1`-`F8`) |
-| `loop` | string | must match directory name (`executor`, `lab-runner`, `doc-writer`, `thesis-writer`) |
+| `loop` | string | must match directory name (`executor`, `bioinfo-quick`, `doc-writer`, `thesis-writer`) |
 | `status` | enum | `pending` / `in_progress` / `blocked` / `done` / `deferred` |
 | `acceptance` | string (multiline) | binary criteria; reviewer flips to `done` when met |
 

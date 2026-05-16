@@ -7,15 +7,34 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 ## Next up (per loop)
 
+- **bioinfo-quick**: `LB.2` (P1) · `LB.3` (P2) · `LM.1` (P2)
 - **doc-writer**: nothing pickable (blocked deps or all done / requires_human)
 
 - **executor**: `FIX-EXP-RUN-ENUM` (P0) · `T2B.6` (P2) · `T-OPS.10` (P2)
 - **farm-platform**: `FARM-EXP.1` (P0) · `FARM-1.1` (P0) · `FARM-1.7` (P0)
-- **lab-runner**: `LB.2` (P1) · `LB.3` (P2) · `LM.1` (P2)
 - **thesis-writer**: nothing pickable (blocked deps or all done / requires_human)
 
 
 ## By loop
+
+### bioinfo-quick (12 slices)
+
+🟥 2 blocked · ⬜ 9 pending · ⬛ 1 deferred · **total 12**
+
+| id | phase | status | priority | title |
+|---|---|---|---|---|
+| [LB.1](bioinfo-quick/PLAN.md#lb1--bench-v1-k5-v226-lineage-dataset-publish) | LB | 🟥 blocked | P0 | LB.1 — bench-v1-K5-v226-lineage dataset publish |
+| [LR.1](bioinfo-quick/PLAN.md#lr1--v22-lineage-feature-training) | LR | 🟥 blocked | P0 | LR.1 — v22 lineage feature training |
+| [LB.2](bioinfo-quick/PLAN.md#lb2--anc2vec-leakage-retrofix-on-protea-side-cafaeval) | LB | ⬜ pending | P1 | LB.2 — anc2vec leakage retrofix on PROTEA-side cafaeval |
+| [LB.3](bioinfo-quick/PLAN.md#lb3--paired-ci-reporting-per-cell) | LB | ⬜ pending | P2 | LB.3 — paired CI reporting per cell |
+| [LM.1](bioinfo-quick/PLAN.md#lm1--champion-tracking-system) | LM | ⬜ pending | P2 | LM.1 — champion tracking system |
+| [LM.2](bioinfo-quick/PLAN.md#lm2--spec-catalog--outcome-registry) | LM | ⬜ pending | P3 | LM.2 — spec catalog + outcome registry |
+| [LM.3](bioinfo-quick/PLAN.md#lm3--per-aspect-feature-importance-audit) | LM | ⬜ pending | P3 | LM.3 — per-aspect feature importance audit |
+| [LP.1](bioinfo-quick/PLAN.md#lp1--pull_datasetpy-resilience) | LP | ⬜ pending | P3 | LP.1 — pull_dataset.py resilience |
+| [LP.2](bioinfo-quick/PLAN.md#lp2--training_dump_helpers-shim-refresh-after-t-contexts) | LP | ⬜ pending | P2 | LP.2 — training_dump_helpers shim refresh after T-CONTEXTS |
+| [LR.2](bioinfo-quick/PLAN.md#lr2--geokg-embeddings-vs-anc2vec) | LR | ⬜ pending | P2 | LR.2 — GeOKG embeddings vs anc2vec |
+| [LR.4](bioinfo-quick/PLAN.md#lr4--k10-v18-selective-re-run-with-leakage-free-dataset) | LR | ⬜ pending | P2 | LR.4 — k=10 v18-selective re-run with leakage-free dataset |
+| [LR.3](bioinfo-quick/PLAN.md#lr3--ensemble-multi-k-reranker) | LR | ⬛ deferred | P3 | LR.3 — ensemble multi-K reranker |
 
 ### doc-writer (13 slices)
 
@@ -164,25 +183,6 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-UI.8](farm-platform/PLAN.md#farm-ui8--mobile--tablet-playwright-suite-for-enfarm) | F-UI | ⬜ pending | P2 | FARM-UI.8 — Mobile + tablet playwright suite for /en/farm/ |
 | [FARM-UI.9](farm-platform/PLAN.md#farm-ui9--ux-reviewer-audit-of-farm-dashboard) | F-UI | ⬜ pending | P3 | FARM-UI.9 — ux-reviewer audit of farm dashboard |
 
-### lab-runner (12 slices)
-
-🟥 2 blocked · ⬜ 9 pending · ⬛ 1 deferred · **total 12**
-
-| id | phase | status | priority | title |
-|---|---|---|---|---|
-| [LB.1](lab-runner/PLAN.md#lb1--bench-v1-k5-v226-lineage-dataset-publish) | LB | 🟥 blocked | P0 | LB.1 — bench-v1-K5-v226-lineage dataset publish |
-| [LR.1](lab-runner/PLAN.md#lr1--v22-lineage-feature-training) | LR | 🟥 blocked | P0 | LR.1 — v22 lineage feature training |
-| [LB.2](lab-runner/PLAN.md#lb2--anc2vec-leakage-retrofix-on-protea-side-cafaeval) | LB | ⬜ pending | P1 | LB.2 — anc2vec leakage retrofix on PROTEA-side cafaeval |
-| [LB.3](lab-runner/PLAN.md#lb3--paired-ci-reporting-per-cell) | LB | ⬜ pending | P2 | LB.3 — paired CI reporting per cell |
-| [LM.1](lab-runner/PLAN.md#lm1--champion-tracking-system) | LM | ⬜ pending | P2 | LM.1 — champion tracking system |
-| [LM.2](lab-runner/PLAN.md#lm2--spec-catalog--outcome-registry) | LM | ⬜ pending | P3 | LM.2 — spec catalog + outcome registry |
-| [LM.3](lab-runner/PLAN.md#lm3--per-aspect-feature-importance-audit) | LM | ⬜ pending | P3 | LM.3 — per-aspect feature importance audit |
-| [LP.1](lab-runner/PLAN.md#lp1--pull_datasetpy-resilience) | LP | ⬜ pending | P3 | LP.1 — pull_dataset.py resilience |
-| [LP.2](lab-runner/PLAN.md#lp2--training_dump_helpers-shim-refresh-after-t-contexts) | LP | ⬜ pending | P2 | LP.2 — training_dump_helpers shim refresh after T-CONTEXTS |
-| [LR.2](lab-runner/PLAN.md#lr2--geokg-embeddings-vs-anc2vec) | LR | ⬜ pending | P2 | LR.2 — GeOKG embeddings vs anc2vec |
-| [LR.4](lab-runner/PLAN.md#lr4--k10-v18-selective-re-run-with-leakage-free-dataset) | LR | ⬜ pending | P2 | LR.4 — k=10 v18-selective re-run with leakage-free dataset |
-| [LR.3](lab-runner/PLAN.md#lr3--ensemble-multi-k-reranker) | LR | ⬛ deferred | P3 | LR.3 — ensemble multi-K reranker |
-
 ### thesis-writer (21 slices)
 
 🟥 1 blocked · ⬜ 2 pending · ✅ 18 done · **total 21**
@@ -311,13 +311,13 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 ## Blocked
 
+- `LB.1` (bioinfo-quick): LB.1 — bench-v1-K5-v226-lineage dataset publish
+- `LR.1` (bioinfo-quick): LR.1 — v22 lineage feature training
 - `T1.6` (executor): T1.6 — schema_sha v2 migration
 - `T2B.4` (executor): T2B.4 — extract class on reranker pipeline
 - `T3.1` (executor): T3.1-T3.4 — GOPrediction JSONB dual-write
 - `T-OPS.7` (executor): T-OPS.7 — sops + age install
 - `T-EXP.x` (executor): T-EXP.x — narrative campaign with ExperimentRun
-- `LB.1` (lab-runner): LB.1 — bench-v1-K5-v226-lineage dataset publish
-- `LR.1` (lab-runner): LR.1 — v22 lineage feature training
 - `TD.1` (thesis-writer): TD.1 — final read pass + supervisor review
 ## Requires human
 

@@ -1,4 +1,4 @@
-# lab-runner — Plan
+# bioinfo-quick — Plan
 
 Research / experimental slices for the LightGBM reranker lab + benchmark
 campaigns. Lives in `protea-reranker-lab` repo (separate from PROTEA);
@@ -35,7 +35,7 @@ Hard constraints:
 ```yaml
 id: LB.1
 phase: LB
-loop: lab-runner
+loop: bioinfo-quick
 status: blocked
 deps: []
 acceptance: |-
@@ -55,7 +55,7 @@ cannot start without this Dataset.
 ```yaml
 id: LB.2
 phase: LB
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: []
 acceptance: |-
@@ -75,7 +75,7 @@ pending and is the closing artefact.
 ```yaml
 id: LB.3
 phase: LB
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: []
 acceptance: |-
@@ -93,7 +93,7 @@ tags: [stats, ci, chapter-6]
 ```yaml
 id: LR.1
 phase: LR
-loop: lab-runner
+loop: bioinfo-quick
 status: blocked
 deps: [LB.1]
 acceptance: |-
@@ -114,7 +114,7 @@ Fmax internal + cafa-evaluator f_micro_w as the LAFA-aligned metric.
 ```yaml
 id: LR.2
 phase: LR
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: [LR.1]
 acceptance: |-
@@ -135,7 +135,7 @@ Likely reduces anc2vec leakage exposure but doesn't fix dataset replication.
 ```yaml
 id: LR.3
 phase: LR
-loop: lab-runner
+loop: bioinfo-quick
 status: deferred
 deps: [LR.1]
 acceptance: |-
@@ -151,7 +151,7 @@ tags: [research, ensemble, post-defensa]
 ```yaml
 id: LR.4
 phase: LR
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: [LB.2]
 acceptance: |-
@@ -173,7 +173,7 @@ leakage. Honest re-run pending.
 ```yaml
 id: LM.1
 phase: LM
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: []
 acceptance: |-
@@ -189,7 +189,7 @@ tags: [method, tracking]
 ```yaml
 id: LM.2
 phase: LM
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: []
 acceptance: |-
@@ -205,7 +205,7 @@ tags: [method, registry]
 ```yaml
 id: LM.3
 phase: LM
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: [LR.1]
 acceptance: |-
@@ -223,7 +223,7 @@ tags: [method, interpretability]
 ```yaml
 id: LP.1
 phase: LP
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: []
 acceptance: |-
@@ -239,7 +239,7 @@ tags: [plumbing, dataset]
 ```yaml
 id: LP.2
 phase: LP
-loop: lab-runner
+loop: bioinfo-quick
 status: pending
 deps: []
 acceptance: |-

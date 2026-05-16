@@ -153,7 +153,7 @@ status: done
 deps: []
 acceptance: |-
   All cafaeval Fmax / coverage / AuPRC numbers updated to leakage-free baseline
-  Paired CIs from lab-runner LB.3 imported as figures + tables
+  Paired CIs from bioinfo-quick LB.3 imported as figures + tables
   v22 lineage delta (if positive) added as section
   Per-cell × aspect tables canonical
   CAFA 6 #2 framing as TEAM result, not individual
