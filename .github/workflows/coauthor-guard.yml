@@ -1,0 +1,67 @@
+name: Co-author guard (reusable)
+
+# Server-side guard against Claude / Anthropic / AI-attribution
+# commit-message trailers. Second layer of defense after FARM-1.1's
+# client-side pre-push hooks (which can be bypassed by --no-verify or
+# AGENT_FARM_SKIP_HOOKS=1).
+#
+# Trigger model: callers invoke this via workflow_call in their own
+# pull_request workflow, so the PR event payload is available in the
+# caller context and reflected here through the github context.
+#
+# Slice: FARM-1.1a (farm-platform loop).
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout PR head with full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch base ref
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=200 origin "${BASE_SHA}"
+
+      - name: Scan commit messages for forbidden attribution
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          range="${BASE_SHA}..${HEAD_SHA}"
+          echo "Scanning commit range: ${range}"
+          tmp="$(mktemp)"
+          # Prefix every commit body with its SHA so any grep hit reports
+          # which commit is dirty. %x00 is a NUL separator that grep -E
+          # treats as a regular byte; we keep one commit per record.
+          git log --format='commit %H%n%B%n---END---' "${range}" > "${tmp}"
+          pattern='co-authored-by:[[:space:]]*.*(claude|anthropic|noreply@anthropic)|generated[[:space:]]+with[[:space:]]+\[?claude|generated[[:space:]]+by[[:space:]]+\[?anthropic|^[[:space:]]*claude[[:space:]]+(code|opus|sonnet|haiku)\b|\bby[[:space:]]+anthropic\b'
+          if grep -iEn "${pattern}" "${tmp}"; then
+            echo ""
+            echo "ERROR: commit message in this PR contains forbidden"
+            echo "Claude / Anthropic / AI attribution. See matches above."
+            echo ""
+            echo "Why this is blocked: project policy forbids Claude or"
+            echo "Anthropic attribution in commit messages, PR bodies, or"
+            echo "repo prose. The author of record is the human committer."
+            echo ""
+            echo "Fix: rebase the offending commit(s) to strip the"
+            echo "attribution, then force-push the PR branch. Example:"
+            echo "  git rebase -i ${BASE_SHA}"
+            echo "  # mark the offending commit 'reword', drop the line,"
+            echo "  # save, then: git push --force-with-lease"
+            exit 1
+          fi
+          echo "OK: no forbidden attribution found in ${range}"
