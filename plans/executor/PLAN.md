@@ -1207,7 +1207,7 @@ note: "2026-05-16 janitor reconcile: shipped via PR #375 (2026-05-15)"
 id: T-INFRA.NACK
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   When an operation raises (cancellation, exception, or worker-side termination),
@@ -1226,7 +1226,10 @@ acceptance: |-
 estimated_hours: 4
 priority: P1
 tags: [infra, queue, reliability]
+note: "2026-05-16 janitor reconcile: shipped via PR #373 (2026-05-15)"
 ```
+
+Shipped via PR #373 2026-05-15.
 
 ### T-INFRA.EVAL-SET-UNIQUE — pair uniqueness on EvaluationSet
 
@@ -1234,7 +1237,7 @@ tags: [infra, queue, reliability]
 id: T-INFRA.EVAL-SET-UNIQUE
 phase: F3
 loop: executor
-status: in_progress
+status: done
 deps: []
 acceptance: |-
   evaluation_set table has a UNIQUE constraint on
@@ -1248,5 +1251,8 @@ acceptance: |-
 estimated_hours: 4
 priority: P1
 tags: [infra, schema, idempotency]
+note: "2026-05-16 janitor reconcile: shipped via PR #361 (2026-05-13)"
 ```
+
+Shipped via PR #361 2026-05-13.
 
