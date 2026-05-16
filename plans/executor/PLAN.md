@@ -470,6 +470,39 @@ tags: [refactor, method-object]
 
 Closed via PRs #162, #169, #170, #177, #267 (verified 2026-05-09 via AST).
 
+### T2B.6 — split predict_go_terms.py + training_dump_helpers.py into submodules
+
+```yaml
+id: T2B.6
+phase: F3
+loop: executor
+status: pending
+deps: [T2B.5]
+acceptance: |-
+  protea/core/operations/predict_go_terms.py <800 LOC
+  protea/core/training_dump_helpers.py <800 LOC
+  .smell-baseline.json entries for both files removed
+  OperationRegistry surface unchanged: predict_go_terms / predict_go_terms_batch
+  still registered under same names with same payload contract
+  Predictions bit-exact vs pre-split on regression fixture (F2C.5b dataset)
+  Existing imports kept via re-exports in the original module path; no
+  consumer-side breakage in PROTEA + protea-method + protea-reranker-lab
+estimated_hours: 8
+priority: P2
+tags: [refactor, smell-budget, file-split]
+```
+
+T2B.5 brought every productive method below 60 LOC (verified 2026-05-09 via
+AST: top methods 56 and 54 respectively), but the files themselves still
+violate the file <800 LOC smell budget (2096 and 1214 LOC) and are
+grandfathered into `.smell-baseline.json`. This slice cashes in the
+method-object work by extracting cohesive groups (coordinator vs per-batch
+KNN vs feature application vs reference loading for the predict op; split
+loaders vs label/write vs runner glue for training_dump_helpers) into
+submodules under `protea/core/operations/predict_go_terms/` and
+`protea/core/training_dump/`, keeping the original paths as thin re-export
+shims so external callers stay green.
+
 ## F4 — F3 + F4 model + API
 
 ### T3.1-T3.4 — GOPrediction JSONB dual-write
@@ -495,31 +528,18 @@ D3 accepted; requires DB migration window.
 
 ```yaml
 id: T3.5
-Done 2026-05-12 via PR #340 (merged).
 phase: F4
-Done 2026-05-12 via PR #340 (merged).
 loop: executor
-Done 2026-05-12 via PR #340 (merged).
 status: done
-Done 2026-05-12 via PR #340 (merged).
 deps: []
-Done 2026-05-12 via PR #340 (merged).
 acceptance: |-
-Done 2026-05-12 via PR #340 (merged).
   Every PG index audited; redundant indexes dropped via migration
-Done 2026-05-12 via PR #340 (merged).
   Frequent slow queries (>500ms in dev) covered by an index
-Done 2026-05-12 via PR #340 (merged).
 estimated_hours: 4
-Done 2026-05-12 via PR #340 (merged).
 priority: P3
-Done 2026-05-12 via PR #340 (merged).
 tags: [migration, performance]
-Done 2026-05-12 via PR #340 (merged).
+note: "Done 2026-05-12 via PR #340 (merged)"
 ```
-Done 2026-05-12 via PR #340 (merged).
-
-Done 2026-05-12 via PR #340 (merged).
 
 ### T3.6 — nullables audit
 
@@ -685,31 +705,18 @@ tags: [observability, grafana]
 
 ```yaml
 id: T5.4
-Done 2026-05-12 via PR #339 (merged).
 phase: F5
-Done 2026-05-12 via PR #339 (merged).
 loop: executor
-Done 2026-05-12 via PR #339 (merged).
 status: done
-Done 2026-05-12 via PR #339 (merged).
 deps: []
-Done 2026-05-12 via PR #339 (merged).
 acceptance: |-
-Done 2026-05-12 via PR #339 (merged).
   All container logs ship to Loki via loki-docker-driver
-Done 2026-05-12 via PR #339 (merged).
   Grafana dashboard queries log streams by container/service
-Done 2026-05-12 via PR #339 (merged).
 estimated_hours: 4
-Done 2026-05-12 via PR #339 (merged).
 priority: P3
-Done 2026-05-12 via PR #339 (merged).
 tags: [observability, loki]
-Done 2026-05-12 via PR #339 (merged).
+note: "Done 2026-05-12 via PR #339 (merged)"
 ```
-Done 2026-05-12 via PR #339 (merged).
-
-Done 2026-05-12 via PR #339 (merged).
 
 ### T5.5 — CORS allowlist
 
@@ -932,7 +939,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [deployment, docs]
-note: "2026-05-16 janitor: still pending; no deploy/README.md in PROTEA (verify if deferred)"
+note: "2026-05-16 janitor gate: deploy/README.md does not exist in PROTEA; either create it under this slice or retarget to docs/source/deployment/"
 ```
 
 ### T-OPS.11 — E2E deploy test
