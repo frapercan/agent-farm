@@ -36,7 +36,12 @@ código and write ADRs when there's a new architectural decision.
 4. **Lint reranker tokens** (FARM-EXP.6): before push, run
    `python3 ~/Thesis2/agent-farm/scripts/lint-reranker-tokens.py --paths <touched files>`.
    Zero offences required. CI re-runs the same linter on every PR.
-5. **Open PR** via `gh pr create` against `develop`, label `docs:`.
+5. **Open PR** via `gh pr create -B develop --label docs: ...`. ALWAYS
+   pass `-B develop` explicitly when targeting any PROTEA stack repo;
+   `gh`'s default is the repo's GitHub default branch (`main` on the
+   stack), which is the wrong base. The agent-farm canonical table
+   (`scripts/lib/pr_base.py`) is the source of truth: every PROTEA stack
+   repo targets `develop`; `agent-farm` and `thesis` target `main`.
 
 ## Hard constraints
 
