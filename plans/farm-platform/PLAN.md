@@ -1693,7 +1693,7 @@ in snapshot"` + thesis Tab `tab:improvement` warning that
 bench-v1-K5 and bench-v1-K5-filtered rows are not comparable.
 Suggested agent: lab-runner.
 
-### FARM-EXP.10 — Leakage-free re-derivation of the selective-rerank-at-K-10 cell
+### FARM-EXP.10 — Selective rerank resurrection: recompute, not archaeology
 
 ```yaml
 id: FARM-EXP.10
@@ -1702,30 +1702,30 @@ loop: farm-platform
 status: pending
 deps: [FARM-EXP.2]
 acceptance: |-
-  Reconstruct the axis tuple for the legacy "selective rerank at K=10" cell from the live RerankerModel table (the snapshot does not carry enough information)
-  Train the cell on bench-v1-K5-filtered and store under runs/transversal/<shortid>/ with run.json
-  ADR docs/decisions/D34-selective-rerank-resurrection.md documents the reconstructed axis tuple and supersedes the memory-only champion record
-  The new shortid replaces the prior memory-only champion in champions.md
+  Re-train the selective-rerank-at-K=10 cell on bench-v1-K5-v226-lineage (and optionally v230) using the current selective rerank policy
+  Store under runs/transversal/<shortid>/ with run.json per F-EXP-RESET layout; pin eval_set_name explicitly
+  ADR D34-selective-rerank-resurrection.rst documents why the legacy v18 0.4562 is superseded (range-unknown, leakage-suspected) and what the recomputed champion replaces it
+  The legacy memory-only [[project_v18_selective_rerank]] record stays as historical context; the recomputed run becomes the live champion
 estimated_hours: 8
 priority: P2
-tags: [benchmark, lineage]
+tags: [benchmark, lineage, recompute]
 requires_human: false
 ```
 
-**Goal**: close the needs-archaeology entry; today the legacy cell
-exists only as a memory-only champion (0.4562 avg cafaeval,
-leakage-contaminated).
+**Goal**: replace the memory-only legacy champion (0.4562 avg cafaeval,
+leakage-contaminated, range-unknown) with a recomputed record on the
+current validation band (bench-v1-K5-v226-lineage).
 
-**Repos touched**: protea-reranker-lab, PROTEA (RerankerModel
-inspection via /jobs API).
+**Repos touched**: protea-reranker-lab, PROTEA (current selective rerank
+policy via live codebase).
 
 **Out of scope**:
 1. Resurrecting v4 / v5 / v6 / v7 / v8 rerankers (needs-archaeology
    marks them as does-not-exist unless evidence surfaces; defer).
 
-**Notes**: Cites `context/experiment-axis-map.md §"Rows whose
-configuration could NOT be reconstructed from the snapshot"` +
-§"Wiring needs" #7. Suggested agent: lab-runner.
+**Notes**: Decision per ADR D34: when historical records conflict with
+current data, recompute on the current bench rather than reverse-engineer
+old config. Suggested agent: lab-runner.
 
 ### FARM-EXP.11 — Per-aspect results table for thesis chapter 6
 

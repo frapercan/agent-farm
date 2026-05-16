@@ -113,7 +113,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | id | phase | status | priority | title |
 |---|---|---|---|---|
 | [FARM-EXP.1](farm-platform/PLAN.md#farm-exp1--experimentrun-axis-columns--unique-shortid) | F-EXP-RESET | ⬜ pending | P0 | FARM-EXP.1 — ExperimentRun axis columns + UNIQUE shortid |
-| [FARM-EXP.10](farm-platform/PLAN.md#farm-exp10--leakage-free-re-derivation-of-the-selective-rerank-at-k-10-cell) | F-EXP-RESET | ⬜ pending | P2 | FARM-EXP.10 — Leakage-free re-derivation of the selective-rerank-at-K-10 cell |
+| [FARM-EXP.10](farm-platform/PLAN.md#farm-exp10--selective-rerank-resurrection-recompute-not-archaeology) | F-EXP-RESET | ⬜ pending | P2 | FARM-EXP.10 — Selective rerank resurrection: recompute, not archaeology |
 | [FARM-EXP.11](farm-platform/PLAN.md#farm-exp11--per-aspect-results-table-for-thesis-chapter-6) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.11 — Per-aspect results table for thesis chapter 6 |
 | [FARM-EXP.2](farm-platform/PLAN.md#farm-exp2--transversal-cell-catalog) | F-EXP-RESET | ⬜ pending | P0 | FARM-EXP.2 — Transversal cell catalog |
 | [FARM-EXP.3](farm-platform/PLAN.md#farm-exp3--bootstrap_cispy-grouping-by-axis) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.3 — bootstrap_cis.py grouping by axis |
