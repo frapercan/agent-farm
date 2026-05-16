@@ -94,13 +94,21 @@ def fetch_task_status(db_path: str) -> dict[str, dict]:
     out: dict[str, dict] = {}
     with sqlite3.connect(db_path) as c:
         cur = c.execute("""
-            SELECT json_extract(spawn_args, '$.slice') AS slice,
-                   id, status, COALESCE(ended_at, started_at, created_at) AS ts
+            SELECT spawn_args, id, status, COALESCE(ended_at, started_at, created_at) AS ts
             FROM tasks
-            WHERE agent_name='executor' AND slice IS NOT NULL AND slice != ''
+            WHERE agent_name='executor'
             ORDER BY ts DESC
         """)
-        for slice_id, task_id, status, ts in cur.fetchall():
+        for spawn_args_raw, task_id, status, ts in cur.fetchall():
+            if not spawn_args_raw:
+                continue
+            try:
+                parsed = json.loads(spawn_args_raw)
+            except json.JSONDecodeError:
+                continue
+            slice_id = parsed.get("slice")
+            if not slice_id:
+                continue
             if slice_id in out:
                 out[slice_id]["count"] += 1
                 continue
