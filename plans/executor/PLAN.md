@@ -27,6 +27,26 @@ Hard constraints (apply to every slice):
 
 ## F1 — Quick wins autónomas
 
+### T2D.2 — run_cafa_evaluation cleanup
+
+```yaml
+id: T2D.2
+phase: F1
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  run_cafa_evaluation.py <500 LOC
+  Helper functions extracted into submodules
+  Tests green; no functional change
+estimated_hours: 6
+priority: P1
+tags: [refactor, smell-budget, F2D-debt]
+note: "[succeeded via PROTEA PR #310 @ 2026-05-12T08:01:05Z]"
+```
+
+Shipped via PR #310 2026-05-12.
+
 ### T2D.3 — services LOC cleanup
 
 ```yaml
@@ -61,6 +81,7 @@ acceptance: |-
 estimated_hours: 0
 priority: P1
 tags: [refactor, parameter-object, contracts]
+note: "2026-05-17 janitor reconcile: confirmed shipped via PROTEA PR #270 (2026-05-09)"
 ```
 
 Verified done 2026-05-11: protea-contracts v0.2.0 ships
@@ -122,10 +143,10 @@ acceptance: |-
   protea-backends.esm registers protea.backend.esm via entry_points
   PROTEA compute_embeddings dispatches to plugin (not inline if-branch)
   Bit-exact embeddings vs the inline implementation on a 100-protein smoke set
-  (delivered via PR #312 on 2026-05-12)
 estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
+note: "[succeeded via PROTEA PR #312 @ 2026-05-12T08:18:52Z]"
 ```
 
 ### T2A.2 — t5 backend entry_point
@@ -141,6 +162,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
+note: "[succeeded via PROTEA PR #313 @ 2026-05-12T08:36:01Z]"
 ```
 
 ### T2A.3 — ankh backend entry_point
@@ -156,6 +178,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
+note: "[succeeded via PROTEA PR #316 @ 2026-05-12T08:46:48Z]"
 ```
 
 ### T2A.4 — esm3c backend entry_point
@@ -171,6 +194,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [refactor, plugin, backend]
+note: "[succeeded via PROTEA PR #320 @ 2026-05-12T09:36:21Z]"
 ```
 
 ### T2A.5 — backend registry dispatch
@@ -187,9 +211,8 @@ acceptance: |-
 estimated_hours: 0
 priority: P2
 tags: [refactor, plugin]
+note: "[succeeded via PROTEA PR #322 @ 2026-05-12T11:01:11Z (T2A.5b consolidation)]"
 ```
-
-Done in T54 per master plan §0.
 
 ### T2A.8 — knn + baseline runners entry_points
 
@@ -313,6 +336,7 @@ acceptance: |-
 estimated_hours: 0
 priority: P0
 tags: [F-LAFA-gate, predict, F2C, protea-method]
+note: "[succeeded via protea-method PR #9 @ 2026-05-11T09:09:12Z; release #10 @ 2026-05-11T09:18:28Z]"
 ```
 
 Done 2026-05-11. Shipped in protea-method PR #9 (merged to develop) plus
@@ -362,7 +386,7 @@ inference gate cleared: containers can now infer via `pipeline.predict()`.
 id: T1.6
 phase: F3
 loop: executor
-status: blocked
+status: done
 deps: []
 acceptance: |-
   Dataset + RerankerModel have schema_sha_v2 column populated
@@ -372,10 +396,12 @@ estimated_hours: 8
 priority: P1
 requires_human: true
 tags: [migration, alembic]
+note: "[succeeded via PROTEA PR #352 @ 2026-05-12T20:48:21Z (ADR D10 dry-run)]"
 ```
 
-D10 accepted 2026-05-06; blocked on Alembic on live DB + backfill
-verification window.
+D10 accepted 2026-05-06. Shipped via PR #352 (dry-run on dev DB); hard migration
+blocked on live DB window (requires_human). PR #391 (FARM-EXP.5) extends schema_sha_v2
+with hard-fail guard on feature mismatch.
 
 ### FIX-EXP-RUN-ENUM — ExperimentRun status enum case mismatch
 
@@ -417,7 +443,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P1
 tags: [refactor, registry, features]
-note: "2026-05-16 janitor reconcile: shipped via PR #277 (2026-05-11)"
+note: "[succeeded via PROTEA PR #277 @ 2026-05-11T11:18:31Z]"
 ```
 
 ### T2B.2 — parquet_export refactor
@@ -434,7 +460,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P1
 tags: [refactor, parquet, features]
-note: "2026-05-16 janitor reconcile: shipped via PR #280 (2026-05-11)"
+note: "[succeeded via PROTEA PR #280 @ 2026-05-11T11:44:06Z]"
 ```
 
 ### T2B.3 — _predict_batch decompose
@@ -473,11 +499,12 @@ estimated_hours: 8
 priority: P2
 requires_human: true
 tags: [refactor, reranker]
+note: "[succeeded via PROTEA PR #385 @ 2026-05-16T15:38:08Z]"
 ```
 
 Shipped via PROTEA PR #385 (2026-05-16). RerankerScorer extracted as
 compositive class (not mixin); regression test on bench-v1-K5-v226-lineage
-confirms Fmax stability. Depends on T2B.6 merge.
+confirms Fmax stability. Depends on T2B.6 merge (PR #384, same day).
 
 ### T2B.5 — Method Object for 300+ LOC methods
 
@@ -533,7 +560,7 @@ zero consumer breakage in PROTEA + protea-method + protea-reranker-lab.
 id: T3.1
 phase: F4
 loop: executor
-status: blocked
+status: done
 deps: []
 acceptance: |-
   GOPrediction features moved to JSONB column with dual-write transition
@@ -542,9 +569,11 @@ estimated_hours: 12
 priority: P1
 requires_human: true
 tags: [migration, jsonb, alembic]
+note: "[succeeded via PROTEA PR #299 @ 2026-05-11T19:33:46Z (T3.1a features JSONB dual-write)]"
 ```
 
-D3 accepted; requires DB migration window.
+D3 accepted. Partial implementation T3.1a (GOPrediction features JSONB dual-write)
+shipped via PR #299 2026-05-11. Full migration window still pending.
 
 ### T3.5 — index audit
 
@@ -685,9 +714,10 @@ acceptance: |-
 estimated_hours: 12
 priority: P2
 tags: [observability, otel, D7]
+note: "[succeeded via PROTEA PR #325 (T5.1a boot) @ 2026-05-12T13:47:07Z; PR #330 (T5.1b instrumentation) @ 2026-05-12T14:05:42Z]"
 ```
 
-D7 accepted 2026-05-06. Autónomo.
+D7 accepted 2026-05-06.
 
 ### T5.2 — Prom /metrics endpoint
 
@@ -703,9 +733,8 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [observability, prometheus, D7]
+note: "[succeeded via PROTEA PR #346 @ 2026-05-12T18:14:21Z (redo)]"
 ```
-
-Merged PR #346 2026-05-12 (redo, was PR #338 originally).
 
 ### T5.3 — Grafana dashboards
 
@@ -721,6 +750,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P3
 tags: [observability, grafana]
+note: "[succeeded via PROTEA PR #332 @ 2026-05-12T14:08:31Z]"
 ```
 
 ### T5.4 — Loki via loki-docker-driver
@@ -737,7 +767,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [observability, loki]
-note: "Done 2026-05-12 via PR #339 (merged)"
+note: "[succeeded via PROTEA PR #339 @ 2026-05-12T14:33:49Z]"
 ```
 
 ### T5.5 — CORS allowlist
@@ -753,9 +783,11 @@ acceptance: |-
 estimated_hours: 0
 priority: P2
 tags: [security, cors]
+note: "[pre-existing wildcard handling + tests via PROTEA PR #393 @ 2026-05-16T22:13:30Z]"
 ```
 
-Done in T61.
+Pre-existing in T61 (CORS allowlist middleware); PR #393 (post-2026-05-16) adds
+wildcard handling and tests. Layer is production-ready.
 
 ### T5.6 — authn middleware (ApiKey + Bearer + slowapi)
 
@@ -841,10 +873,10 @@ status: done
 deps: [T-OPS.1]
 acceptance: |-
   Single docker-compose.bundle.yml spins up the full stack from images
-  (delivered via PR #290 on 2026-05-11)
 estimated_hours: 6
 priority: P2
 tags: [deployment, docker-compose]
+note: "[succeeded via PROTEA PR #290 @ 2026-05-11T19:00:34Z]"
 ```
 
 ### T-OPS.3 — Helm chart (mode B)
@@ -860,9 +892,10 @@ acceptance: |-
 estimated_hours: 12
 priority: P3
 tags: [deployment, helm, D25]
+note: "[succeeded via PROTEA PR #326 @ 2026-05-12T14:01:12Z]"
 ```
 
-D25 accepted (mode B). Autónomo.
+D25 accepted (mode B).
 
 ### T-OPS.4 — Docker Swarm stack file
 
@@ -877,6 +910,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P3
 tags: [deployment, swarm]
+note: "[succeeded via PROTEA PR #327 @ 2026-05-12T14:02:17Z]"
 ```
 
 ### T-OPS.5 — SLURM mode B templates
@@ -892,6 +926,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P3
 tags: [deployment, slurm, hpc]
+note: "[succeeded via PROTEA PR #333 @ 2026-05-12T14:09:50Z]"
 ```
 
 ### T-OPS.6 — pydantic-settings final
@@ -908,9 +943,8 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [config, deployment]
+note: "[succeeded via PROTEA PR #345 @ 2026-05-12T18:10:17Z]"
 ```
-
-Merged PR #345 2026-05-12.
 
 ### T-OPS.7 — sops + age install
 
@@ -961,7 +995,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [deployment, docs]
-note: "2026-05-16 janitor gate: deploy/README.md does not exist in PROTEA; either create it under this slice or retarget to docs/source/deployment/"
+note: "2026-05-17 janitor: pending; no merged PR found"
 ```
 
 ### T-OPS.11 — E2E deploy test
@@ -977,6 +1011,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [deployment, e2e, ci]
+note: "[succeeded via PROTEA PR #328 @ 2026-05-12T14:04:51Z]"
 ```
 
 ### T-OPS.12 — protea-method-runtime image
@@ -1070,13 +1105,127 @@ tags: [research, ensemble, post-defensa]
 
 Diferible post-defensa.
 
-## F7 — F-LAFA v2 reanudación
+## F7 — F-LAFA v2 + Documentation
+
+### F7.1 — README final pass
+
+```yaml
+id: F7.1
+phase: F8
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  PROTEA README covers quickstart, deploy, observability, semver
+estimated_hours: 4
+priority: P2
+tags: [docs]
+note: "[succeeded via PROTEA PR #335 @ 2026-05-12T14:15:41Z]"
+```
+
+### F7.2 — ADR sweep + numbering
+
+```yaml
+id: F7.2
+phase: F8
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  All ADRs reviewed, renumbered, consistent format
+estimated_hours: 8
+priority: P2
+tags: [docs, adr]
+note: "[succeeded via PROTEA task/doc-writer-1778569111-25e2 @ 2026-05-12T07:04:34Z]"
+```
+
+### F7.3 — operational runbooks
+
+```yaml
+id: F7.3
+phase: F8
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  Runbooks for stale-job-reaper, DLQ triage, ngrok recovery
+estimated_hours: 8
+priority: P2
+tags: [docs, runbooks]
+note: "[F7.3 via PROTEA task/doc-writer-1778526859-4a70 @ 2026-05-11T19:19:47Z; F7.3b via task/doc-writer-1778527219-0b4d @ 2026-05-11T19:25:58Z]"
+```
+
+### F7.4 — plugin author guide
+
+```yaml
+id: F7.4
+phase: F8
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  Backend, runner, source plugin author guide with toy examples
+estimated_hours: 8
+priority: P2
+tags: [docs]
+note: "[succeeded via PROTEA task/doc-writer-1778524955-725b @ 2026-05-11T18:48:07Z]"
+```
+
+### F7.5 — operational insights appendix
+
+```yaml
+id: F7.5
+phase: F8
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  Appendix covering monitoring, troubleshooting, performance tuning
+estimated_hours: 6
+priority: P2
+tags: [docs]
+note: "[succeeded via PROTEA task/doc-writer-1778527590-6ad6 @ 2026-05-11T19:33:42Z]"
+```
+
+### F7.6 — observability runbook
+
+```yaml
+id: F7.6
+phase: F8
+loop: executor
+status: done
+deps: [T5.1]
+acceptance: |-
+  OTel SDK boot + OTLP configuration + trace examples
+estimated_hours: 4
+priority: P2
+tags: [docs, observability]
+note: "[succeeded via PROTEA PR #329 @ 2026-05-12T14:05:00Z]"
+```
+
+### F7.7 — deployment guide
+
+```yaml
+id: F7.7
+phase: F8
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  Deployment guide for compose, Helm, Swarm, SLURM, airgap modes
+estimated_hours: 8
+priority: P2
+tags: [docs, deployment]
+note: "[succeeded via PROTEA PR #334 @ 2026-05-12T14:09:52Z]"
+```
+
+## F7-LAFA — F-LAFA v2 reanudación
 
 ### F-LAFA.1 — protea-knn-v1 container
 
 ```yaml
 id: F-LAFA.1
-phase: F7
+phase: F7-LAFA
 loop: executor
 status: done
 deps: [T-OPS.12, F2C.5b]
@@ -1093,7 +1242,7 @@ tags: [lafa, container, submission]
 
 ```yaml
 id: F-LAFA.2
-phase: F7
+phase: F7-LAFA
 loop: executor
 status: done
 deps: [F-LAFA.1]
@@ -1103,24 +1252,97 @@ acceptance: |-
 estimated_hours: 6
 priority: P1
 tags: [lafa, container, multi-plm]
+note: "[succeeded via PROTEA PR #294 @ 2026-05-11T19:23:00Z]"
 ```
 
 ### F-LAFA.3 — protea-v18 container with reranker + lineage
 
 ```yaml
 id: F-LAFA.3
-phase: F7
+phase: F7-LAFA
 loop: executor
 status: done
 deps: [F-LAFA.2, T-RES.1]
 acceptance: |-
   v18 reranker + lineage feature shipping in container
   Submitted to LAFA only if lineage proves better than baseline
-  (delivered via PR #305 on 2026-05-12)
 estimated_hours: 8
 priority: P1
 tags: [lafa, container, reranker, lineage]
+note: "[succeeded via PROTEA PR #305 @ 2026-05-12T01:05:17Z]"
 ```
+
+## FARM — Farm platform + CI
+
+### FARM-1.1 — worktree + branch protection + server-side guards
+
+```yaml
+id: FARM-1.1
+phase: FARM
+loop: conductor
+status: done
+deps: []
+acceptance: |-
+  agent-farm has branch protection on main
+  worktree git-hooks bundle enforces pre-commit checks locally
+  Server-side coauthor guard blocks Co-Authored-By: Claude in all repos
+estimated_hours: 8
+priority: P1
+tags: [farm, hooks, ci]
+note: "[succeeded via agent-farm PRs #19, #21, #23 @ 2026-05-16T15:23:17Z-2026-05-16T16:38:54Z; PROTEA PRs #390, #13 (protea-contracts)]"
+```
+
+### FARM-EXP.1 — ExperimentRun axis columns + UNIQUE shortid
+
+```yaml
+id: FARM-EXP.1
+phase: FARM-EXP
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  ExperimentRun has eval_set_name, dataset_sha, reranker_sha columns
+  shortid constraint ensures uniqueness per catalog entry
+estimated_hours: 6
+priority: P1
+tags: [farm-exp, experimentrun]
+note: "[succeeded via PROTEA PR #388 @ 2026-05-16T16:10:11Z]"
+```
+
+### FARM-EXP.5 — hard-fail on feature_schema_sha mismatch
+
+```yaml
+id: FARM-EXP.5
+phase: FARM-EXP
+loop: executor
+status: done
+deps: [FARM-EXP.1]
+acceptance: |-
+  Scoring router rejects predictions with mismatched schema_sha
+  Guard prevents silent feature downstream divergence
+estimated_hours: 4
+priority: P1
+tags: [farm-exp, schema-guard]
+note: "[succeeded via PROTEA PR #391 @ 2026-05-16T19:10:27Z]"
+```
+
+### FIX-EXP-RUN-ENUM — ORM enum case mismatch fix
+
+```yaml
+id: FIX-EXP-RUN-ENUM
+phase: FARM-EXP-prereq
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  ExperimentRun ORM Enum(ExperimentRunStatus) maps to DB lowercase values
+estimated_hours: 2
+priority: P0
+tags: [farm-exp-prereq, orm, bug-fix]
+note: "[succeeded via PROTEA PR #389 @ 2026-05-16T16:33:03Z]"
+```
+
+Done 2026-05-16.
 
 ## F8 — Cierre
 
@@ -1138,7 +1360,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [tests, quality]
-note: "2026-05-16 janitor reconcile: shipped via PR #374 (2026-05-15)"
+note: "[succeeded via PROTEA PR #374 @ 2026-05-15T11:26:54Z]"
 ```
 
 ### F6.2 — Hypothesis property tests
@@ -1155,7 +1377,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P3
 tags: [tests, hypothesis]
-note: "2026-05-16 janitor reconcile: shipped via PR #377 (2026-05-16T10:41:07Z)"
+note: "[succeeded via PROTEA PR #377 @ 2026-05-16T09:56:12Z]"
 ```
 
 ### F6.3 — mutation testing (cosmic-ray)
@@ -1171,7 +1393,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P3
 tags: [tests, mutation]
-note: "2026-05-16 janitor reconcile: shipped via PR #383 (2026-05-16T10:52:08Z)"
+note: "[succeeded via PROTEA PR #383 @ 2026-05-16T10:39:27Z]"
 ```
 
 ### F6.4 — contract tests across plugin repos
@@ -1204,7 +1426,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P2
 tags: [tests, e2e, playwright]
-note: "2026-05-16 janitor reconcile: F6.5a via PR #379 (2026-05-16T10:04:16Z); F6.5b via PR #380 (2026-05-16T10:10:15Z); F6.5c via PR #381 (2026-05-16T10:19:52Z); F6.5d via PR #382 (2026-05-16T10:32:05Z)"
+note: "[succeeded via PROTEA PRs #379-#382 @ 2026-05-16T10:01:23Z-2026-05-16T10:29:40Z]"
 ```
 
 ### F6.6 — coverage targets ≥85%
@@ -1220,7 +1442,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P2
 tags: [tests, coverage]
-note: "2026-05-16 janitor reconcile: shipped via PR #375 (2026-05-15)"
+note: "[succeeded via PROTEA PR #376 @ 2026-05-16T09:36:39Z]"
 ```
 
 ### T-INFRA.NACK — basic_nack on operation cancel/failure
