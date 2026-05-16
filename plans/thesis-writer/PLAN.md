@@ -46,7 +46,7 @@ Hard constraints:
 id: TC.1
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Motivation grounded in functional annotation gap + CAFA 6 results
@@ -56,6 +56,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P2
 tags: [chapter-1, introduction]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #29 (2026-05-11)"
 ```
 
 ### TC.2 — chapter 2 biological background depth check
@@ -64,7 +65,7 @@ tags: [chapter-1, introduction]
 id: TC.2
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   GO ontology + aspects + IEA evidence codes covered
@@ -73,6 +74,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P3
 tags: [chapter-2, background]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #36 (2026-05-15)"
 ```
 
 ### TC.3 — chapter 3 related work expansion
@@ -81,7 +83,7 @@ tags: [chapter-2, background]
 id: TC.3
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   CAFA history + winners + their methods
@@ -91,6 +93,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P2
 tags: [chapter-3, related-work]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TC.4 — chapter 4 system design sync with F2D + F2C
@@ -99,7 +102,7 @@ tags: [chapter-3, related-work]
 id: TC.4
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   System diagram reflects F2D services layer
@@ -109,6 +112,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P1
 tags: [chapter-4, design, drift-prone]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TC.5 — chapter 5 implementation sync (drift hotspot)
@@ -117,7 +121,7 @@ tags: [chapter-4, design, drift-prone]
 id: TC.5
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.4]
 acceptance: |-
   Module names + endpoints + ORM models match current code
@@ -126,6 +130,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P1
 tags: [chapter-5, implementation, drift-prone]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TC.6 — chapter 6 evaluation refresh
@@ -134,7 +139,7 @@ tags: [chapter-5, implementation, drift-prone]
 id: TC.6
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   All cafaeval Fmax / coverage / AuPRC numbers updated to leakage-free baseline
@@ -145,6 +150,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P1
 tags: [chapter-6, evaluation, drift-prone, lab-numbers]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TC.7 — chapter 7 conclusion + future work
@@ -153,7 +159,7 @@ tags: [chapter-6, evaluation, drift-prone, lab-numbers]
 id: TC.7
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.1, TC.6]
 acceptance: |-
   Conclusion mirrors thesis statement of chapter 1
@@ -163,6 +169,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [chapter-7, conclusion]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #35 (2026-05-15)"
 ```
 
 ### TC.8 — appendix A regeneration
@@ -171,7 +178,7 @@ tags: [chapter-7, conclusion]
 id: TC.8
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Appendix A serves a defined purpose (current 317 words is a placeholder).
@@ -179,6 +186,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [appendix-A]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #40 (2026-05-16)"
 ```
 
 ### TC.9 — appendix B refresh
@@ -187,7 +195,7 @@ tags: [appendix-A]
 id: TC.9
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Appendix B (currently 1086 words) clearly scoped + cross-referenced
@@ -195,6 +203,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [appendix-B]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #42 (2026-05-16)"
 ```
 
 ## TA — Abstract + frontmatter
@@ -205,7 +214,7 @@ tags: [appendix-B]
 id: TA.1
 phase: TA
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.6]
 acceptance: |-
   Abstract opens with the gap, names PROTEA, gives 1-2 headline numbers
@@ -215,6 +224,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P1
 tags: [abstract, frontmatter]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TA.2 — title page + supervisors block
@@ -223,7 +233,7 @@ tags: [abstract, frontmatter]
 id: TA.2
 phase: TA
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Author name exact: Francisco Miguel Pérez Canales
@@ -232,6 +242,7 @@ acceptance: |-
 estimated_hours: 1
 priority: P1
 tags: [title-page, frontmatter]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TA.3 — acknowledgements
@@ -240,7 +251,7 @@ tags: [title-page, frontmatter]
 id: TA.3
 phase: TA
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Acknowledgements written; CABD + FANTASIA team acknowledged appropriately;
@@ -248,6 +259,7 @@ acceptance: |-
 estimated_hours: 2
 priority: P2
 tags: [acknowledgements, frontmatter]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #43 (2026-05-16)"
 ```
 
 ## TB — Bibliography
@@ -258,7 +270,7 @@ tags: [acknowledgements, frontmatter]
 id: TB.1
 phase: TB
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every \cite resolves; no dangling refs in pdflatex log
@@ -267,6 +279,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P1
 tags: [bib]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #37 (2026-05-15)"
 ```
 
 ### TB.2 — DOI + URL backfill
@@ -275,13 +288,14 @@ tags: [bib]
 id: TB.2
 phase: TB
 loop: thesis-writer
-status: pending
+status: done
 deps: [TB.1]
 acceptance: |-
   Every entry has a DOI or stable URL
 estimated_hours: 4
 priority: P3
 tags: [bib]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #38 (2026-05-15)"
 ```
 
 ## TX — Cross-cutting
@@ -292,7 +306,7 @@ tags: [bib]
 id: TX.1
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Zero `---` / `--` / `—` in chapters/*.tex (per memory feedback_no_em_dashes)
@@ -300,6 +314,7 @@ acceptance: |-
 estimated_hours: 2
 priority: P1
 tags: [style, em-dash]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 ### TX.2 — figures regeneration from real data
@@ -308,7 +323,7 @@ tags: [style, em-dash]
 id: TX.2
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.6]
 acceptance: |-
   Every figure regenerated from latest experimental data
@@ -317,6 +332,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P1
 tags: [figures, drift-prone]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #44 (2026-05-16) + #45; fixes via PR #46"
 ```
 
 ### TX.3 — ToC + LoF + LoT
@@ -325,7 +341,7 @@ tags: [figures, drift-prone]
 id: TX.3
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   ToC, list of figures, list of tables render correctly
@@ -333,6 +349,7 @@ acceptance: |-
 estimated_hours: 2
 priority: P3
 tags: [frontmatter]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #41 (2026-05-15)"
 ```
 
 ### TX.4 — glossary entries
@@ -341,7 +358,7 @@ tags: [frontmatter]
 id: TX.4
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Glossary covers technical acronyms (PLM, KNN, GO, IEA, EXP, BP/MF/CC, ...)
@@ -349,6 +366,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [glossary]
+note: "2026-05-16 janitor reconcile: verified done; no explicit PR but committed inline"
 ```
 
 ## TD — Defensa-ready

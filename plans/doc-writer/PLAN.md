@@ -43,7 +43,7 @@ tags: [readme, repo-stack]
 id: F7.2
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   ADRs 001-008 (numbered) renamed to D01-D08 OR documented as historical
@@ -52,6 +52,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P3
 tags: [adr]
+note: "2026-05-16 janitor reconcile: shipped via PR #309 (2026-05-12)"
 ```
 
 ### F7.3 — runbooks per critical operation
@@ -78,7 +79,7 @@ tags: [runbooks, ops]
 id: F7.4
 phase: F7
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   How to write a new backend / runner / source plugin: scaffold, contracts,
@@ -87,6 +88,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P2
 tags: [plugin, guide]
+note: "2026-05-16 janitor reconcile: shipped via PR #287 (2026-05-11)"
 ```
 
 ### F7.5 — insights appendix (lessons learned)
@@ -150,7 +152,7 @@ Blocked on executor T-OPS.10.
 id: DS.1
 phase: DS
 loop: doc-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every `--` and `—` in docs/source/ replaced per house style
@@ -159,6 +161,7 @@ acceptance: |-
 estimated_hours: 3
 priority: P2
 tags: [style, em-dash]
+note: "2026-05-16 janitor reconcile: verified done via scan; 4 em-dashes exist only in code/literal blocks"
 ```
 
 ### DS.2 — code reference drift gate
