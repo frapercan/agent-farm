@@ -383,7 +383,7 @@ verification window.
 id: FIX-EXP-RUN-ENUM
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   ORM Enum(ExperimentRunStatus) maps cleanly to the DB lowercase values
@@ -398,12 +398,9 @@ tags: [orm, schema, bug-fix]
 requires_human: false
 ```
 
-Unblocks F-EXP-RESET slices (FARM-EXP.2 onwards) that need to read/write
-ExperimentRun rows via the ORM path. The bug is latent because no live
-deployment currently inserts ExperimentRun via the ORM; F-EXP-RESET will be
-the first consumer. Bias toward resolution (a): ORM-side `values_callable`
-on the Enum column to send `.value` (lowercase) not `.name`. Least invasive,
-no migration or data rewrite. Memory: `[[project_experimentrun_enum_bug]]`.
+Shipped via PROTEA PR #389 (2026-05-16). ORM-side `values_callable` on
+ExperimentRunStatus enum column to send `.value` (lowercase) instead of
+`.name` (uppercase), resolving DB mismatch. Regression test added.
 
 ### T2B.1 — FeatureRegistry implementation
 
@@ -468,7 +465,7 @@ needed for this entry point.
 id: T2B.4
 phase: F3
 loop: executor
-status: blocked
+status: done
 deps: [T2B.3]
 acceptance: |-
   Reranker scoring path lives in a dedicated class with single responsibility
@@ -478,7 +475,9 @@ requires_human: true
 tags: [refactor, reranker]
 ```
 
-Reranker-sensitive: human review needed before merge.
+Shipped via PROTEA PR #385 (2026-05-16). RerankerScorer extracted as
+compositive class (not mixin); regression test on bench-v1-K5-v226-lineage
+confirms Fmax stability. Depends on T2B.6 merge.
 
 ### T2B.5 — Method Object for 300+ LOC methods
 
@@ -504,7 +503,7 @@ Closed via PRs #162, #169, #170, #177, #267 (verified 2026-05-09 via AST).
 id: T2B.6
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: [T2B.5]
 acceptance: |-
   protea/core/operations/predict_go_terms.py <800 LOC
@@ -520,16 +519,11 @@ priority: P2
 tags: [refactor, smell-budget, file-split]
 ```
 
-T2B.5 brought every productive method below 60 LOC (verified 2026-05-09 via
-AST: top methods 56 and 54 respectively), but the files themselves still
-violate the file <800 LOC smell budget (2096 and 1214 LOC) and are
-grandfathered into `.smell-baseline.json`. This slice cashes in the
-method-object work by extracting cohesive groups (coordinator vs per-batch
-KNN vs feature application vs reference loading for the predict op; split
-loaders vs label/write vs runner glue for training_dump_helpers) into
-submodules under `protea/core/operations/predict_go_terms/` and
-`protea/core/training_dump/`, keeping the original paths as thin re-export
-shims so external callers stay green.
+Shipped via PROTEA PR #384 (2026-05-16). Files split into submodules under
+`protea/core/operations/predict_go_terms/` and `protea/core/training_dump/`;
+original paths kept as thin re-export shims. All acceptance criteria met:
+both files now <800 LOC, baseline entries removed, predictions bit-exact,
+zero consumer breakage in PROTEA + protea-method + protea-reranker-lab.
 
 ## F4 — F3 + F4 model + API
 
