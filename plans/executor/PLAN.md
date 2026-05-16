@@ -86,6 +86,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [tests, contracts]
+note: "2026-05-16 janitor reconcile: shipped via PR #371 (2026-05-15)"
 ```
 
 Shipped via PR #371 2026-05-15.
@@ -104,6 +105,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [tests, contracts]
+note: "2026-05-16 janitor reconcile: shipped via PR #372 (2026-05-15)"
 ```
 
 Shipped via PR #372 2026-05-15.
@@ -203,6 +205,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [refactor, plugin, runner]
+note: "2026-05-16 janitor reconcile: shipped via PR #240 + #243"
 ```
 
 Shipped pre-session via PROTEA #240/#243 + protea-runners 48e2770.
@@ -380,7 +383,7 @@ verification window.
 id: T2B.1
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: [T-CONTEXTS]
 acceptance: |-
   protea/core/features/ package with FeatureRegistry abstraction
@@ -389,6 +392,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P1
 tags: [refactor, registry, features]
+note: "2026-05-16 janitor reconcile: shipped via PR #277 (2026-05-11)"
 ```
 
 ### T2B.2 — parquet_export refactor
@@ -397,7 +401,7 @@ tags: [refactor, registry, features]
 id: T2B.2
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: [T2B.1]
 acceptance: |-
   parquet_export delegates feature compute to FeatureRegistry
@@ -405,6 +409,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P1
 tags: [refactor, parquet, features]
+note: "2026-05-16 janitor reconcile: shipped via PR #280 (2026-05-11)"
 ```
 
 ### T2B.3 — _predict_batch decompose
@@ -927,6 +932,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [deployment, docs]
+note: "2026-05-16 janitor: still pending; no deploy/README.md in PROTEA (verify if deferred)"
 ```
 
 ### T-OPS.11 — E2E deploy test
@@ -987,7 +993,7 @@ tags: [narrative, qa]
 id: T-RES.1
 phase: F6
 loop: executor
-status: pending
+status: done
 deps: [F2C.5b]
 acceptance: |-
   protea-method.lineage feature consumed by predict_go_terms_batch
@@ -997,6 +1003,7 @@ estimated_hours: 12
 priority: P1
 requires_human: true
 tags: [research, lineage, reranker]
+note: "2026-05-16 janitor reconcile: shipped via PR #304 (2026-05-12); additional fixes #364, #368"
 ```
 
 ### T-RES.2 — GeOKG embeddings vs anc2vec
@@ -1014,6 +1021,7 @@ estimated_hours: 16
 priority: P2
 requires_human: true
 tags: [research, embeddings, go]
+note: "2026-05-16 janitor: still pending; no merged PR found; awaiting lab-runner decision"
 ```
 
 ### T-RES.3 — ensemble multi-K
@@ -1093,7 +1101,7 @@ tags: [lafa, container, reranker, lineage]
 id: F6.1
 phase: F8
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Every test that uses time.sleep() replaced by event-driven wait
@@ -1101,6 +1109,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [tests, quality]
+note: "2026-05-16 janitor reconcile: shipped via PR #374 (2026-05-15)"
 ```
 
 ### F6.2 — Hypothesis property tests
@@ -1117,6 +1126,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P3
 tags: [tests, hypothesis]
+note: "2026-05-16 janitor: still pending; no merged PR found"
 ```
 
 ### F6.3 — mutation testing (cosmic-ray)
@@ -1132,6 +1142,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P3
 tags: [tests, mutation]
+note: "2026-05-16 janitor: still pending; no merged PR found; depends on F6.2"
 ```
 
 ### F6.4 — contract tests across plugin repos
@@ -1147,6 +1158,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [tests, contracts, plugin]
+note: "2026-05-16 janitor: still pending; no merged PR found; T1.7 gate cleared 2026-05-15"
 ```
 
 ### F6.5 — Playwright E2E
@@ -1163,6 +1175,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P2
 tags: [tests, e2e, playwright]
+note: "2026-05-16 janitor: still pending; no merged PR found"
 ```
 
 ### F6.6 — coverage targets ≥85%
@@ -1171,11 +1184,12 @@ tags: [tests, e2e, playwright]
 id: F6.6
 phase: F8
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Codecov gate ≥85% on protea/core/, ≥75% on protea/api/
 estimated_hours: 8
 priority: P2
 tags: [tests, coverage]
+note: "2026-05-16 janitor reconcile: shipped via PR #375 (2026-05-15)"
 ```

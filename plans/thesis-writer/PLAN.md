@@ -56,6 +56,7 @@ acceptance: |-
 estimated_hours: 8
 priority: P2
 tags: [chapter-1, introduction]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #29 (2026-05-11)"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -75,6 +76,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P3
 tags: [chapter-2, background]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #36 (2026-05-15)"
 ```
 
 Shipped via thesis PR #36 2026-05-15.
@@ -95,6 +97,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P2
 tags: [chapter-3, related-work]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -115,6 +118,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P1
 tags: [chapter-4, design, drift-prone]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -134,6 +138,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P1
 tags: [chapter-5, implementation, drift-prone]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -155,6 +160,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P1
 tags: [chapter-6, evaluation, drift-prone, lab-numbers]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -175,6 +181,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [chapter-7, conclusion]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #35 (2026-05-15)"
 ```
 
 Shipped via thesis PR #35 2026-05-15.
@@ -185,7 +192,7 @@ Shipped via thesis PR #35 2026-05-15.
 id: TC.8
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Appendix A serves a defined purpose (current 317 words is a placeholder).
@@ -193,6 +200,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [appendix-A]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #40 (2026-05-16)"
 ```
 
 ### TC.9 — appendix B refresh
@@ -201,7 +209,7 @@ tags: [appendix-A]
 id: TC.9
 phase: TC
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Appendix B (currently 1086 words) clearly scoped + cross-referenced
@@ -209,6 +217,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [appendix-B]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #42 (2026-05-16)"
 ```
 
 ## TA — Abstract + frontmatter
@@ -229,6 +238,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P1
 tags: [abstract, frontmatter]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -248,6 +258,7 @@ acceptance: |-
 estimated_hours: 1
 priority: P1
 tags: [title-page, frontmatter]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -258,7 +269,7 @@ Shipped pre-session (per shepherd 2026-05-15 git audit).
 id: TA.3
 phase: TA
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Acknowledgements written; CABD + FANTASIA team acknowledged appropriately;
@@ -266,6 +277,7 @@ acceptance: |-
 estimated_hours: 2
 priority: P2
 tags: [acknowledgements, frontmatter]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #43 (2026-05-16)"
 ```
 
 ## TB — Bibliography
@@ -285,6 +297,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P1
 tags: [bib]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #37 (2026-05-15)"
 ```
 
 Shipped via thesis PR #37 2026-05-15.
@@ -302,6 +315,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [bib]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #38 (2026-05-15)"
 ```
 
 Shipped via thesis PR #38 2026-05-15.
@@ -322,6 +336,7 @@ acceptance: |-
 estimated_hours: 2
 priority: P1
 tags: [style, em-dash]
+note: "2026-05-16 janitor reconcile: verified pre-session per shepherd 2026-05-15 git audit"
 ```
 
 Shipped pre-session (per shepherd 2026-05-15 git audit).
@@ -332,7 +347,7 @@ Shipped pre-session (per shepherd 2026-05-15 git audit).
 id: TX.2
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: [TC.6]
 acceptance: |-
   Every figure regenerated from latest experimental data
@@ -341,6 +356,7 @@ acceptance: |-
 estimated_hours: 12
 priority: P1
 tags: [figures, drift-prone]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #44 (2026-05-16) + #45; fixes via PR #46"
 ```
 
 ### TX.3 — ToC + LoF + LoT
@@ -349,7 +365,7 @@ tags: [figures, drift-prone]
 id: TX.3
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   ToC, list of figures, list of tables render correctly
@@ -357,6 +373,7 @@ acceptance: |-
 estimated_hours: 2
 priority: P3
 tags: [frontmatter]
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #41 (2026-05-15)"
 ```
 
 ### TX.4 — glossary entries
@@ -365,7 +382,7 @@ tags: [frontmatter]
 id: TX.4
 phase: TX
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   Glossary covers technical acronyms (PLM, KNN, GO, IEA, EXP, BP/MF/CC, ...)
@@ -373,6 +390,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [glossary]
+note: "2026-05-16 janitor reconcile: verified done; no explicit PR but committed inline"
 ```
 
 ## TD — Defensa-ready
