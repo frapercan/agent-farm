@@ -3,15 +3,35 @@ state/tasks.sqlite
 state/tasks.sqlite-journal
 state/tasks.sqlite-wal
 state/tasks.sqlite-shm
+state/tasks.sqlite.bak-*
 state/logs/
+
+# Stray sqlite stubs (occasionally created at repo root by tooling)
+agent-farm.db
+agent_farm.db
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 
 # Per-task artifacts
 results/
+
+# Worktrees (in case anyone clones inside)
+worktrees/
+
+# Environment files (keep .env.example tracked)
+.env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Editor / OS
 .~lock.*
