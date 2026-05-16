@@ -31,6 +31,14 @@ esac
 # 1. ensure DB
 [[ -f "$ROOT/state/tasks.sqlite" ]] || bash "$ROOT/scripts/init.sh"
 
+# 1b. install FARM-1.4 dev-clone guard hook into every Thesis2/repositories/*
+# clone (idempotent). Soft-fails: missing repos root or pre-existing
+# non-FARM hooks should not block session boot.
+if [[ -x "$ROOT/scripts/install-dev-hooks.sh" ]]; then
+  bash "$ROOT/scripts/install-dev-hooks.sh" --all >/dev/null 2>&1 || \
+    echo "launch-conductor: install-dev-hooks reported issues (non-fatal); re-run manually if needed." >&2
+fi
+
 # 2. ensure tmux session
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   tmux new-session -d -s "$SESSION" -n bootstrap -c "$HOME/Thesis2"
