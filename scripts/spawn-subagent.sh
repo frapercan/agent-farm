@@ -85,6 +85,21 @@ if [[ "$WT_CLEANUP" != "none" ]]; then
     die "git worktree add failed: $(cat /tmp/wt-err.log)"
   fi
   heartbeat "$TASK_ID" info "worktree created: $WORKTREE (branch $BRANCH)"
+
+  # FARM-1.1: install enforcement git-hooks bundle into the fresh worktree.
+  # The installer is repo-local to agent-farm; for non-agent-farm worktrees
+  # (PROTEA, thesis, lab, ...) we still source the installer from
+  # $AGENT_FARM_ROOT so the bundle applies uniformly.
+  INSTALL_HOOKS="$ROOT/scripts/lib/install-hooks.sh"
+  if [[ -x "$INSTALL_HOOKS" ]]; then
+    if bash "$INSTALL_HOOKS" "$WORKTREE" 2>>/tmp/install-hooks.log; then
+      heartbeat "$TASK_ID" info "install-hooks: bundle installed into $WORKTREE"
+    else
+      heartbeat "$TASK_ID" warn "install-hooks failed (non-fatal): see /tmp/install-hooks.log"
+    fi
+  else
+    heartbeat "$TASK_ID" warn "install-hooks.sh not found at $INSTALL_HOOKS; worktree has no enforcement hooks"
+  fi
 fi
 
 # Pre-create results dir
