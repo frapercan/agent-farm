@@ -48,8 +48,36 @@ This enforces sqlite ↔ §24 traceability. Plan-progress queries
    `feat/<slug>` from `origin/develop`.
 4. **Implement** — minimal diff, no scope drift. Local-first CI: ruff +
    mypy + pytest BEFORE push. Zero "fix CI" commits.
-5. **Open PR** via `gh pr create` against `develop`. Use the canonical
-   format (see prompt_executor.md).
+5. **Open PR** with the canonical base for the repo you are PR-ing into.
+   ALWAYS pass `-B <base>` explicitly. `gh` defaults to the repo's
+   GitHub default branch, which is `main` on PROTEA stack repos and
+   that is the wrong base (see canonical table below).
+
+   Canonical base per repo (single source of truth: `scripts/lib/pr_base.py`):
+
+   | Repo | Base |
+   |---|---|
+   | `frapercan/PROTEA` | `develop` |
+   | `frapercan/protea-contracts` | `develop` |
+   | `frapercan/protea-method` | `develop` |
+   | `frapercan/protea-sources` | `develop` |
+   | `frapercan/protea-runners` | `develop` |
+   | `frapercan/protea-backends` | `develop` |
+   | `frapercan/protea-reranker-lab` | `develop` |
+   | `frapercan/cafaeval-protea` | `develop` |
+   | `frapercan/agent-farm` | `main` |
+   | `frapercan/thesis` | `main` |
+
+   Recommended invocation:
+   ```bash
+   # PROTEA stack (most slices)
+   gh pr create -B develop --title "..." --body "..."
+   # OR via the helper, which never picks the wrong base:
+   bash ~/Thesis2/agent-farm/scripts/lib/pr-base.sh create PROTEA -- --title "..." --body "..."
+   ```
+   The agent-farm finalize step verifies your PR's `baseRefName` against
+   the table and auto-rebases via `gh pr edit --base <correct>` if it
+   slipped, but DO NOT rely on that safety net; fix it at creation time.
 6. **Return summary**:
    ```
    executor v2 @ <ts>

@@ -40,6 +40,10 @@ fixes only — anything substantive escalates back to the user.
 
 - TRIVIAL ONLY. If a fix needs design judgment, leave it for executor.
 - NEVER push to develop or main directly. Always to the PR's branch.
+- If you open a NEW PR (rare; janitors usually only push to existing PR
+  branches), pass `-B <base>` explicitly. PROTEA stack repos target
+  `develop`; `agent-farm` and `thesis` target `main`. Source of truth:
+  `~/Thesis2/agent-farm/scripts/lib/pr_base.py`.
 - NEVER `--no-verify`, NEVER bypass branch protection.
 - NEVER co-author Claude (memory: feedback_no_coauthor.md).
 - If a PR's branch is from a fork, you can't push — note in summary.

@@ -48,6 +48,46 @@ WORKTREE=$(printf '%s' "$ROW" | awk -F'\t' '{print $2}')
 # Mark task ended in sqlite
 task_set_ended "$TASK_ID" "$STATUS" "$EXIT"
 
+# FARM-1.3: scan the task's heartbeats + summary for PR URLs and verify
+# each PR's base branch matches the canonical table in
+# scripts/lib/pr_base.py. Mismatch → emit warn heartbeat and try to
+# rebase via `gh pr edit --base`. Best-effort; failure here never
+# blocks finalize (the worktree must still be cleaned up).
+PR_BASE_SH="$ROOT/scripts/lib/pr-base.sh"
+if [[ -x "$PR_BASE_SH" ]]; then
+  # Pull all heartbeat messages + summary in one go (NUL-separated to
+  # survive embedded newlines in messages).
+  SCAN_TEXT=$(db_query "SELECT message FROM heartbeats WHERE task_id='$TASK_ID' UNION ALL SELECT '$(printf '%s' "$SUMMARY" | sed "s/'/''/g")';" 2>/dev/null || true)
+  if [[ -n "$SCAN_TEXT" ]]; then
+    # JSON list of {owner,repo,number,expected_base}
+    PR_JSON=$(printf '%s' "$SCAN_TEXT" | python3 "$ROOT/scripts/lib/pr_base.py" scan --stdin 2>/dev/null || echo '[]')
+    if [[ "$PR_JSON" != "[]" && -n "$PR_JSON" ]]; then
+      # Iterate via python so jq isn't a hard dep
+      while IFS=$'\t' read -r OWNER REPO_SHORT NUMBER EXPECTED; do
+        [[ -z "$NUMBER" ]] && continue
+        if [[ "$EXPECTED" == "None" || -z "$EXPECTED" ]]; then
+          heartbeat "$TASK_ID" warn "pr-base: unknown repo $OWNER/$REPO_SHORT (PR #$NUMBER); update pr_base.REPO_BASE"
+          continue
+        fi
+        if bash "$PR_BASE_SH" check "$OWNER" "$REPO_SHORT" "$NUMBER" >/dev/null 2>&1; then
+          heartbeat "$TASK_ID" info "pr-base: $OWNER/$REPO_SHORT#$NUMBER base=$EXPECTED OK"
+        else
+          heartbeat "$TASK_ID" warn "pr-base: $OWNER/$REPO_SHORT#$NUMBER base != $EXPECTED; auto-rebasing"
+          if bash "$PR_BASE_SH" fix "$OWNER" "$REPO_SHORT" "$NUMBER" >/dev/null 2>&1; then
+            heartbeat "$TASK_ID" info "pr-base: $OWNER/$REPO_SHORT#$NUMBER rebased to $EXPECTED"
+          else
+            heartbeat "$TASK_ID" error "pr-base: failed to rebase $OWNER/$REPO_SHORT#$NUMBER (check gh auth + permissions)"
+          fi
+        fi
+      done < <(printf '%s' "$PR_JSON" | python3 -c "
+import json, sys
+for x in json.load(sys.stdin):
+    print('\t'.join([x['owner'], x['repo'], str(x['number']), str(x['expected_base'])]))
+")
+    fi
+  fi
+fi
+
 # Optional summary row
 if [[ -n "$SUMMARY" ]]; then
   ESCAPED=$(printf '%s' "$SUMMARY" | sed "s/'/''/g")

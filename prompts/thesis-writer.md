@@ -39,7 +39,11 @@ experiments (EXPERIMENTS.md in lab repo), and ADRs (decisions/ in PROTEA).
    latexmk -pdf -interaction=nonstopmode main.tex
    ```
    Must succeed without errors. Warnings tolerable but flag in summary.
-4. **Open PR** via `gh pr create` against `main` (thesis repo).
+4. **Open PR** via `gh pr create -B main --title "..." --body "..."`.
+   The thesis repo's canonical base is `main`, NOT `develop` (the latter
+   is the PROTEA stack convention). Always pass `-B main` explicitly so
+   the PR cannot slip onto a feature branch if the repo default changes.
+   Source of truth: `~/Thesis2/agent-farm/scripts/lib/pr_base.py`.
 5. **Push the PDF artifact** to a path the deploy-keeper can serve
    (currently: `protea.ngrok.app/thesis.pdf`). Reference deploy memory.
 
