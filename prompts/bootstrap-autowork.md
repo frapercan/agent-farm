@@ -35,12 +35,22 @@ so the user can chat with you while they run.
 2. Install dev-clone guards into the developer's workspace (FARM-1.4):
    `bash ~/Thesis2/agent-farm/scripts/install-dev-hooks.sh --all`.
    Idempotent; no-op if already installed.
-3. If deploy-keeper is NOT running, spawn it now (headless):
+3. Run the memory-to-prompt drift linter (FARM-2.6, advisory, non-blocking):
+   ```bash
+   python3 ~/Thesis2/agent-farm/scripts/memory-prompt-drift.py \
+     --memory-dir ~/.claude/projects/-home-frapercan-Thesis2/memory/ \
+     --prompts-dir ~/Thesis2/agent-farm/prompts/ \
+     --quiet
+   ```
+   Read `stale_count` from the JSON output. Include it in the boot
+   summary as: "Drift linter: N stale entries." If N > 0, list them
+   as bullets. Do NOT block the boot sequence regardless of the count.
+4. If deploy-keeper is NOT running, spawn it now (headless):
    `bash ~/Thesis2/agent-farm/scripts/spawn.sh deploy-keeper`.
    If the user explicitly said "no deploy hoy", skip this.
-4. Spawn shepherd as a subagent (sonnet, background). When it returns
+5. Spawn shepherd as a subagent (sonnet, background). When it returns
    its coord.md, read the top 3 recommendations.
-5. Based on shepherd:
+6. Based on shepherd:
    - Spawn **executor** in background on the top P0/P1 slice from
      `plans/executor/PLAN.md` (unless requires_human or deps unmet).
    - Spawn **thesis-writer** in background on the top slice from
@@ -49,7 +59,7 @@ so the user can chat with you while they run.
      `plans/doc-writer/PLAN.md` if there is one pending.
    - Spawn **janitor** only if shepherd recommends it (red CI or
      landmine), background.
-6. Report to the user in ≤8 lines: what got spawned with which slice,
+7. Report to the user in ≤8 lines: what got spawned with which slice,
    any threads you skipped and why. Do not block on user reply unless
    shepherd flagged a `requires_human` slice.
 

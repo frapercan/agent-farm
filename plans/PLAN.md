@@ -142,7 +142,6 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-2.3](farm-platform/PLAN.md#farm-23--tasksworktree_owner_repo-column) | F-FARM-2 | ⬜ pending | P2 | FARM-2.3 — tasks.worktree_owner_repo column |
 | [FARM-2.4](farm-platform/PLAN.md#farm-24--populate-resultssha_before--sha_after) | F-FARM-2 | ⬜ pending | P2 | FARM-2.4 — populate results.sha_before / sha_after |
 | [FARM-2.5](farm-platform/PLAN.md#farm-25--read-deploy-keeper-poll_interval-from-yaml) | F-FARM-2 | ⬜ pending | P3 | FARM-2.5 — Read deploy-keeper poll_interval from yaml |
-| [FARM-2.6](farm-platform/PLAN.md#farm-26--memory-to-prompt-drift-linter) | F-FARM-2 | ⬜ pending | P2 | FARM-2.6 — Memory-to-prompt drift linter |
 | [FARM-FEAT.1](farm-platform/PLAN.md#farm-feat1--materialise-agent-farm--slash-commands) | F-FEAT | ⬜ pending | P2 | FARM-FEAT.1 — Materialise /agent-farm-* slash commands |
 | [FARM-FEAT.10](farm-platform/PLAN.md#farm-feat10--cafaeval-protea-coverage-decision) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.10 — cafaeval-protea coverage decision |
 | [FARM-FEAT.11](farm-platform/PLAN.md#farm-feat11--one-file-per-feature-surface-under-docsfeatures) | F-FEAT | ⬜ pending | P1 | FARM-FEAT.11 — One-file-per-feature surface under docs/features/ |
@@ -182,6 +181,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-1.9](farm-platform/PLAN.md#farm-19--agent-farm-gitignore-hygiene) | F-FARM-1 | ✅ done | P2 | FARM-1.9 — agent-farm .gitignore hygiene |
 | [FARM-2.1](farm-platform/PLAN.md#farm-21--events-table-for-lifecycle-audit) | F-FARM-2 | ✅ done | P1 | FARM-2.1 — events table for lifecycle audit |
 | [FARM-2.2](farm-platform/PLAN.md#farm-22--metrics_json-writer-tokens-duration-model) | F-FARM-2 | ✅ done | P1 | FARM-2.2 — metrics_json writer (tokens, duration, model) |
+| [FARM-2.6](farm-platform/PLAN.md#farm-26--memory-to-prompt-drift-linter) | F-FARM-2 | ✅ done | P2 | FARM-2.6 — Memory-to-prompt drift linter |
 | [FARM-2.7](farm-platform/PLAN.md#farm-27--bridge-the-two-plan-systems) | F-FARM-2 | ✅ done | P1 | FARM-2.7 — Bridge the two plan systems |
 
 ### thesis-writer (21 slices)
@@ -232,7 +232,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 ### F-FARM-2 (7 slices)
 
-⬜ 4 pending · ✅ 3 done · **total 7**
+⬜ 3 pending · ✅ 4 done · **total 7**
 
 ### F-FEAT (11 slices)
 
