@@ -170,6 +170,69 @@ class TestScanFile:
         finally:
             tmp.unlink(missing_ok=True)
 
+    # -- Q3: URL-path carve-out ----------------------------------------------
+
+    def test_url_path_file_is_clean(self) -> None:
+        """Tokens like /v1/jobs and /api/v1/jobs must not fire."""
+        offences = linter.scan_file(FIXTURES / "clean_url_path.md")
+        assert offences == [], offences
+
+    def test_url_path_bare(self) -> None:
+        """Bare slash-prefixed path: ``/v1/jobs`` must be carved out."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("POST /v1/jobs is the canonical entry.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_url_path_inside_backticks(self) -> None:
+        """Inline code span ``/v1/jobs`` must be carved out."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Use ``/v1/jobs`` to submit jobs.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_url_path_sphinx_http_directive(self) -> None:
+        """``.. http:get:: /v1/jobs`` Sphinx directives must be carved out."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".rst"))
+        tmp.write_text(".. http:get:: /v1/jobs\n.. http:post:: /v1/datasets\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_url_path_nested_prefix(self) -> None:
+        """Nested prefixes like ``/api/v1/jobs`` must be carved out."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Internal alias: /api/v1/jobs (legacy).\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_standalone_v1_still_flagged_after_q3(self) -> None:
+        """Standalone ``v1`` (no leading slash) must still fire."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("The v1 reranker was trained on per-aspect data.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            tokens = [t for _, _, t in offences]
+            assert "v1" in tokens
+        finally:
+            tmp.unlink(missing_ok=True)
+
 
 # ---------------------------------------------------------------------------
 # Default-target walk + extension filter
