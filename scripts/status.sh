@@ -81,4 +81,42 @@ else
   db_query "SELECT 'summary', COALESCE(summary,'') FROM results WHERE task_id='$TASK_ID'
             UNION ALL SELECT 'sha_before', COALESCE(sha_before,'') FROM results WHERE task_id='$TASK_ID'
             UNION ALL SELECT 'sha_after',  COALESCE(sha_after,'')  FROM results WHERE task_id='$TASK_ID';"
+
+  # FARM-2.2: cost summary if results.metrics_json populated.
+  METRICS_RAW=$(db_query "SELECT COALESCE(metrics_json,'') FROM results WHERE task_id='$TASK_ID';" 2>/dev/null)
+  if [[ -n "$METRICS_RAW" && "$METRICS_RAW" != "{}" ]]; then
+    echo
+    echo "--- Cost (FARM-2.2) ---"
+    METRICS_RAW="$METRICS_RAW" python3 - <<'PY'
+import json, os, sys
+raw = os.environ.get("METRICS_RAW", "")
+try:
+    m = json.loads(raw)
+except (TypeError, ValueError):
+    sys.exit(0)
+if not isinstance(m, dict) or not m:
+    sys.exit(0)
+def fmt_tok(v):
+    if not isinstance(v, int):
+        return str(v)
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.1f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.1f}k"
+    return str(v)
+usd = m.get("usd_estimate")
+model = m.get("model") or "(unknown model)"
+dur = m.get("duration_seconds")
+parts = []
+if isinstance(usd, (int, float)):
+    parts.append(f"${usd:.4f}")
+parts.append(str(model))
+if isinstance(dur, (int, float)):
+    parts.append(f"{dur:.1f}s")
+print("Cost: " + " | ".join(parts))
+for k in ("input_tokens", "output_tokens", "cache_tokens"):
+    if k in m:
+        print(f"{k:14s}: {fmt_tok(m[k])}")
+PY
+  fi
 fi

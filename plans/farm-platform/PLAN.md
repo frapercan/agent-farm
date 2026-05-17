@@ -559,7 +559,7 @@ event audit trail today). Suggested agent: executor.
 id: FARM-2.2
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   finalize-subagent.sh parses the Claude CLI last-turn cost line and writes results.metrics_json with input_tokens, output_tokens, cache_tokens, usd_estimate, duration_seconds, model

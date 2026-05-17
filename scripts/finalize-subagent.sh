@@ -13,12 +13,21 @@
 #
 # Usage:
 #   bash finalize-subagent.sh <task_id> <succeeded|failed> [exit_code] [summary]
+#       [--metrics-file PATH]   parse Claude CLI cost output captured to PATH
+#       [--metrics-json STR]    raw metrics JSON (pre-parsed by caller)
 #
 # Output: K=V on stdout (final task state for the conductor to surface).
 #
 # The conductor MUST call this — it replaces the manual `db.py set-ended`
 # pattern. Forgetting to call it leaves worktrees orphan, which is the
 # bug that produced the _siblings/* leak in the previous session.
+#
+# FARM-2.2: when --metrics-file or --metrics-json is supplied (or when
+# results/<task_id>/stream.jsonl exists as a default capture path), parse
+# the Claude CLI cost line and call db.py set-metrics. The conductor may
+# pre-stage results/<task_id>/stream.jsonl by piping Agent tool output
+# through tee; the default capture path is honoured without an explicit
+# flag.
 
 set -uo pipefail
 
@@ -26,12 +35,36 @@ ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 # shellcheck source=lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
 
-TASK_ID="${1:-}"
-STATUS="${2:-succeeded}"
-EXIT="${3:-0}"
-SUMMARY="${4:-}"
+TASK_ID=""
+STATUS="succeeded"
+EXIT="0"
+SUMMARY=""
+METRICS_FILE=""
+METRICS_JSON=""
 
-[[ -z "$TASK_ID" ]] && die "usage: finalize-subagent.sh <task_id> <succeeded|failed> [exit] [summary]"
+# Positional args (task_id, status, exit, summary) interleave with flags.
+positional_idx=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --metrics-file) METRICS_FILE="${2:?--metrics-file needs PATH}"; shift 2 ;;
+    --metrics-json) METRICS_JSON="${2:?--metrics-json needs JSON}"; shift 2 ;;
+    --) shift; break ;;
+    -*) die "unknown flag: $1" ;;
+    *)
+      case "$positional_idx" in
+        0) TASK_ID="$1" ;;
+        1) STATUS="$1" ;;
+        2) EXIT="$1" ;;
+        3) SUMMARY="$1" ;;
+        *) die "too many positional args (extra: $1)" ;;
+      esac
+      positional_idx=$((positional_idx + 1))
+      shift
+      ;;
+  esac
+done
+
+[[ -z "$TASK_ID" ]] && die "usage: finalize-subagent.sh <task_id> <succeeded|failed> [exit] [summary] [--metrics-file PATH] [--metrics-json STR]"
 
 case "$STATUS" in
   succeeded|failed|crashed) ;;
@@ -145,10 +178,41 @@ else
   fi
 fi
 
+# FARM-2.2: cost metrics writer. Source priority:
+#   1. --metrics-json (already a JSON object, pass straight through)
+#   2. --metrics-file (parse via parse_claude_cost.py)
+#   3. Default capture: results/<task_id>/stream.jsonl (parse if present)
+# Result on success: results.metrics_json populated, end-event payload
+# annotated, and results/<task_id>/metrics.json mirrored for offline tools.
+METRICS_PARSED=""
+if [[ -n "$METRICS_JSON" ]]; then
+  METRICS_PARSED="$METRICS_JSON"
+elif [[ -n "$METRICS_FILE" && -f "$METRICS_FILE" ]]; then
+  METRICS_PARSED=$(python3 "$ROOT/scripts/lib/parse_claude_cost.py" "$METRICS_FILE" 2>/dev/null || echo "")
+else
+  DEFAULT_STREAM="$ROOT/results/$TASK_ID/stream.jsonl"
+  if [[ -f "$DEFAULT_STREAM" ]]; then
+    METRICS_PARSED=$(python3 "$ROOT/scripts/lib/parse_claude_cost.py" "$DEFAULT_STREAM" 2>/dev/null || echo "")
+  fi
+fi
+
+if [[ -n "$METRICS_PARSED" && "$METRICS_PARSED" != "{}" ]]; then
+  # Mirror to disk first (useful even if the DB write later fails).
+  RESULTS_DIR="$ROOT/results/$TASK_ID"
+  mkdir -p "$RESULTS_DIR" 2>/dev/null || true
+  printf '%s' "$METRICS_PARSED" > "$RESULTS_DIR/metrics.json" 2>/dev/null || true
+  if python3 "$ROOT/scripts/lib/db.py" set-metrics "$TASK_ID" "$METRICS_PARSED" 2>/tmp/finalize-metrics.err; then
+    heartbeat "$TASK_ID" info "metrics recorded: $METRICS_PARSED"
+  else
+    heartbeat "$TASK_ID" warn "set-metrics failed: $(cat /tmp/finalize-metrics.err 2>/dev/null)"
+  fi
+fi
+
 cat <<EOF
 task_id=$TASK_ID
 status=$STATUS
 exit=$EXIT
 worktree_removed=$REMOVED
 ${SKIP_REASON:+skip_reason=$SKIP_REASON}
+${METRICS_PARSED:+metrics=$METRICS_PARSED}
 EOF

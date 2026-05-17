@@ -1,0 +1,5 @@
+this is not claude output at all
+just garbage
+{"type": "result", but no closing brace
+{"type":"assistant","message":{"some":"thing"}}
+no result line here

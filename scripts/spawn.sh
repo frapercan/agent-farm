@@ -79,10 +79,29 @@ else
     *)                 PERM_FLAG="" ;;
   esac
 
+  # FARM-2.2: capture `claude -p` stdout to results/<task_id>/stream.jsonl
+  # so the post-run hook can parse the final {"type":"result"} cost line.
+  # We tee instead of redirect so the operator still sees output live in
+  # the tmux window. The trailing `db.py set-metrics` call is best-effort:
+  # parse_claude_cost.py is robust to partial / interleaved output.
+  RESULTS_DIR="$ROOT/results/$TASK_ID"
+  mkdir -p "$RESULTS_DIR"
+  STREAM_LOG="$RESULTS_DIR/stream.jsonl"
+
+  POST_CMD="STREAM_LOG='$STREAM_LOG'; \
+TASK_ID='$TASK_ID'; \
+AGENT_FARM_ROOT='$ROOT'; \
+METRICS=\$(python3 \"\$AGENT_FARM_ROOT/scripts/lib/parse_claude_cost.py\" \"\$STREAM_LOG\" 2>/dev/null); \
+if [[ -n \"\$METRICS\" && \"\$METRICS\" != '{}' ]]; then \
+  printf '%s' \"\$METRICS\" > \"$RESULTS_DIR/metrics.json\"; \
+  python3 \"\$AGENT_FARM_ROOT/scripts/lib/db.py\" set-metrics \"\$TASK_ID\" \"\$METRICS\" >/dev/null 2>&1 || true; \
+  python3 \"\$AGENT_FARM_ROOT/scripts/lib/db.py\" heartbeat \"\$TASK_ID\" info \"metrics recorded: \$METRICS\" >/dev/null 2>&1 || true; \
+fi"
+
   tmux new-window -t "$AGENT_FARM_TMUX_SESSION" -n "$WINDOW" -c "$HOME/Thesis2" \
-    "claude -p \"$CMD_PROMPT\" $PERM_FLAG --output-format stream-json --verbose; echo 'exited; press enter'; read"
+    "claude -p \"$CMD_PROMPT\" $PERM_FLAG --output-format stream-json --verbose 2>&1 | tee '$STREAM_LOG'; $POST_CMD; echo 'exited; press enter'; read"
   task_set_started "$TASK_ID" "$WT_PATH" "$AGENT_FARM_TMUX_SESSION:$WINDOW" ""
-  heartbeat "$TASK_ID" info "claude -p launched in tmux window $WINDOW"
+  heartbeat "$TASK_ID" info "claude -p launched in tmux window $WINDOW (stream.jsonl capture on)"
 fi
 
 # Kill placeholder if present
