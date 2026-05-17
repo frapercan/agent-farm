@@ -32,12 +32,15 @@ so the user can chat with you while they run.
 ## Boot sequence (do this when the user says "go" or pastes this prompt)
 
 1. `bash ~/Thesis2/agent-farm/scripts/status.sh` — sanity check.
-2. If deploy-keeper is NOT running, spawn it now (headless):
+2. Install dev-clone guards into the developer's workspace (FARM-1.4):
+   `bash ~/Thesis2/agent-farm/scripts/install-dev-hooks.sh --all`.
+   Idempotent; no-op if already installed.
+3. If deploy-keeper is NOT running, spawn it now (headless):
    `bash ~/Thesis2/agent-farm/scripts/spawn.sh deploy-keeper`.
    If the user explicitly said "no deploy hoy", skip this.
-3. Spawn shepherd as a subagent (sonnet, background). When it returns
+4. Spawn shepherd as a subagent (sonnet, background). When it returns
    its coord.md, read the top 3 recommendations.
-4. Based on shepherd:
+5. Based on shepherd:
    - Spawn **executor** in background on the top P0/P1 slice from
      `plans/executor/PLAN.md` (unless requires_human or deps unmet).
    - Spawn **thesis-writer** in background on the top slice from
@@ -46,7 +49,7 @@ so the user can chat with you while they run.
      `plans/doc-writer/PLAN.md` if there is one pending.
    - Spawn **janitor** only if shepherd recommends it (red CI or
      landmine), background.
-5. Report to the user in ≤8 lines: what got spawned with which slice,
+6. Report to the user in ≤8 lines: what got spawned with which slice,
    any threads you skipped and why. Do not block on user reply unless
    shepherd flagged a `requires_human` slice.
 
