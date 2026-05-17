@@ -1428,7 +1428,7 @@ empty). Suggested agent: executor.
 id: FARM-FEAT.10
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   ADR docs/decisions/D33-cafaeval-protea-scope.md decides: add cafaeval to janitor scope OR document why excluded
