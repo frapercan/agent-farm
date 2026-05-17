@@ -178,6 +178,40 @@ drill at Sun 04:30 by default, and appends results to
 `state/logs/restore_drill.log`. Override the schedule with
 `RESTORE_DRILL_SCHEDULE='30 4 * * 0' bash scripts/install-restore-drill-cron.sh`.
 
+### Nightly pg_dump backup cron
+
+The freshest backup on 2026-05-17 was from 2026-04-12 (35 days stale).
+Nightly automated dumps ensure the recovery window is at most 24 hours.
+
+Install the nightly pg_dump + 30-day retention sweep:
+
+```bash
+bash scripts/install-nightly-pgdump-cron.sh           # preview entries
+bash scripts/install-nightly-pgdump-cron.sh --apply   # install to crontab
+```
+
+The installer is idempotent; it adds two lines to the user's crontab:
+
+- **03:00 daily**: `pg_dump --format=custom --no-owner --file=<BACKUPS>/protea-YYYY-MM-DD.dump`
+- **03:15 daily**: `find <BACKUPS> -name 'protea-*.dump' -mtime +30 -delete`
+
+Verify the cron is running:
+
+```bash
+# Check crontab entry:
+crontab -l | grep protea
+
+# Check for new dumps (should grow daily):
+ls -la ~/Thesis2/backups/protea-*.dump | wc -l
+
+# Monitor the dump log:
+tail -f ~/Thesis2/backups/pgdump.log
+```
+
+The dump will be named `protea-YYYY-MM-DD.dump` and matches the drill's
+default `DUMP_GLOB` pattern, so the weekly restore drill will
+automatically prefer the freshest dump.
+
 ## Drill operation
 
 Manual one-shot:
