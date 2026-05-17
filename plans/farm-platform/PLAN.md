@@ -205,7 +205,7 @@ inside this same loop.
 id: FARM-1.3
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   prompts/executor.md and prompts/doc-writer.md and prompts/thesis-writer.md show literal "gh pr create --base develop"
@@ -216,6 +216,7 @@ estimated_hours: 4
 priority: P1
 tags: [stability, prompt, gh-policy, ci-gate]
 requires_human: false
+note: "2026-05-17 janitor audit: all bullets verified in shipped code (finalize-subagent.sh:51-89 + scripts/lib/pr_base.{py,sh} + tests/test_pr_base.py 35 tests)"
 ```
 
 **Goal**: kill the "gh pr create defaulted to main" class of incident
@@ -456,7 +457,7 @@ Suggested agent: executor.
 id: FARM-1.10
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   tests/test_feature_producer_coverage.py mocks a minimal dump for every payload-flag combination from FEATURE_FAMILIES
@@ -467,6 +468,7 @@ estimated_hours: 6
 priority: P1
 tags: [stability, schema, ci-gate, lineage]
 requires_human: false
+note: "2026-05-17 shipped via protea-contracts PR #14 (merged 16:27Z); 128 flag combinations, producer-coverage workflow live"
 ```
 
 **Goal**: catch canonical-feature drift at PR time on
