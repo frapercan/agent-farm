@@ -812,7 +812,7 @@ write but write-affordances gated by existing AuthChip middleware.
 id: FARM-UI.1
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-2.1, FARM-2.2]
 acceptance: |-
   apps/farm-api/ FastAPI service exposes: GET /tasks (list with filters by status/agent/since), GET /tasks/{id}, GET /tasks/{id}/heartbeats, GET /tasks/{id}/results, GET /events (since, kind), GET /plan (per loop), GET /cost (rollup by agent/day/model), GET /worktrees (du-aware)

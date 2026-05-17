@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "farm-api"
+version = "0.1.0"
+description = "FastAPI sidecar exposing read-only views over agent-farm state."
+authors = ["Francisco Miguel Perez Canales <frapercan1@alum.us.es>"]
+readme = "README.md"
+license = "Apache-2.0"
+packages = [{ include = "farm_api" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = { version = "^0.30.0", extras = ["standard"] }
+pydantic = "^2.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+httpx = "^0.27"
+
+[build-system]
+requires = ["poetry-core>=1.7"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
