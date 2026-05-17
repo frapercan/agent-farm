@@ -240,7 +240,7 @@ work) plus a doc-writer follow-on for the prompt edits.
 id: FARM-1.4
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   prompts/janitor.md gains an explicit "operate inside $WORKTREE only" section that references the injected variable from spawn-subagent.sh
@@ -278,7 +278,7 @@ branch state. Suggested agent: executor.
 id: FARM-1.5
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   scripts/janitor-systemic-check.sh pulls gh pr list --state open --json statusCheckRollup, counts identical failures across PRs
