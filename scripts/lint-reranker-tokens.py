@@ -11,7 +11,7 @@ form for naming a reranker is the axis-tuple notation defined in
 
 This linter scans publishable prose (Sphinx docs, thesis chapters,
 READMEs, ADRs) for the regex ``\\bv\\d+\\b`` and flags every match
-that is NOT in an explicit allowlist. Three token classes are allowed:
+that is NOT in an explicit allowlist. Four token classes are allowed:
 
 1. GOA snapshot identifiers: v160, v200, v210, v215, v220, v226, v227,
    v229, v230
@@ -21,9 +21,15 @@ that is NOT in an explicit allowlist. Three token classes are allowed:
 3. Dataset-name prefixes: any token immediately preceded by ``bench-``
    (e.g. ``bench-v1-K5-filtered``).  Dataset names use a fixed
    ``bench-vN`` scheme that is not a reranker shorthand.
+4. URL path segments: any token immediately preceded by ``/`` (e.g.
+   ``/v1/jobs``, ``/api/v1/jobs``, ``` ``/v1/jobs`` ``` inside an
+   inline code span, ``.. http:get:: /v1/jobs`` Sphinx directives).
+   URL versioning is an independent axis from reranker version
+   shorthand; see ADR-D4 for the API versioning policy.
 
 Slice: FARM-EXP.6 (farm-platform loop); policy carve-outs Q1 (semver)
-and Q2 (bench-vN) added in FIX-47-linter-policy.
+and Q2 (bench-vN) added in FIX-47-linter-policy; Q3 (URL path) added
+in FIX-395-api-path-carve-out.
 
 Exit codes:
     0 — clean (no offences)
@@ -184,6 +190,15 @@ def scan_file(path: Path) -> list[tuple[int, int, str]]:
             # ``bench-vN`` scheme that is not a reranker shorthand.
             prefix = line[: match.start()]
             if prefix.endswith("bench-"):
+                continue
+            # Q3: URL-path carve-out.  Skip tokens immediately preceded
+            # by a forward slash, e.g. ``/v1/jobs`` or ``/api/v1/jobs``,
+            # including the same form inside backtick code spans and
+            # inside Sphinx ``.. http:get:: /v1/jobs`` directives. URL
+            # versioning is an independent axis from reranker version
+            # shorthand (see ADR-D4); reranker shorthand always lacks
+            # the leading slash.
+            if prefix.endswith("/"):
                 continue
             offences.append((line_no, match.start() + 1, token))
     return offences
