@@ -320,7 +320,7 @@ cleanup incident). Suggested agent: executor.
 id: FARM-1.7
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   inotify or auditd watch on /var/lib/docker/volumes/postgres_data/ logs every container recreate or volume-removal event with invoking PID + cwd to agent-farm/state/logs/volume_audit.log
