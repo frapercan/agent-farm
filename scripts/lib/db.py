@@ -12,10 +12,17 @@ Usage from bash:
     python3 ~/Thesis2/agent-farm/scripts/lib/db.py set-ended <task_id> <status> [exit_code] [summary]
     python3 ~/Thesis2/agent-farm/scripts/lib/db.py mark-killed <task_id> [reason]
     python3 ~/Thesis2/agent-farm/scripts/lib/db.py mark-crashed <task_id> [reason]
+    python3 ~/Thesis2/agent-farm/scripts/lib/db.py set-metrics <task_id> <metrics_json_str>
 
 FARM-2.1: every lifecycle entrypoint also appends a row to the events
 table inside the same transaction (so a task move to a terminal state and
 the matching audit row are committed atomically).
+
+FARM-2.2: set-metrics upserts the results.metrics_json column (creating
+the results row if missing) and annotates the most recent kind=end event
+for the task with the parsed metrics under payload.metrics. If no end
+event exists yet (set-metrics called before set-ended) a kind=end row is
+NOT inserted; we just stamp the results column.
 
 All commands print nothing on success unless they're a query. Exit non-zero on error.
 """
@@ -222,6 +229,67 @@ def cmd_mark_killed(task_id: str, reason: str = "") -> int:
     return 0
 
 
+def cmd_set_metrics(task_id: str, metrics_json: str) -> int:
+    """Upsert results.metrics_json for the task and annotate the latest
+    kind=end event with the parsed metrics (so the audit trail surfaces
+    cost without a second join).
+
+    The input must be a valid JSON object; an invalid blob exits non-zero
+    so callers notice malformed parser output instead of silently dropping
+    cost data.
+    """
+    try:
+        parsed = json.loads(metrics_json or "{}")
+    except (TypeError, ValueError) as e:
+        print(f"set-metrics: invalid JSON: {e}", file=sys.stderr)
+        return 2
+    if not isinstance(parsed, dict):
+        print("set-metrics: metrics_json must be a JSON object", file=sys.stderr)
+        return 2
+    # Re-serialise with canonical ordering so downstream consumers see a
+    # stable string (handy for assertions + cache keys).
+    canonical = json.dumps(parsed, sort_keys=True)
+    with conn() as c:
+        cur = c.cursor()
+        # Verify the task exists so we don't accidentally orphan a results row.
+        row = cur.execute("SELECT 1 FROM tasks WHERE id=?", (task_id,)).fetchone()
+        if row is None:
+            print(f"set-metrics: unknown task_id: {task_id}", file=sys.stderr)
+            return 1
+        # Upsert the results row.
+        cur.execute(
+            """INSERT INTO results(task_id, metrics_json)
+               VALUES(?, ?)
+               ON CONFLICT(task_id) DO UPDATE SET metrics_json=excluded.metrics_json""",
+            (task_id, canonical),
+        )
+        # If a kind=end event already exists, fold the metrics into its
+        # payload (preserves the original status/exit_code/summary
+        # fields). Otherwise leave events alone — the next set-ended will
+        # emit a fresh end event and the caller can re-run set-metrics
+        # afterwards if order matters.
+        end_row = cur.execute(
+            """SELECT id, payload_json FROM events
+               WHERE task_id=? AND kind='end'
+               ORDER BY id DESC LIMIT 1""",
+            (task_id,),
+        ).fetchone()
+        if end_row is not None:
+            ev_id, ev_payload = end_row
+            try:
+                ev_obj: dict = json.loads(ev_payload) if ev_payload else {}
+            except (TypeError, ValueError):
+                ev_obj = {}
+            if not isinstance(ev_obj, dict):
+                ev_obj = {}
+            ev_obj["metrics"] = parsed
+            cur.execute(
+                "UPDATE events SET payload_json=? WHERE id=?",
+                (json.dumps(ev_obj, sort_keys=True), ev_id),
+            )
+    return 0
+
+
 def cmd_mark_crashed(task_id: str, reason: str = "") -> int:
     """Record a cleanup-detected crash. The companion set-ended call moves
     the task to status=crashed; this kind=cleanup event documents that
@@ -251,6 +319,7 @@ COMMANDS = {
     "set-ended": cmd_set_ended,
     "mark-killed": cmd_mark_killed,
     "mark-crashed": cmd_mark_crashed,
+    "set-metrics": cmd_set_metrics,
 }
 
 

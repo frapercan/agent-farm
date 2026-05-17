@@ -1,0 +1,11 @@
+[some interleaved verbose text from the agent transcript]
+hi there
+some other lines
+
+Total cost:   $0.1234
+Total duration (API):  12.3s
+Total duration (wall): 45.6s
+Total code changes:   42 lines added, 3 lines removed
+Usage by model:
+    claude-opus-4-7: 5.2k input, 1.1k output, 23.4k cache create, 100k cache read
+    claude-haiku-4-5: 200 input, 50 output
