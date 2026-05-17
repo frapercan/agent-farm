@@ -1105,119 +1105,12 @@ tags: [research, ensemble, post-defensa]
 
 Diferible post-defensa.
 
-## F7 — F-LAFA v2 + Documentation
+## F7 (Documentation, canonical home: plans/doc-writer/PLAN.md)
 
-### F7.1 — README final pass
-
-```yaml
-id: F7.1
-phase: F8
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  PROTEA README covers quickstart, deploy, observability, semver
-estimated_hours: 4
-priority: P2
-tags: [docs]
-note: "[succeeded via PROTEA PR #335 @ 2026-05-12T14:15:41Z]"
-```
-
-### F7.2 — ADR sweep + numbering
-
-```yaml
-id: F7.2
-phase: F8
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  All ADRs reviewed, renumbered, consistent format
-estimated_hours: 8
-priority: P2
-tags: [docs, adr]
-note: "[succeeded via PROTEA task/doc-writer-1778569111-25e2 @ 2026-05-12T07:04:34Z]"
-```
-
-### F7.3 — operational runbooks
-
-```yaml
-id: F7.3
-phase: F8
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  Runbooks for stale-job-reaper, DLQ triage, ngrok recovery
-estimated_hours: 8
-priority: P2
-tags: [docs, runbooks]
-note: "[F7.3 via PROTEA task/doc-writer-1778526859-4a70 @ 2026-05-11T19:19:47Z; F7.3b via task/doc-writer-1778527219-0b4d @ 2026-05-11T19:25:58Z]"
-```
-
-### F7.4 — plugin author guide
-
-```yaml
-id: F7.4
-phase: F8
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  Backend, runner, source plugin author guide with toy examples
-estimated_hours: 8
-priority: P2
-tags: [docs]
-note: "[succeeded via PROTEA task/doc-writer-1778524955-725b @ 2026-05-11T18:48:07Z]"
-```
-
-### F7.5 — operational insights appendix
-
-```yaml
-id: F7.5
-phase: F8
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  Appendix covering monitoring, troubleshooting, performance tuning
-estimated_hours: 6
-priority: P2
-tags: [docs]
-note: "[succeeded via PROTEA task/doc-writer-1778527590-6ad6 @ 2026-05-11T19:33:42Z]"
-```
-
-### F7.6 — observability runbook
-
-```yaml
-id: F7.6
-phase: F8
-loop: executor
-status: done
-deps: [T5.1]
-acceptance: |-
-  OTel SDK boot + OTLP configuration + trace examples
-estimated_hours: 4
-priority: P2
-tags: [docs, observability]
-note: "[succeeded via PROTEA PR #329 @ 2026-05-12T14:05:00Z]"
-```
-
-### F7.7 — deployment guide
-
-```yaml
-id: F7.7
-phase: F8
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  Deployment guide for compose, Helm, Swarm, SLURM, airgap modes
-estimated_hours: 8
-priority: P2
-tags: [docs, deployment]
-note: "[succeeded via PROTEA PR #334 @ 2026-05-12T14:09:52Z]"
-```
+Slices F7.1 through F7.7 are owned by the doc-writer loop. Their
+historical shadow copies were removed from this file in FARM-2.7 to
+satisfy the cross-loop unique-id invariant; the canonical (status: done)
+entries live in `plans/doc-writer/PLAN.md`.
 
 ## F7-LAFA — F-LAFA v2 reanudación
 
@@ -1272,77 +1165,17 @@ tags: [lafa, container, reranker, lineage]
 note: "[succeeded via PROTEA PR #305 @ 2026-05-12T01:05:17Z]"
 ```
 
-## FARM — Farm platform + CI
+## FARM (Farm platform + CI, canonical home: plans/farm-platform/PLAN.md)
 
-### FARM-1.1 — worktree + branch protection + server-side guards
+FARM-1.x and FARM-EXP.x are owned by the farm-platform loop; their
+canonical entries live in `plans/farm-platform/PLAN.md`. Historical
+shadow copies were removed from this file in FARM-2.7 to satisfy the
+cross-loop unique-id invariant.
 
-```yaml
-id: FARM-1.1
-phase: FARM
-loop: conductor
-status: done
-deps: []
-acceptance: |-
-  agent-farm has branch protection on main
-  worktree git-hooks bundle enforces pre-commit checks locally
-  Server-side coauthor guard blocks Co-Authored-By: Claude in all repos
-estimated_hours: 8
-priority: P1
-tags: [farm, hooks, ci]
-note: "[succeeded via agent-farm PRs #19, #21, #23 @ 2026-05-16T15:23:17Z-2026-05-16T16:38:54Z; PROTEA PRs #390, #13 (protea-contracts)]"
-```
-
-### FARM-EXP.1 — ExperimentRun axis columns + UNIQUE shortid
-
-```yaml
-id: FARM-EXP.1
-phase: FARM-EXP
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  ExperimentRun has eval_set_name, dataset_sha, reranker_sha columns
-  shortid constraint ensures uniqueness per catalog entry
-estimated_hours: 6
-priority: P1
-tags: [farm-exp, experimentrun]
-note: "[succeeded via PROTEA PR #388 @ 2026-05-16T16:10:11Z]"
-```
-
-### FARM-EXP.5 — hard-fail on feature_schema_sha mismatch
-
-```yaml
-id: FARM-EXP.5
-phase: FARM-EXP
-loop: executor
-status: done
-deps: [FARM-EXP.1]
-acceptance: |-
-  Scoring router rejects predictions with mismatched schema_sha
-  Guard prevents silent feature downstream divergence
-estimated_hours: 4
-priority: P1
-tags: [farm-exp, schema-guard]
-note: "[succeeded via PROTEA PR #391 @ 2026-05-16T19:10:27Z]"
-```
-
-### FIX-EXP-RUN-ENUM — ORM enum case mismatch fix
-
-```yaml
-id: FIX-EXP-RUN-ENUM
-phase: FARM-EXP-prereq
-loop: executor
-status: done
-deps: []
-acceptance: |-
-  ExperimentRun ORM Enum(ExperimentRunStatus) maps to DB lowercase values
-estimated_hours: 2
-priority: P0
-tags: [farm-exp-prereq, orm, bug-fix]
-note: "[succeeded via PROTEA PR #389 @ 2026-05-16T16:33:03Z]"
-```
-
-Done 2026-05-16.
+The duplicate `FIX-EXP-RUN-ENUM` summary block that followed (a
+status: done copy under phase FARM-EXP-prereq) was likewise removed;
+the canonical FIX-EXP-RUN-ENUM slice lives earlier in this file under
+phase F3.
 
 ## F8 — Cierre
 

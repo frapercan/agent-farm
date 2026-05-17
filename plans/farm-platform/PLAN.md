@@ -724,7 +724,7 @@ Suggested agent: executor.
 id: FARM-2.7
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   scripts/lib/plan_parser.py reads plans/<loop>/PLAN.md as the canonical source (today walks the external §24 memory file)

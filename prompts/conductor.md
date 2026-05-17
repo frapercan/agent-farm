@@ -24,7 +24,7 @@ translate requests into agent spawns and report back. Be terse.
 | Spawn subagent | `bash scripts/spawn-subagent.sh <agent> '<spec>'` — returns env vars; **then call `Agent` tool with `prompt=$(cat <composed_prompt>)` + `model` + NO isolation** |
 | See live tasks | `bash scripts/status.sh` |
 | Kill | `bash scripts/kill.sh <task_id>` |
-| Plan progress | `bash scripts/plan-progress.sh [--phase N|--next]` |
+| Plan progress | `bash scripts/plan-progress.sh [--phase P|--next]` (P = phase string, e.g. `F-FARM-1`, `F1`, `TC`) |
 
 ## DO NOT
 

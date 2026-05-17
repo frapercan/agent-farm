@@ -74,7 +74,7 @@ agent-farm/
 │   ├── status.sh                # tabla live tasks
 │   ├── kill.sh                  # cancel + cleanup
 │   ├── cleanup.sh               # GC stale tmux/worktrees
-│   ├── plan-progress.sh         # parse master plan + join sqlite
+│   ├── plan-progress.sh         # parse plans/<loop>/PLAN.md + join sqlite
 │   ├── launch-conductor.sh      # boot the conductor in tmux
 │   ├── lib/                     # shared bash + python helpers
 │   ├── hooks/                   # worktree lifecycle hooks
@@ -143,22 +143,25 @@ Inside the conductor tmux window, just talk:
 /agent-farm-status [task_id|--all]   # tabla of live (or detail / 24h history)
 /agent-farm-kill <task_id>           # cancel + cleanup
 /agent-farm-cleanup                  # GC stale tmux/worktrees
-/agent-farm-plan [--phase N|--next]  # master plan progress + next untouched slice
+/agent-farm-plan [`--phase` PH|`--next`]  # plan progress, next pickable slice
 ```
 
 ### Plan tracking
 
-The agent-farm is plan-aware. Point `scripts/plan-progress.sh` at your
-project's canonical plan file (Markdown with `## §<N>` slice sections,
-each slice having an `id` field). The script joins it with the sqlite
-executor task history (via the `spawn_args.slice` convention) to show
-which slices are touched, in flight, or untouched.
+The agent-farm is plan-aware. The canonical plan store lives at
+`plans/<loop>/PLAN.md` (one Markdown file per loop, each `### <title>`
+slice carrying a yaml frontmatter block with `id`, `phase`, `loop`,
+`status`, `deps`, `priority`, etc; see `plans/README.md`).
+`scripts/plan-progress.sh` walks every loop's plan, joins with the
+sqlite executor task history (via the `spawn_args.slice` convention),
+and reports which slices are pickable, in flight, blocked, or done.
+`--next` picks the highest-priority pickable slice across all loops.
 
 Convention: every `executor` spawn MUST include `slice` and `phase` in
 spawn_args (the executor prompt enforces this). Example:
 
 ```bash
-/agent-farm-spawn executor '{"slice":"T2B.5-per-split-loop","phase":1,"notes":"continue partials, leave test-split block for next slice"}'
+/agent-farm-spawn executor '{"slice":"FARM-2.7","phase":"F-FARM-2","notes":"refactor plan_parser to read plans/<loop>/PLAN.md"}'
 ```
 
 ### Direct shell (when scripting / automation)
