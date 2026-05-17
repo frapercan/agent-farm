@@ -860,7 +860,7 @@ ASCII surface sketch:
 id: FARM-UI.2
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-UI.1]
 acceptance: |-
   apps/web/app/[locale]/farm/page.tsx renders the task list with status filter (useUrlParam) + agent filter + 24h/7d windows
