@@ -188,7 +188,13 @@ fi
 # stream model can't track open/close ``` markers across the diff), so
 # avoid em-dashes in fenced examples too if they would otherwise look
 # like prose.
-prose_paths=$(git diff --cached --name-only --diff-filter=AM -- 'thesis/*' 'docs/*' '*.md' 'README*' 'plans/*.md' 2>/dev/null || true)
+#
+# Note: plans/*.md files are excluded from em-dash checking. Internal plan
+# catalog files (plans/<loop>/PLAN.md and plans/PLAN.md) use em-dashes in
+# slice titles by convention and are not publishable prose. The em-dash rule
+# per CLAUDE.md applies only to publishable prose (thesis chapters, READMEs,
+# papers, ADRs). See FARM-2.7 follow-up context for details.
+prose_paths=$(git diff --cached --name-only --diff-filter=AM -- 'thesis/*' 'docs/*' '*.md' 'README*' ':(exclude)plans/**' 2>/dev/null || true)
 if [[ -n "$prose_paths" ]]; then
   # shellcheck disable=SC2086
   added=$(git diff --cached -U0 -- $prose_paths 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' || true)
