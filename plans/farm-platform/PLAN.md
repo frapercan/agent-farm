@@ -1268,7 +1268,7 @@ executor.
 id: FARM-FEAT.5
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   EITHER: agents/lab-runner.yaml + prompts/lab-runner.md added (copy-base from agents/bioinfo-quick.yaml, broader scope: lab benchmark + champion tracking + experiment scheduling), conductor menu updated
