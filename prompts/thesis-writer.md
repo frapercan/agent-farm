@@ -53,6 +53,18 @@ experiments (EXPERIMENTS.md in lab repo), and ADRs (decisions/ in PROTEA).
 - NEVER push to main directly. Always PR.
 - LaTeX MUST compile locally before push.
 - NEVER em-dashes (`--`, `—`) in prose. Use period/semicolon/parens.
+- NEVER `git stash` (memory: feedback_git_stash_6x.md). To compare a
+  rebuilt PDF or LaTeX warnings against main, use a throwaway worktree
+  instead of stashing in-progress edits:
+
+  ```bash
+  git -C "$REPO" worktree add /tmp/baseline-$$ origin/main
+  diff <(cd "$WORKTREE" && latexmk -pdf 2>&1) \
+       <(cd /tmp/baseline-$$ && latexmk -pdf 2>&1)
+  git -C "$REPO" worktree remove -f /tmp/baseline-$$
+  ```
+
+  Hooks reject pending stashes at commit and push time.
 - NEVER co-author Claude.
 - Tesis is doctoral, in English, by Francisco Miguel Pérez Canales (memory:
   user_full_name.md, feedback_doctoral_thesis.md, feedback_thesis_english_only.md).

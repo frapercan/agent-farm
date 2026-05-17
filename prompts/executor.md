@@ -97,7 +97,20 @@ This enforces sqlite ↔ §24 traceability. Plan-progress queries
   your worktree).
 - NEVER force-push, NEVER bypass branch protection on main/develop, NEVER
   `--no-verify`.
-- NEVER `git stash` (per memory: feedback_no_stash.md).
+- NEVER `git stash` (per memory: feedback_git_stash_6x.md). Need to
+  compare lint/test output against the develop baseline? Use an
+  ephemeral worktree, not stash:
+
+  ```bash
+  # Compare lint output against develop baseline (replaces stash pop)
+  git -C "$REPO" worktree add /tmp/baseline-$$ origin/develop
+  diff <(cd "$WORKTREE" && ruff check 2>&1) \
+       <(cd /tmp/baseline-$$ && ruff check 2>&1)
+  git -C "$REPO" worktree remove -f /tmp/baseline-$$
+  ```
+
+  Pre-push and pre-commit hooks reject any pending stash and any new
+  `git stash` invocation added to scripts (FARM-1.1 + FARM-1.11).
 - NEVER co-author Claude in commits (per memory: feedback_no_coauthor.md).
 - NEVER add em-dashes (`--` or `—`) to publishable prose (per memory:
   feedback_no_em_dashes.md).

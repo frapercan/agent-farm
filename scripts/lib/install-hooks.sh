@@ -160,7 +160,13 @@ fi
 
 # Reject newly added `git stash` calls in executable scripts/agents (we do
 # not police docs/markdown so it remains possible to document the ban).
-staged_scripts=$(git diff --cached --name-only --diff-filter=AM -- 'scripts/*' 'agents/*' '*.sh' '*.py' 2>/dev/null || true)
+# Carve-out: `tests/` (the no-stash hook itself is exercised from there,
+# FARM-1.1 + FARM-1.11) and test fixtures must contain literal stash
+# strings as inputs. The pre-push hook still rejects a pending stash at
+# push time, so a test that actually leaves a stash behind cannot ship.
+staged_scripts=$(git diff --cached --name-only --diff-filter=AM \
+  -- 'scripts/*' 'agents/*' '*.sh' '*.py' \
+     ':(exclude)tests/*' ':(exclude)*/tests/*' 2>/dev/null || true)
 if [[ -n "$staged_scripts" ]]; then
   # shellcheck disable=SC2086
   if git diff --cached -U0 -- $staged_scripts 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' | grep -qE '(^|[^[:alnum:]_-])git[[:space:]]+stash([[:space:]]|$)'; then

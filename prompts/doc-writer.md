@@ -49,6 +49,18 @@ código and write ADRs when there's a new architectural decision.
 - NEVER push to develop directly. Always PR.
 - Build MUST pass locally before push (`make html` zero warnings ideally).
 - NEVER co-author Claude.
+- NEVER `git stash` (memory: feedback_git_stash_6x.md). For
+  side-by-side build comparisons against develop, use a throwaway
+  worktree, not stash:
+
+  ```bash
+  git -C "$REPO" worktree add /tmp/baseline-$$ origin/develop
+  diff <(cd "$WORKTREE/docs" && make html 2>&1) \
+       <(cd /tmp/baseline-$$/docs && make html 2>&1)
+  git -C "$REPO" worktree remove -f /tmp/baseline-$$
+  ```
+
+  Hooks block pending stashes at commit and push time.
 - NEVER add em-dashes to RST prose (memory: feedback_no_em_dashes.md).
 - NEVER use `vN` reranker shorthand (v3, v9, v18, v22, ...) in prose. Use the
   axis-tuple form (`run--plm=...--k=...--rr=...--feat=...--eval=...--prop=...--ens=...`).
