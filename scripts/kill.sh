@@ -48,5 +48,9 @@ if [[ -n "$WT" && -d "$WT" ]]; then
 fi
 
 heartbeat "$TASK_ID" warn "killed by user"
+# FARM-2.1: distinct kind=kill events row so the audit trail separates
+# operator-initiated kills from natural ends. The set-ended call below
+# still emits a kind=end row; both share the same task_id.
+task_mark_killed "$TASK_ID" "killed by user (kill.sh)"
 task_set_ended "$TASK_ID" "killed" "130"
 echo "killed: $TASK_ID"

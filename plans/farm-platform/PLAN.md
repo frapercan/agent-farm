@@ -525,7 +525,7 @@ agent: executor.
 id: FARM-2.1
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   state/schema.sql gains an events table: id (AI PK), task_id (FK cascade), ts, kind (CHECK in 'spawn','start','end','kill','heartbeat','cleanup'), level, message, payload_json

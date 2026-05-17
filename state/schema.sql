@@ -44,3 +44,19 @@ CREATE TABLE IF NOT EXISTS results (
   artifacts_dir  TEXT,                      -- results/<task_id>/
   metrics_json   TEXT                       -- free-form JSON (tokens, time, etc.)
 );
+
+-- FARM-2.1: append-only lifecycle audit trail.
+-- Mirrors state/migrations/001_events.sql so a fresh init.sh DB also has it.
+CREATE TABLE IF NOT EXISTS events (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id      TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  ts           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  kind         TEXT NOT NULL CHECK (kind IN
+                ('spawn','start','end','kill','heartbeat','cleanup')),
+  level        TEXT,
+  message      TEXT,
+  payload_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_task_ts ON events(task_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_events_kind_ts ON events(kind, ts DESC);
