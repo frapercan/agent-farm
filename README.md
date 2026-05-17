@@ -136,6 +136,14 @@ Inside the conductor tmux window, just talk:
 
 ### Slash commands (also work from any session)
 
+Install the slash commands to `~/.claude/commands/`:
+
+```bash
+bash ~/Thesis2/agent-farm/commands/install.sh
+```
+
+Then use:
+
 ```
 /agent-farm-conductor                # load conductor identity (run first)
 /agent-farm-agents                   # list agent types
