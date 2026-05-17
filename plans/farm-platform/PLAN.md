@@ -138,7 +138,7 @@ Goal: server-side defense against Claude/AI co-author trailer slipthrough that b
 id: FARM-1.2
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   Branch protection enabled on main and develop for all 8 frapercan/ repos
@@ -151,6 +151,20 @@ priority: P0
 tags: [stability, security, branch-protection, gh-policy]
 requires_human: true
 ```
+
+Shipped 2026-05-17 via `scripts/apply-branch-protection.sh --apply`:
+- 16 (repo, branch) targets protected with `enforce_admins=true`,
+  `dismiss_stale_reviews=true`, `allow_force_pushes=false`,
+  `allow_deletions=false`, `required_approving_review_count=0`,
+  and at least one required status check each.
+- Audit: `state/logs/branch-protection-audit-2026-05-17.md`.
+- Run log: `state/logs/branch-protection-2026-05-17.log`.
+- Runbook: `docs/runbook-branch-protection.md`.
+- `cafaeval-protea` deliberately skipped (no `coauthor-guard`
+  workflow; requiring it would soft-block every PR; documented in
+  the runbook out-of-scope section).
+- `agent-farm/develop` and `thesis/develop` absent on GitHub; the
+  script skips missing branches gracefully.
 
 **Goal**: server-side enforcement of the PR-only rule. Until this
 lands, the worktree pre-push hook (FARM-1.1) is the only barrier and
