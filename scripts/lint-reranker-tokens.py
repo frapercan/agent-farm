@@ -11,7 +11,11 @@ form for naming a reranker is the axis-tuple notation defined in
 
 This linter scans publishable prose (Sphinx docs, thesis chapters,
 READMEs, ADRs) for the regex ``\\bv\\d+\\b`` and flags every match
-that is NOT in an explicit allowlist. Four token classes are allowed:
+that is NOT in an explicit allowlist. By default, it scans docs/,
+chapters/, README*, and ADR* files. Changelog files (CHANGELOG*) are
+intentionally excluded because version histories legitimately contain
+bare `vN` tokens (schema versions, build numbers, semver-without-dot)
+unrelated to reranker shorthands. Four token classes are allowed:
 
 1. GOA snapshot identifiers: v160, v200, v210, v215, v220, v226, v227,
    v229, v230
@@ -85,7 +89,6 @@ DEFAULT_ROOTS: tuple[str, ...] = (
 # Default top-level glob patterns. Same skip semantics.
 DEFAULT_TOPLEVEL_GLOBS: tuple[str, ...] = (
     "README*",
-    "CHANGELOG*",
     "ADR*",
 )
 
