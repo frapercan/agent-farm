@@ -62,12 +62,20 @@ db_query "SELECT id, tmux_window FROM tasks WHERE status='running' AND tmux_wind
     win="${tw##*:}"
     if ! tmux has-session -t "$sess" 2>/dev/null; then
       log "task $id: tmux session $sess gone → crashed"
-      [[ "$APPLY" -eq 1 ]] && task_set_ended "$id" "crashed" "1"
+      if [[ "$APPLY" -eq 1 ]]; then
+        # FARM-2.1: kind=cleanup row attributes the transition to cleanup.sh
+        # so the audit trail explains *why* the task moved to crashed.
+        task_mark_crashed "$id" "tmux session $sess vanished"
+        task_set_ended "$id" "crashed" "1"
+      fi
       continue
     fi
     if ! tmux list-windows -t "$sess" -F '#W' | grep -qx "$win"; then
       log "task $id: tmux window $win gone → crashed"
-      [[ "$APPLY" -eq 1 ]] && task_set_ended "$id" "crashed" "1"
+      if [[ "$APPLY" -eq 1 ]]; then
+        task_mark_crashed "$id" "tmux window $win vanished"
+        task_set_ended "$id" "crashed" "1"
+      fi
     fi
   done
 

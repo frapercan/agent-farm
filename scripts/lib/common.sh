@@ -5,7 +5,9 @@
 # Set strict mode in callers, not here (so we don't break interactive sourcing).
 
 AGENT_FARM_ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
-AGENT_FARM_DB="$AGENT_FARM_ROOT/state/tasks.sqlite"
+# AGENT_FARM_DB defaults to the canonical location but tests / fixture runs
+# can override it (set AGENT_FARM_DB before sourcing this file).
+AGENT_FARM_DB="${AGENT_FARM_DB:-$AGENT_FARM_ROOT/state/tasks.sqlite}"
 AGENT_FARM_TMUX_SESSION="${AGENT_FARM_TMUX_SESSION:-agent-farm}"
 AGENT_FARM_WORKTREES="${AGENT_FARM_WORKTREES:-$HOME/Thesis2/worktrees}"
 
@@ -65,7 +67,20 @@ task_set_started() {
 }
 
 task_set_ended() {
-  python3 "$DB_PY" set-ended "$1" "$2" "${3:-0}"
+  # task_set_ended <id> <status> [exit_code] [summary]
+  # The optional summary argument (FARM-2.1) is forwarded to db.py so the
+  # corresponding events row carries the first 200 chars in payload_json.
+  python3 "$DB_PY" set-ended "$1" "$2" "${3:-0}" "${4:-}"
+}
+
+task_mark_killed() {
+  # task_mark_killed <id> [reason] — emits a kind=kill events row.
+  python3 "$DB_PY" mark-killed "$1" "${2:-}"
+}
+
+task_mark_crashed() {
+  # task_mark_crashed <id> [reason] — emits a kind=cleanup events row.
+  python3 "$DB_PY" mark-crashed "$1" "${2:-}"
 }
 
 heartbeat() {

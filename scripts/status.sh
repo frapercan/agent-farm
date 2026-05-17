@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# status.sh — show live tasks (tabular) or detail of one task.
+# status.sh — show live tasks (tabular), detail of one task, or the
+# farm-wide events timeline (FARM-2.1).
 #
 # Usage:
-#   bash status.sh                # tabla de live tasks
-#   bash status.sh <task_id>      # detail + last 10 heartbeats
-#   bash status.sh --all          # include completed/failed/killed (last 24h)
+#   bash status.sh                       # table of live tasks
+#   bash status.sh <task_id>             # detail + last 10 heartbeats
+#   bash status.sh --all                 # include completed/failed/killed (last 24h)
+#   bash status.sh --events              # last 50 lifecycle events farm-wide
+#   bash status.sh --events --kind end   # filter by event kind
+#   bash status.sh --events --since 1h   # last hour only (h/m/d suffix or ISO ts)
+#   bash status.sh --events --task <id>  # restrict to one task
+#
+# --events supports any combination of --kind / --since / --task.
 
 set -euo pipefail
 
@@ -13,6 +20,14 @@ ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 source "$ROOT/scripts/lib/common.sh"
 
 ARG="${1:-}"
+
+if [[ "$ARG" == "--events" ]]; then
+  # Delegate to a small Python helper that knows how to parse --since
+  # offsets (1h, 30m, 2d) and apply --kind / --task filters.
+  shift
+  exec python3 "$ROOT/scripts/lib/events_view.py" \
+    --db "$AGENT_FARM_DB" "$@"
+fi
 
 if [[ -z "$ARG" ]]; then
   echo "Live tasks:"
