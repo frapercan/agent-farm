@@ -19,6 +19,7 @@ AGENT_FARM_ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 
 DEPLOY_PATH="${PROTEA_DEPLOY_PATH:-$HOME/Thesis2/worktrees/protea-deploy}"
 SIBLINGS_DIR="${PROTEA_SIBLINGS_DIR:-$HOME/Thesis2/worktrees/_siblings}"
+REPOS_DIR="${PROTEA_REPOS_DIR:-$HOME/Thesis2/repositories}"
 LOG_FILE="${PROTEA_REDEPLOY_LOG:-$AGENT_FARM_ROOT/state/logs/protea_redeploy.log}"
 
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -28,6 +29,25 @@ FORCE=0
 
 ts() { date -Is; }
 log() { printf '[%s] %s\n' "$(ts)" "$*" | tee -a "$LOG_FILE"; }
+
+# self_heal_heartbeat <level> <message>
+# Best-effort heartbeat into agent-farm sqlite. We only emit if TASK_ID
+# is set (i.e. when invoked from the deploy-keeper supervisor; outside
+# that context the script is run manually or under the FARM-1.6 test
+# harness and the heartbeat is a no-op). Always returns 0 so a missing
+# task row or sqlite hiccup never crashes the redeploy tick.
+self_heal_heartbeat() {
+  local level="$1" msg="$2"
+  if [[ -z "${TASK_ID:-}" ]]; then
+    return 0
+  fi
+  local db_py="$AGENT_FARM_ROOT/scripts/lib/db.py"
+  if [[ ! -f "$db_py" ]]; then
+    return 0
+  fi
+  python3 "$db_py" heartbeat "$TASK_ID" "$level" "$msg" >/dev/null 2>&1 || true
+  return 0
+}
 
 # Self-seed .env.local with the JWT secret + supporting envs. manage.sh
 # starts uvicorn via _start_bg (setsid + &) which needs vars EXPORTED,
@@ -59,6 +79,45 @@ ensure_env_local() {
     log "seeded $f (generated new secret)"
   fi
 }
+
+# 0) Self-heal the deploy worktree if it has been removed. The
+# deploy-keeper supervisor used to pause 30 min after consecutive
+# failures when the worktree was missing (cf.
+# feedback_deploy_worktree_bootstrap memory, 2026-05-11 incident).
+# FARM-1.6 makes that recoverable on the next tick: we recreate the
+# worktree from origin/develop and continue into the existing redeploy
+# logic, which will then bootstrap deps + frontend on its own.
+if [[ ! -d "$DEPLOY_PATH" ]]; then
+  log "[self-heal] deploy worktree missing at $DEPLOY_PATH; recreating from origin/develop" >&2
+  PROTEA_REPO_FOR_HEAL="${PROTEA_REPO:-$REPOS_DIR/PROTEA}"
+  if [[ ! -d "$PROTEA_REPO_FOR_HEAL/.git" ]]; then
+    log "[self-heal] ERR PROTEA clone not found at $PROTEA_REPO_FOR_HEAL; cannot recreate worktree"
+    self_heal_heartbeat error "[self-heal] PROTEA clone missing at $PROTEA_REPO_FOR_HEAL; cannot recreate $DEPLOY_PATH"
+    exit 30
+  fi
+  if ! git -C "$PROTEA_REPO_FOR_HEAL" fetch --quiet origin develop >>"$LOG_FILE" 2>&1; then
+    log "[self-heal] ERR fetch origin develop failed"
+    self_heal_heartbeat error "[self-heal] fetch origin develop failed; cannot recreate $DEPLOY_PATH"
+    exit 30
+  fi
+  mkdir -p "$(dirname "$DEPLOY_PATH")"
+  if ! git -C "$PROTEA_REPO_FOR_HEAL" worktree add "$DEPLOY_PATH" origin/develop >>"$LOG_FILE" 2>&1; then
+    log "[self-heal] ERR git worktree add $DEPLOY_PATH origin/develop failed"
+    self_heal_heartbeat error "[self-heal] git worktree add failed for $DEPLOY_PATH"
+    exit 30
+  fi
+  log "[self-heal] recreated deploy worktree at $DEPLOY_PATH from origin/develop"
+  self_heal_heartbeat info "[self-heal] recreated deploy worktree at $DEPLOY_PATH from origin/develop"
+fi
+
+# Test-only short-circuit. Set by tests/test_redeploy_self_heal.sh to
+# exercise the self-heal preflight without invoking the full deploy
+# pipeline (which needs docker, node, poetry, etc.). NOT consumed by any
+# production caller. Exit 0 here means "self-heal preflight passed".
+if [[ -n "${PROTEA_REDEPLOY_SELF_HEAL_TEST:-}" ]]; then
+  log "[self-heal-test] short-circuit before sibling refresh and deploy"
+  exit 0
+fi
 
 # 1) Refresh sibling worktrees first. If any of them advanced we want
 # the deploy to rebuild the docs even if PROTEA itself is on tip.
