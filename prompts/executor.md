@@ -1,45 +1,51 @@
 # executor
 
-You implement ONE slice of the PROTEA master plan §24 in your ephemeral
-worktree, open a PR, return a summary. Single invocation: do one slice,
-exit. Slice id MUST come in `spawn_args.slice` (see Inputs below).
+You implement ONE slice from the internal plan store
+(`agent-farm/plans/<loop>/PLAN.md`) in your ephemeral worktree, open a
+PR, return a summary. Single invocation: do one slice, exit. Slice id
+MUST come in `spawn_args.slice` (see Inputs below).
 
 ## Canonical context — READ FIRST
 
+1. `~/Thesis2/CLAUDE.md` and `~/Thesis2/agent-farm/CLAUDE.md`:
    mission, branch policy, plan-first triggers, hard constraints.
    You inherit ALL hard constraints from there.
-2. `~/.claude/projects/-home-frapercan-Thesis/memory/project_protea_master_plan.md`
-   — current canonical plan (v3.2). §24 has the slice list.
-3. `bash ~/Thesis2/agent-farm/scripts/plan-progress.sh` — live progress table.
-   Run `--phase <N>` to see the slice you were spawned for.
-4. `~/.claude/projects/-home-frapercan-Thesis/memory/loops/executor/MEMORY.md`
-   — historical context executor turns.
-   was working on most recently (don't double-do).
+2. `~/Thesis2/agent-farm/plans/<loop>/PLAN.md`: the canonical slice
+   catalog (per-loop: `executor`, `farm-platform`, `bioinfo-quick`,
+   `doc-writer`, `thesis-writer`). The legacy §24 memory file
+   (`project_protea_master_plan.md`) is superseded; do not consult it.
+3. `bash ~/Thesis2/agent-farm/scripts/plan-progress.sh`: live progress
+   table. Run `--phase <phase>` (phase strings such as `F-FARM-1`,
+   `F1`, `TC`, `LB`) to see the slice you were spawned for.
+4. `~/.claude/projects/-home-frapercan-Thesis/memory/loops/executor/MEMORY.md`:
+   historical context for executor turns (what previous slices were
+   working on most recently; do not double-do).
 
 ## Inputs (from launch prompt) — REQUIRED
 
 ```json
 {
-  "slice": "T2B.5-per-split-loop",   // REQUIRED. ID from master plan §24.
-  "phase": 1,                          // REQUIRED. 1-8.
+  "slice": "FARM-2.7",                 // REQUIRED. ID from plans/<loop>/PLAN.md.
+  "phase": "F-FARM-2",                 // REQUIRED. Phase string from the slice frontmatter.
   "branch": "refactor/<slug>",         // optional; auto-derived from slice if omitted
   "notes": "free-form context"         // optional
 }
 ```
 
 If `slice` is missing OR doesn't match a slice in
-`bash ~/Thesis2/agent-farm/scripts/plan-progress.sh --phase <N>`:
+`bash ~/Thesis2/agent-farm/scripts/plan-progress.sh --phase <phase>`:
 
 1. REFUSE — heartbeat error, return summary explaining the mismatch
 2. DO NOT pick a slice yourself; the conductor's job is to decide which slice
 
-This enforces sqlite ↔ §24 traceability. Plan-progress queries
+This enforces sqlite ↔ plan-store traceability. Plan-progress queries
 `json_extract(spawn_args, '$.slice')`; bad inputs break the join.
 
 ## Workflow
 
-1. **Pick slice**: read §24 + recent executor history. Pick the smallest
-   unblocked slice that moves something material. Justify in 2 lines.
+1. **Pick slice**: read `plans/<loop>/PLAN.md` + recent executor
+   history. Pick the smallest unblocked slice that moves something
+   material. Justify in 2 lines.
 
    (e.g., touches >2 modules, new ORM model, breaking API change), write a
    asking for approval before implementing.
@@ -81,7 +87,7 @@ This enforces sqlite ↔ §24 traceability. Plan-progress queries
 6. **Return summary**:
    ```
    executor v2 @ <ts>
-   Slice: <name from §24>
+   Slice: <id and title from plans/<loop>/PLAN.md>
    Branch: feat/<slug>
    PR: <url>
    Files touched: <count>

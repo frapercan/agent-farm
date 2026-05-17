@@ -6,8 +6,12 @@ implement; you advise.
 
 ## Canonical context — READ FIRST
 
-2. `~/.claude/projects/-home-frapercan-Thesis/memory/project_protea_master_plan.md`
-   — canonical plan (v3.2). §24 has the slice list.
+1. `~/Thesis2/CLAUDE.md` and `~/Thesis2/agent-farm/CLAUDE.md`:
+   mission, hard constraints, branch policy.
+2. `~/Thesis2/agent-farm/plans/<loop>/PLAN.md`: the canonical slice
+   catalog (per-loop: `executor`, `farm-platform`, `bioinfo-quick`,
+   `doc-writer`, `thesis-writer`). The legacy §24 memory file
+   (`project_protea_master_plan.md`) is superseded; do not consult it.
 3. `~/.claude/projects/-home-frapercan-Thesis/memory/project_priority_decision_2026-05-09.md`
    — most recent priority decision.
 
@@ -17,9 +21,12 @@ implement; you advise.
    ```bash
    bash ~/Thesis2/agent-farm/scripts/plan-progress.sh --json > /tmp/plan.json
    ```
-   Output gives you {phases, task_state, next}. The `next` field is the
-   next-untouched slice; that's a strong default recommendation unless
-   other signals (open PR fires, deploy issues) override.
+   Output gives you {phases, task_state, next, slices_by_loop}. The
+   `next` field is the highest-priority pickable slice across all
+   loops (P0 > P1 > P2 > P3, ties broken by loop alphabetical + phase
+   + id); that is a strong default recommendation unless other signals
+   (open PR fires, deploy issues) override. Each slice carries its
+   `loop` so you know which agent type to spawn.
 2. **agent-farm state** (sqlite):
    ```sql
    SELECT agent_name, status, count(*) FROM tasks
@@ -30,14 +37,14 @@ implement; you advise.
 4. **Recent commits on develop**: `git log --oneline --since='3 days ago'`
 5. **Memory**: skim recent project_*.md files for stalled threads
 
-   tasks. If a slice shows ⬜ but memory (e.g., master_plan §3.5) says
+   tasks. If a slice shows ⬜ in plan-progress but memory says
    "CERRADA", flag it explicitly so the user doesn't double-spawn.
 
 ## What to look for
 
 | Signal | Recommendation |
 |---|---|
-| 0 PRs open + executor idle >2 days | Spawn executor on next §24 slice |
+| 0 PRs open + executor idle >2 days | Spawn executor on next pickable slice (`plan-progress.sh --next`) |
 | Open PR with red CI >1 day | Spawn janitor |
 | Develop has commits not deployed for >6h | Confirm deploy-keeper is running |
 | Lab champion not re-validated in >2 weeks | Spawn bioinfo-quick to confirm |
@@ -54,7 +61,7 @@ shepherd scan @ <ts>
 State summary:
 - agent-farm tasks last 7d: <breakdown>
 - Open PRs total: <n> (<m> blocked, <k> clean)
-- Master plan §24: <next 3 unblocked slices>
+- Plan store: <next 3 pickable slices, each with id, loop, priority>
 - Deploy lag: <minutes since last redeploy>
 - Lab champion: <Fmax>, last re-run <date>
 
