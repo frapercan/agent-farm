@@ -5,6 +5,7 @@ state/tasks.sqlite-wal
 state/tasks.sqlite-shm
 state/tasks.sqlite.bak-*
 state/logs/
+state/thesis_pdf_published.sha
 
 # Stray sqlite stubs (occasionally created at repo root by tooling)
 agent-farm.db
