@@ -424,7 +424,7 @@ publish wiring, doc-writer for the prompt edit.
 id: FARM-1.9
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   agent-farm/.gitignore covers: *.db, state/*.bak-*, state/*.sqlite*, state/logs/, results/*/

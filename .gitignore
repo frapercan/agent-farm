@@ -1,22 +1,9 @@
-# Runtime state
-state/tasks.sqlite
-state/tasks.sqlite-journal
-state/tasks.sqlite-wal
-state/tasks.sqlite-shm
-state/tasks.sqlite.bak-*
+# FARM-1.9: agent-farm state hygiene
+*.db
+state/*.bak-*
+state/*.sqlite*
 state/logs/
-state/thesis_pdf_published.sha
-
-# Stray sqlite stubs (occasionally created at repo root by tooling)
-agent-farm.db
-agent_farm.db
-*.sqlite
-*.sqlite-journal
-*.sqlite-wal
-*.sqlite-shm
-
-# Per-task artifacts
-results/
+results/*/
 
 # Worktrees (in case anyone clones inside)
 worktrees/
