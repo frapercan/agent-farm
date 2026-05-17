@@ -160,13 +160,17 @@ fi
 
 # Reject newly added `git stash` calls in executable scripts/agents (we do
 # not police docs/markdown so it remains possible to document the ban).
-# Carve-out: `tests/` (the no-stash hook itself is exercised from there,
-# FARM-1.1 + FARM-1.11) and test fixtures must contain literal stash
-# strings as inputs. The pre-push hook still rejects a pending stash at
-# push time, so a test that actually leaves a stash behind cannot ship.
+# Carve-outs:
+#   - `tests/` (the no-stash hook is exercised from there: FARM-1.1 +
+#     FARM-1.11; test fixtures must contain literal stash strings).
+#   - `*.md` anywhere (so README-hooks.md, runbooks, etc can document the
+#     no-stash policy by name, even when they live under scripts/).
+# The pre-push hook still rejects a pending stash at push time, so a test
+# that actually leaves a stash behind cannot ship.
 staged_scripts=$(git diff --cached --name-only --diff-filter=AM \
   -- 'scripts/*' 'agents/*' '*.sh' '*.py' \
-     ':(exclude)tests/*' ':(exclude)*/tests/*' 2>/dev/null || true)
+     ':(exclude)tests/*' ':(exclude)*/tests/*' \
+     ':(exclude)*.md' 2>/dev/null || true)
 if [[ -n "$staged_scripts" ]]; then
   # shellcheck disable=SC2086
   if git diff --cached -U0 -- $staged_scripts 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' | grep -qE '(^|[^[:alnum:]_-])git[[:space:]]+stash([[:space:]]|$)'; then
@@ -177,13 +181,23 @@ if [[ -n "$staged_scripts" ]]; then
 fi
 
 # --- 2. Em-dashes in publishable prose --------------------------------------
+# Catches '--' and U+2014 in staged prose paths. Strips inline code spans
+# (`...`) and HTML comments (<!-- ... -->) before checking, so that
+# legitimate references like `--flag` or `--no-verify` do not trigger
+# the rejection. Fenced code blocks are not parsed here (the per-line
+# stream model can't track open/close ``` markers across the diff), so
+# avoid em-dashes in fenced examples too if they would otherwise look
+# like prose.
 prose_paths=$(git diff --cached --name-only --diff-filter=AM -- 'thesis/*' 'docs/*' '*.md' 'README*' 'plans/*.md' 2>/dev/null || true)
 if [[ -n "$prose_paths" ]]; then
   # shellcheck disable=SC2086
   added=$(git diff --cached -U0 -- $prose_paths 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' || true)
-  if printf '%s' "$added" | grep -E '(--|—)' | grep -vE '^\+\+\+|^\+[[:space:]]*<!--' >/dev/null; then
+  # Strip inline code spans and HTML comments before scanning.
+  # sed removes the shortest `...` runs and <!-- ... --> blocks per line.
+  scrubbed=$(printf '%s' "$added" | sed -e 's/`[^`]*`//g' -e 's/<!--.*-->//g')
+  if printf '%s' "$scrubbed" | grep -E '(--|—)' >/dev/null; then
     farm_info "em-dash (-- or U+2014) detected in staged prose:"
-    printf '%s' "$added" | grep -nE '(--|—)' | grep -vE '<!--' | head -5 >&2
+    printf '%s' "$scrubbed" | grep -nE '(--|—)' | head -5 >&2
     farm_die "no em-dashes in publishable prose; use point/comma/parens"
   fi
 fi

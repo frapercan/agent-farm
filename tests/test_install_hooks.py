@@ -422,6 +422,35 @@ class TestPreCommit:
         res = _git(fresh_repo, "commit", "-m", "docs: rules", check=False)
         assert res.returncode == 0, res.stderr
 
+    def test_allows_stash_mention_in_markdown_under_scripts(
+            self, fresh_repo: Path) -> None:
+        # README-hooks.md and similar docs may live under scripts/lib/ but
+        # still need to spell out the no-stash policy. The hook carves out
+        # `*.md` from the stash-invocation check so policy docs ship clean.
+        target = fresh_repo / "scripts" / "lib"
+        target.mkdir(parents=True)
+        (target / "README-hooks.md").write_text(
+            "Refuses to commit while `git stash list` is non-empty.\n"
+        )
+        _git(fresh_repo, "add", "scripts/lib/README-hooks.md")
+        res = _git(fresh_repo, "commit", "-m", "docs: hooks README",
+                   check=False)
+        assert res.returncode == 0, res.stderr
+
+    def test_allows_em_dash_inside_backticked_code_span(
+            self, fresh_repo: Path) -> None:
+        # CLI flags like `--lock` or `--no-verify` are legitimate prose
+        # tokens. The em-dash check strips inline code spans before
+        # scanning, so backticked flags pass.
+        (fresh_repo / "README.md").write_text(
+            "Run `poetry check --lock` to verify the lockfile.\n"
+            "The hook calls `git rev-parse --absolute-git-dir`.\n"
+        )
+        _git(fresh_repo, "add", "README.md")
+        res = _git(fresh_repo, "commit", "-m", "docs: cli flags",
+                   check=False)
+        assert res.returncode == 0, res.stderr
+
     def test_rejects_commit_when_stash_pending(self, fresh_repo: Path) -> None:
         (fresh_repo / "p.txt").write_text("pp\n")
         _git(fresh_repo, "add", "p.txt")

@@ -151,7 +151,10 @@ normally.
   ```
 
   Hooks reject pending stash entries at commit and at push time.
-- NEVER co-author Claude (memory: feedback_no_coauthor.md).
+  Authoritative reference for the hook bundle:
+  `scripts/lib/README-hooks.md`.
+- NEVER co-author Claude (memory: feedback_no_coauthor.md). The
+  `commit-msg` hook blocks this; see `scripts/lib/README-hooks.md`.
 - If a PR's branch is from a fork, you can't push — note in summary.
 - Local-first CI: ruff/mypy/pytest BEFORE push for every commit you make.
 

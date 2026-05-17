@@ -55,7 +55,7 @@ conductor picks at spawn time based on `loop` + `tags` + this hint
 id: FARM-1.1
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   scripts/lib/install-hooks.sh installs four hooks into every freshly created worktree
@@ -66,11 +66,21 @@ acceptance: |-
   spawn-subagent.sh calls the installer right after git worktree add (today line 82)
   hooks/worktree-create.sh calls the installer right after git worktree add (today line 39)
   unit tests in agent-farm/tests/test_install_hooks.py cover each rejection path
+  scripts/lib/README-hooks.md documents the four hooks, escape hatch, and integration points
+  prompts/executor.md and prompts/janitor.md point at README-hooks.md as authoritative
 estimated_hours: 6
 priority: P0
 tags: [stability, hook, ci-gate, security]
 requires_human: false
 ```
+
+Shipped 2026-05-16 (PR #19) and re-anchored 2026-05-17 with the
+README-hooks.md documentation and prompt pointers. The follow-up
+server-side guard is FARM-1.1a (shipped same day in PR #23).
+Lessons captured in `feedback_farm_1_1_hook_bypass`: the bundle is
+necessary but not sufficient; server-side CI is the real backstop
+when an agent commits via `gh api`, `git commit-tree`, or with
+hooks uninstalled.
 
 **Goal**: install enforcement at the only layer agents cannot bypass
 (the git client they use to push) so the recurring "prompt rule
