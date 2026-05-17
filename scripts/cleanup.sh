@@ -94,10 +94,14 @@ if tmux has-session -t "$AGENT_FARM_TMUX_SESSION" 2>/dev/null; then
 fi
 
 # 3. Worktrees under AGENT_FARM_WORKTREES not referenced by any running/pending
-#    task AND not in PROTECTED_PATHS → remove. Iterates all REPO_LIST entries
-#    to find the worktree's owning repo and deregisters before rm.
+#    task AND not in PROTECTED_PATHS → remove. FARM-2.3: prefer the
+#    tasks.worktree_owner_repo column when populated (O(1)); fall back to a
+#    scan across REPO_LIST when the column is null (historical tasks).
 if [[ -d "$AGENT_FARM_WORKTREES" ]]; then
   active_wts=$(db_query "SELECT worktree FROM tasks WHERE status IN ('running','pending') AND worktree IS NOT NULL;" | sort -u)
+  # Build a worktree -> owner_repo map from sqlite so we don't query per
+  # iteration.  Empty map is fine; the loop falls back to the scan path.
+  owner_map=$(db_query "SELECT worktree, worktree_owner_repo FROM tasks WHERE worktree IS NOT NULL AND worktree_owner_repo IS NOT NULL;" 2>/dev/null || echo "")
   for d in "$AGENT_FARM_WORKTREES"/*/; do
     [[ -d "$d" ]] || continue
     d="${d%/}"
@@ -111,11 +115,20 @@ if [[ -d "$AGENT_FARM_WORKTREES" ]]; then
     log "orphan worktree: $d"
     if [[ "$APPLY" -eq 1 ]]; then
       removed=0
-      for repo in "${REPO_LIST[@]}"; do
-        if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $d$"; then
-          git -C "$repo" worktree remove --force "$d" 2>/dev/null && removed=1 && break
+      # FARM-2.3: O(1) lookup of owner_repo when present.
+      owner=$(printf '%s\n' "$owner_map" | awk -F'\t' -v wt="$d" '$1==wt{print $2; exit}')
+      if [[ -n "$owner" && -d "$owner/.git" ]]; then
+        if git -C "$owner" worktree list --porcelain 2>/dev/null | grep -q "^worktree $d$"; then
+          git -C "$owner" worktree remove --force "$d" 2>/dev/null && removed=1
         fi
-      done
+      fi
+      if [[ "$removed" -eq 0 ]]; then
+        for repo in "${REPO_LIST[@]}"; do
+          if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $d$"; then
+            git -C "$repo" worktree remove --force "$d" 2>/dev/null && removed=1 && break
+          fi
+        done
+      fi
       [[ "$removed" -eq 0 ]] && rm -rf "$d" 2>/dev/null || true
     fi
   done

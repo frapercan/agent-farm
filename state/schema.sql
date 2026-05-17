@@ -20,7 +20,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   created_at   TEXT NOT NULL,               -- ISO-8601
   started_at   TEXT,
   ended_at     TEXT,
-  exit_code    INTEGER
+  exit_code    INTEGER,
+  -- FARM-2.3: owning repo path recorded at spawn time so finalize/cleanup
+  -- skip the O(repos x worktrees) scan when tearing the worktree down.
+  -- Null for tasks predating the column (the scan fallback handles them).
+  worktree_owner_repo TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);

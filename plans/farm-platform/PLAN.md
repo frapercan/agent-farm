@@ -595,7 +595,7 @@ Suggested agent: executor.
 id: FARM-2.3
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   state/migrations/002_owner_repo.sql adds tasks.worktree_owner_repo TEXT
@@ -608,6 +608,23 @@ priority: P2
 tags: [schema, cleanup]
 requires_human: false
 ```
+
+Shipped 2026-05-17 (combined with FARM-2.4 because they share the
+spawn/finalize integration surface).
+- Migration `state/migrations/002_task_metadata.sql` adds the column;
+  idempotent via the new `scripts/lib/apply_migrations.py` helper, which
+  guards each statement with a `PRAGMA table_info()` precondition.
+- `state/schema.sql` carries the column inline for fresh inits.
+- `db.py set-worktree-owner-repo` writes the column without emitting
+  an event row (plumbing, not lifecycle).
+- `spawn-subagent.sh` records the owner immediately after
+  `git worktree add`.
+- `finalize-subagent.sh`, `cleanup.sh`, and `kill.sh` consult the
+  column for O(1) teardown and fall back to the legacy scan when the
+  column is null or stale.
+- Benchmark `tests/test_finalize_lookup_perf.py` showed about 10x
+  speedup on a 3-repo / 15-worktree fixture (scan ~23ms vs column
+  ~2.5ms).
 
 **Goal**: replace the every-teardown owner-repo scan with a recorded
 column populated at create time.
@@ -628,7 +645,7 @@ observation 4 + `context/feature-inventory.md §8.4`
 id: FARM-2.4
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   spawn-subagent.sh writes results.sha_before = git -C $WORKTREE rev-parse HEAD right after worktree creation
@@ -640,6 +657,20 @@ priority: P2
 tags: [schema, observability]
 requires_human: false
 ```
+
+Shipped 2026-05-17 (combined PR with FARM-2.3).
+- `db.py set-sha <task> before|after <sha>` upserts the results row
+  preserving sibling columns (summary, metrics_json).
+- `spawn-subagent.sh` captures `git rev-parse HEAD` straight after
+  `git worktree add` so sha_before is non-null for every fresh task.
+- `finalize-subagent.sh` captures HEAD just before the teardown block;
+  if the worktree directory is already gone, sha_after stays null and
+  status.sh renders `(unset)`.
+- The pre-existing `INSERT OR REPLACE INTO results(...summary...)` in
+  finalize was changed to a proper UPSERT so it no longer blanks
+  sha_before / metrics_json on its way through.
+- `status.sh <task>` adds an `owner_repo` row and a combined
+  `SHA: <before> -> <after>` line; null columns render gracefully.
 
 **Goal**: make the executor-trail introspectable. Schema declares
 both columns but no writer fills them today.
