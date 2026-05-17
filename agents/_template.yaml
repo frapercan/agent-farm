@@ -33,6 +33,11 @@ worktree:
 
 # Persistent service config — only read if persistent=true and kind=headless.
 service:
+  # load-bearing: deploy-keeper-supervisor.sh reads this on startup via
+  # scripts/lib/yaml_parse.sh (FARM-2.5). Supports `<int>` seconds
+  # (300), Xs (30s), Xm (5m), Xh (1h). Unparseable / missing values
+  # fall back to 300s with a warn heartbeat. Other persistent services
+  # are expected to follow the same convention.
   poll_interval: 5m            # bash supervisor sleeps this between ticks
   triggers: []                 # human-readable list; supervisor implements them
                                # examples: new_commit_on:origin/develop, ngrok_tunnel_down

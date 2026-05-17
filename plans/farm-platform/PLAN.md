@@ -492,7 +492,7 @@ Suggested agent: executor.
 id: FARM-1.11
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   deploy-keeper-supervisor.sh runs a quick-retry ladder before the existing 30-min PAUSE_AFTER_PAUSE_SEC pause: 30s, 2min, 5min
@@ -691,7 +691,7 @@ agent: executor.
 id: FARM-2.5
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   deploy-keeper-supervisor.sh parses service.poll_interval from agents/deploy-keeper.yaml (5m -> 300, 30s -> 30)
