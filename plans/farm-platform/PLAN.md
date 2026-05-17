@@ -362,7 +362,7 @@ executor.
 id: FARM-1.8
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   One-shot janitor commit on thesis repo: git rm --cached thesis.pdf + add to .gitignore

@@ -153,7 +153,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-1.5](farm-platform/PLAN.md#farm-15--janitor-systemic-red-check-carve-out) | F-FARM-1 | ⬜ pending | P1 | FARM-1.5 — Janitor systemic red-check carve-out |
 | [FARM-1.6](farm-platform/PLAN.md#farm-16--deploy-keeper-worktree-self-heal) | F-FARM-1 | ⬜ pending | P1 | FARM-1.6 — Deploy-keeper worktree self-heal |
 | [FARM-1.7](farm-platform/PLAN.md#farm-17--postgres-data-volume-audit--restore-test-cron) | F-FARM-1 | ⬜ pending | P0 | FARM-1.7 — Postgres data volume audit + restore-test cron |
-| [FARM-1.8](farm-platform/PLAN.md#farm-18--untrack-thesispdf-and-serve-via-deploy-keeper) | F-FARM-1 | ⬜ pending | P1 | FARM-1.8 — Untrack thesis.pdf and serve via deploy-keeper |
+| [FARM-1.8](farm-platform/PLAN.md#farm-18--untrack-thesispdf-and-serve-via-deploy-keeper) | F-FARM-1 | ✅ done | P1 | FARM-1.8 — Untrack thesis.pdf and serve via deploy-keeper |
 | [FARM-1.9](farm-platform/PLAN.md#farm-19--agent-farm-gitignore-hygiene) | F-FARM-1 | ⬜ pending | P2 | FARM-1.9 — agent-farm .gitignore hygiene |
 | [FARM-2.1](farm-platform/PLAN.md#farm-21--events-table-for-lifecycle-audit) | F-FARM-2 | ⬜ pending | P1 | FARM-2.1 — events table for lifecycle audit |
 | [FARM-2.2](farm-platform/PLAN.md#farm-22--metrics_json-writer-tokens-duration-model) | F-FARM-2 | ⬜ pending | P1 | FARM-2.2 — metrics_json writer (tokens, duration, model) |

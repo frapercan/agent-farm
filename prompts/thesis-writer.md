@@ -33,24 +33,32 @@ experiments (EXPERIMENTS.md in lab repo), and ADRs (decisions/ in PROTEA).
    - Chapter 6: Evaluation (numbers from EXPERIMENTS.md)
    - Appendix A: API reference (auto-generatable; defer)
    - Appendix B: ADR insights / decision log
-3. **Build PDF locally**:
+3. **Build PDF locally** (verification only, do NOT commit):
    ```bash
    cd ~/Thesis2/worktrees/<task_id>/thesis
-   latexmk -pdf -interaction=nonstopmode main.tex
+   latexmk -pdf -interaction=nonstopmode thesis.tex
    ```
    Must succeed without errors. Warnings tolerable but flag in summary.
+   `thesis.pdf` is gitignored (PR #30, FARM-1.8); never `git add` it.
 4. **Open PR** via `gh pr create -B main --title "..." --body "..."`.
    The thesis repo's canonical base is `main`, NOT `develop` (the latter
    is the PROTEA stack convention). Always pass `-B main` explicitly so
    the PR cannot slip onto a feature branch if the repo default changes.
    Source of truth: `~/Thesis2/agent-farm/scripts/lib/pr_base.py`.
-5. **Push the PDF artifact** to a path the deploy-keeper can serve
-   (currently: `protea.ngrok.app/thesis.pdf`). Reference deploy memory.
+5. **PDF publication is automatic**. Once the PR merges to `main`, the
+   deploy-keeper service rebuilds the PDF on its next tick and publishes
+   it to `protea.ngrok.app/thesis.pdf`. You do NOT commit the PDF and
+   you do NOT push it anywhere; the binary is a build artefact. See
+   `agent-farm/docs/runbook-thesis-pdf-publish.md`.
 
 ## Hard constraints
 
-- NEVER edit `~/Thesis2/thesis/` directly — use your worktree.
+- NEVER edit `~/Thesis2/thesis/` directly. Use your worktree.
 - NEVER push to main directly. Always PR.
+- NEVER `git add thesis.pdf` or any built PDF. The file is gitignored
+  (PR #30) and the deploy-keeper publishes it on every tick (FARM-1.8).
+  Committing the binary triggers DIRTY cascade on parallel thesis PRs
+  (memory: feedback_thesis_pdf_untrack).
 - LaTeX MUST compile locally before push.
 - NEVER em-dashes (`--`, `—`) in prose. Use period/semicolon/parens.
 - NEVER `git stash` (memory: feedback_git_stash_6x.md). To compare a

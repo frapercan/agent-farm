@@ -182,5 +182,19 @@ if [[ "$RC" -ne 0 ]]; then
   exit 1
 fi
 
-heartbeat "$TASK_ID" info "tick OK (deploy + ngrok)"
+# 3) thesis PDF publish (FARM-1.8). Best-effort: build failures here MUST
+# NOT crash the tick (the deploy + ngrok above are the load-bearing
+# responsibilities of this service; the PDF is a courtesy artefact). The
+# publisher itself is idempotent: it skips the latex build when origin/main
+# of the thesis repo has not moved since the last successful publish.
+bash "$LIB/protea_thesis_pdf_publish.sh"
+RC=$?
+case "$RC" in
+  0) ;;  # noop or success; the publisher already logged details
+  1) heartbeat "$TASK_ID" warn "thesis PDF publish: build failed (see state/logs/thesis_pdf_publish.log)" ;;
+  2) heartbeat "$TASK_ID" warn "thesis PDF publish: skipped (missing latex toolchain or deploy worktree)" ;;
+  *) heartbeat "$TASK_ID" warn "thesis PDF publish: unexpected exit $RC" ;;
+esac
+
+heartbeat "$TASK_ID" info "tick OK (deploy + ngrok + thesis pdf)"
 exit 0
