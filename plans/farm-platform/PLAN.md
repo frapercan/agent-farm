@@ -1140,7 +1140,7 @@ audit dimensions). Suggested agent: ux-reviewer.
 id: FARM-FEAT.1
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   ~/.claude/commands/agent-farm-conductor.md, -agents.md, -spawn.md, -status.md, -kill.md, -cleanup.md, -plan.md ship as small markdown files matching the project's slash-command template
