@@ -56,7 +56,7 @@ cannot start without this Dataset.
 id: LB.2
 phase: LB
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   Re-run cafaeval on PROTEA against the leakage-free baseline
@@ -65,6 +65,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P1
 tags: [eval, anc2vec, leakage-fix]
+note: "2026-05-17 janitor reconcile: multi-seed sweep (3 seeds × 6 cells) completed; selective avg cafaeval Fmax 0.6215 ± 0.0014 on v226 per memory project_lb2_leakage_fixed_champion"
 ```
 
 Lab fixed the leakage 2026-05-05; PROTEA-side cafaeval reproduction was
@@ -115,7 +116,7 @@ Fmax internal + cafa-evaluator f_micro_w as the LAFA-aligned metric.
 id: LR.2
 phase: LR
 loop: bioinfo-quick
-status: pending
+status: deferred
 deps: [LR.1]
 acceptance: |-
   GeOKG embeddings ingested as alternative GO embedding source
@@ -125,6 +126,7 @@ acceptance: |-
 estimated_hours: 16
 priority: P2
 tags: [research, embeddings, geokg]
+note: "2026-05-17 janitor reconcile: NO-GO decision per memory project_geokg_nogo_2026_05_17 (task mismatch, paywall, anc2vec load-bearing in LB.2 champion, coverage unknown); defer until preconditions met (Fmax gain >0.005 on CAFA + v226 coverage parity)"
 ```
 
 Per `reference_geokg_paper.md`: hyperbolic + Euclidean GO embeddings.
