@@ -424,7 +424,7 @@ publish wiring, doc-writer for the prompt edit.
 id: FARM-1.9
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   agent-farm/.gitignore covers: *.db, state/*.bak-*, state/*.sqlite*, state/logs/, results/*/
@@ -722,7 +722,7 @@ instead of being decorative.
 id: FARM-2.6
 phase: F-FARM-2
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   scripts/memory-prompt-drift.py scans context/memory/feedback_*.md + project_*.md for "How to apply" blocks
@@ -736,6 +736,13 @@ priority: P2
 tags: [schema, lint, prompt, observability]
 requires_human: false
 ```
+
+Shipped 2026-05-17 (PR). `scripts/memory-prompt-drift.py` (~175 LOC)
+scans the real memory dir against `prompts/`. Smoke run on
+2026-05-17: 0 stale entries across 28 memory files. Boot sequence
+step added to `prompts/bootstrap-autowork.md`. 17 unit tests covering
+all heading styles, file-reference pairing, all-prompts fallback, JSON
+mode, and robustness.
 
 **Goal**: convert the latent "rule lives only in memory" class
 (P1-4, P2-4, P3-2 today) into a mechanical check the conductor runs
