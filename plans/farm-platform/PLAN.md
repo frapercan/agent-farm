@@ -313,7 +313,7 @@ master/main mismatch). Suggested agent: executor.
 id: FARM-1.6
 phase: F-FARM-1
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   protea_redeploy.sh checks [[ ! -d "$DEPLOY_PATH" ]] before the cd at today's line 42
