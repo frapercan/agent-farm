@@ -308,6 +308,21 @@ class TestPreCommit:
         res = _git(fresh_repo, "commit", "-m", "feat: code", check=False)
         assert res.returncode == 0, res.stderr
 
+    def test_allows_em_dash_in_plans_md(self, fresh_repo: Path) -> None:
+        # plans/*.md files are excluded from em-dash checking per FARM-2.7.
+        # They use em-dashes in slice titles by convention and are not
+        # publishable prose.
+        plans = fresh_repo / "plans" / "FARM-1.0"
+        plans.mkdir(parents=True)
+        (plans / "PLAN.md").write_text(
+            "### FARM-1.0 — Untrack thesis and serve via deploy-keeper\n"
+            "\n"
+            "This slice title uses an em-dash by convention.\n"
+        )
+        _git(fresh_repo, "add", "plans/FARM-1.0/PLAN.md")
+        res = _git(fresh_repo, "commit", "-m", "plan: FARM-1.0", check=False)
+        assert res.returncode == 0, res.stderr
+
     def test_rejects_stash_invocation_added_to_script(self,
                                                      fresh_repo: Path) -> None:
         scripts = fresh_repo / "scripts"
