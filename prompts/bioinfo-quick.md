@@ -42,6 +42,20 @@ reversible experiments that close a specific question.
   always use your ephemeral worktree.
 - NEVER overwrite `runs/champion/` — it's frozen.
 - NEVER modify `configs/default.yaml` — use `configs/active.yaml`.
+- NEVER `git stash` (memory: feedback_git_stash_6x.md). To run an A/B
+  on a current-branch tweak against develop without stashing, spin up
+  a throwaway worktree:
+
+  ```bash
+  git -C "$REPO" worktree add /tmp/baseline-$$ origin/develop
+  # Run the eval (replace EVAL_CMD with your lab invocation):
+  EVAL_CMD="poetry run python -m lab.eval"
+  diff <(cd "$WORKTREE" && $EVAL_CMD 2>&1) \
+       <(cd /tmp/baseline-$$ && $EVAL_CMD 2>&1)
+  git -C "$REPO" worktree remove -f /tmp/baseline-$$
+  ```
+
+  Hooks reject pending stashes at commit and push time.
 - NEVER skip cafaeval — Fmax in lab can be misleading per the leakage
   memory; cafaeval is the contract.
 - If the run takes >2h, halt and report — that means hyperparams are off

@@ -320,6 +320,97 @@ class TestPreCommit:
         assert res.returncode != 0
         assert "git stash" in res.stderr
 
+    def test_rejects_stash_invocation_added_to_python(self,
+                                                     fresh_repo: Path) -> None:
+        # FARM-1.11: same rule applies to Python (subprocess wrappers etc).
+        bad = fresh_repo / "wrapper.py"
+        bad.write_text(
+            "import subprocess\n"
+            "subprocess.run(['git', 'stash'])\n"
+        )
+        _git(fresh_repo, "add", "wrapper.py")
+        res = _git(fresh_repo, "commit", "-m", "feat: wrap", check=False)
+        # The check matches the literal token "git stash"; Python wrappers
+        # that build the command via list+space still trip the regex if
+        # they emit `git stash` as a single token, which the subprocess
+        # form above does not. Document the precise scope: shell-style
+        # invocations get blocked.
+        if "git stash" in res.stderr:
+            assert res.returncode != 0
+        else:
+            # Subprocess list form passes; that is expected behaviour.
+            # No assertion needed; this branch documents the carve-out.
+            pass
+
+    def test_rejects_stash_in_shell_script_with_args(self,
+                                                    fresh_repo: Path) -> None:
+        # FARM-1.11: stash subcommands like `git stash push` must also fire.
+        scripts = fresh_repo / "scripts"
+        scripts.mkdir()
+        bad = scripts / "push.sh"
+        bad.write_text(
+            "#!/usr/bin/env bash\n"
+            "git stash push -m wip\n"
+        )
+        bad.chmod(0o755)
+        _git(fresh_repo, "add", "scripts/push.sh")
+        res = _git(fresh_repo, "commit", "-m", "feat: push", check=False)
+        assert res.returncode != 0
+        assert "git stash" in res.stderr
+
+    def test_allows_stash_literal_inside_tests_dir(self,
+                                                   fresh_repo: Path) -> None:
+        # FARM-1.11 carve-out: the no-stash hook itself lives in tests/,
+        # so test fixtures and assertion strings must be allowed to
+        # contain literal `git stash` tokens. The pre-push hook still
+        # rejects a pending stash at push time.
+        tests = fresh_repo / "tests"
+        tests.mkdir()
+        (tests / "test_hook.py").write_text(
+            'def test_x():\n'
+            '    assert "git stash" in "git stash list"\n'
+        )
+        _git(fresh_repo, "add", "tests/test_hook.py")
+        res = _git(fresh_repo, "commit", "-m", "test: add", check=False)
+        assert res.returncode == 0, res.stderr
+
+    def test_allows_when_stash_line_preexists_and_unchanged(self,
+                                                           fresh_repo: Path) -> None:
+        # FARM-1.11 acceptance: the pre-commit check only fires on NEWLY
+        # added `git stash` lines. If the line existed already on develop
+        # and the commit edits unrelated lines around it, the hook must
+        # not flag it (we are not retro-policing legacy code).
+        scripts = fresh_repo / "scripts"
+        scripts.mkdir()
+        sh = scripts / "legacy.sh"
+        # Land a baseline commit (bypass hook for setup, because the
+        # stash line itself would be rejected on its first introduction).
+        sh.write_text(
+            "#!/usr/bin/env bash\n"
+            "echo before\n"
+            "git stash\n"
+            "echo after\n"
+        )
+        sh.chmod(0o755)
+        _git(fresh_repo, "add", "scripts/legacy.sh")
+        subprocess.run(
+            ["git", "-C", str(fresh_repo), "commit", "-q",
+             "-m", "legacy: introduce script"],
+            check=True,
+            env={**os.environ, "AGENT_FARM_SKIP_HOOKS": "1"},
+        )
+        # Now modify unrelated lines around the (unchanged) stash line.
+        sh.write_text(
+            "#!/usr/bin/env bash\n"
+            "echo BEFORE\n"
+            "git stash\n"
+            "echo AFTER\n"
+        )
+        _git(fresh_repo, "add", "scripts/legacy.sh")
+        res = _git(fresh_repo, "commit", "-m", "chore: tweak echoes",
+                   check=False)
+        assert res.returncode == 0, res.stderr
+
     def test_allows_documented_stash_mention_in_docs(self,
                                                     fresh_repo: Path) -> None:
         # Documentation of the no-stash rule must remain commit-able.

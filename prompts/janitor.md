@@ -139,6 +139,18 @@ normally.
   `develop`; `agent-farm` and `thesis` target `main`. Source of truth:
   `~/Thesis2/agent-farm/scripts/lib/pr_base.py`.
 - NEVER `--no-verify`, NEVER bypass branch protection.
+- NEVER `git stash` (memory: feedback_git_stash_6x.md). To compare a
+  PR branch against develop without stashing local edits, use a
+  throwaway worktree:
+
+  ```bash
+  git -C "$REPO" worktree add /tmp/baseline-$$ origin/develop
+  diff <(cd "$WORKTREE" && ruff check 2>&1) \
+       <(cd /tmp/baseline-$$ && ruff check 2>&1)
+  git -C "$REPO" worktree remove -f /tmp/baseline-$$
+  ```
+
+  Hooks reject pending stash entries at commit and at push time.
 - NEVER co-author Claude (memory: feedback_no_coauthor.md).
 - If a PR's branch is from a fork, you can't push — note in summary.
 - Local-first CI: ruff/mypy/pytest BEFORE push for every commit you make.
