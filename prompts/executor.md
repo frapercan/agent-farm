@@ -111,9 +111,12 @@ This enforces sqlite ↔ §24 traceability. Plan-progress queries
 
   Pre-push and pre-commit hooks reject any pending stash and any new
   `git stash` invocation added to scripts (FARM-1.1 + FARM-1.11).
+  Authoritative reference for the hook bundle:
+  `scripts/lib/README-hooks.md`.
 - NEVER co-author Claude in commits (per memory: feedback_no_coauthor.md).
+  The `commit-msg` hook blocks this; see `scripts/lib/README-hooks.md`.
 - NEVER add em-dashes (`--` or `—`) to publishable prose (per memory:
-  feedback_no_em_dashes.md).
+  feedback_no_em_dashes.md). The `pre-commit` hook blocks this.
 - Smell budget: each PR must NOT introduce new offenders >800 LOC file,
   >500 LOC class, >60 LOC method, >6 args. CI enforces via
   `scripts/check_smells.py`.
