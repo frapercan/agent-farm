@@ -71,12 +71,27 @@ case "$STATUS" in
   *) die "status must be succeeded|failed|crashed (got '$STATUS')" ;;
 esac
 
-# Read task metadata we need
-ROW=$(db_query "SELECT agent_name, worktree FROM tasks WHERE id='$TASK_ID' LIMIT 1;" || true)
+# Read task metadata we need. FARM-2.3 adds worktree_owner_repo to the
+# read so the teardown path can skip the O(repos x worktrees) scan when
+# the column is populated. Null for historical tasks → fallback to scan.
+ROW=$(db_query "SELECT agent_name, worktree, COALESCE(worktree_owner_repo,'') FROM tasks WHERE id='$TASK_ID' LIMIT 1;" || true)
 [[ -z "$ROW" ]] && die "task not found in sqlite: $TASK_ID"
 
 AGENT_NAME=$(printf '%s' "$ROW" | awk -F'\t' '{print $1}')
 WORKTREE=$(printf '%s' "$ROW" | awk -F'\t' '{print $2}')
+OWNER_REPO=$(printf '%s' "$ROW" | awk -F'\t' '{print $3}')
+
+# FARM-2.4: capture sha_after right before teardown so the executor trail
+# is introspectable end-to-end. Best-effort — failure must not block the
+# rest of finalize, since the audit value is observability, not control.
+if [[ -n "$WORKTREE" && -d "$WORKTREE" ]]; then
+  if SHA_AFTER=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null); then
+    if ! python3 "$ROOT/scripts/lib/db.py" set-sha \
+          "$TASK_ID" after "$SHA_AFTER" 2>/tmp/set-sha-after.err; then
+      heartbeat "$TASK_ID" warn "set-sha after failed: $(cat /tmp/set-sha-after.err 2>/dev/null)"
+    fi
+  fi
+fi
 
 # Mark task ended in sqlite
 task_set_ended "$TASK_ID" "$STATUS" "$EXIT"
@@ -121,10 +136,12 @@ for x in json.load(sys.stdin):
   fi
 fi
 
-# Optional summary row
+# Optional summary row. We UPSERT instead of INSERT OR REPLACE so the
+# sibling columns (sha_before, sha_after, metrics_json) that spawn /
+# FARM-2.4 wrote earlier do not get blanked out.
 if [[ -n "$SUMMARY" ]]; then
   ESCAPED=$(printf '%s' "$SUMMARY" | sed "s/'/''/g")
-  db_exec "INSERT OR REPLACE INTO results(task_id, summary) VALUES('$TASK_ID', '$ESCAPED');"
+  db_exec "INSERT INTO results(task_id, summary) VALUES('$TASK_ID', '$ESCAPED') ON CONFLICT(task_id) DO UPDATE SET summary=excluded.summary;"
 fi
 
 # Worktree cleanup, gated by yaml policy
@@ -147,30 +164,50 @@ else
     elif [[ -n "$PROTECTED_PATH" && "$WORKTREE" == "$PROTECTED_PATH" ]]; then
       SKIP_REASON="worktree matches protected path in yaml"
     else
-      # Find the owning repo and deregister
-      CANDIDATES=()
-      for d in "$HOME/Thesis2/repositories"/*; do
-        [[ -d "$d/.git" ]] && CANDIDATES+=("$d")
-      done
-      [[ -d "$HOME/Thesis2/thesis/.git" ]] && CANDIDATES+=("$HOME/Thesis2/thesis")
-
-      for repo in "${CANDIDATES[@]}"; do
-        if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $WORKTREE$"; then
-          if git -C "$repo" worktree remove --force "$WORKTREE" 2>/dev/null; then
-            REMOVED=1
-            heartbeat "$TASK_ID" info "worktree removed from $repo"
-          fi
-          break
+      # FARM-2.3: prefer the recorded owner_repo column (O(1)) over a
+      # repository scan (O(repos x worktrees)). Falls back to the scan if
+      # the column is null (historical tasks) or the recorded repo no
+      # longer owns the worktree.
+      REMOVE_REPO=""
+      if [[ -n "$OWNER_REPO" && -d "$OWNER_REPO/.git" ]]; then
+        if git -C "$OWNER_REPO" worktree list --porcelain 2>/dev/null \
+            | grep -q "^worktree $WORKTREE$"; then
+          REMOVE_REPO="$OWNER_REPO"
         fi
-      done
+      fi
 
-      if [[ "$REMOVED" -eq 0 ]]; then
-        # Fallback: nuke the dir and prune dangling registry
-        rm -rf "$WORKTREE" 2>/dev/null && REMOVED=1
-        for repo in "${CANDIDATES[@]}"; do
-          git -C "$repo" worktree prune 2>/dev/null || true
+      if [[ -n "$REMOVE_REPO" ]]; then
+        if git -C "$REMOVE_REPO" worktree remove --force "$WORKTREE" 2>/dev/null; then
+          REMOVED=1
+          heartbeat "$TASK_ID" info "worktree removed from $REMOVE_REPO (via owner_repo column)"
+        fi
+      else
+        # Fallback: scan the candidate repos. Kept verbatim so historical
+        # tasks (column null) keep working unchanged.
+        CANDIDATES=()
+        for d in "$HOME/Thesis2/repositories"/*; do
+          [[ -d "$d/.git" ]] && CANDIDATES+=("$d")
         done
-        heartbeat "$TASK_ID" warn "worktree removed by rm -rf fallback (no owning repo found)"
+        [[ -d "$HOME/Thesis2/thesis/.git" ]] && CANDIDATES+=("$HOME/Thesis2/thesis")
+
+        for repo in "${CANDIDATES[@]}"; do
+          if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $WORKTREE$"; then
+            if git -C "$repo" worktree remove --force "$WORKTREE" 2>/dev/null; then
+              REMOVED=1
+              heartbeat "$TASK_ID" info "worktree removed from $repo (scan fallback)"
+            fi
+            break
+          fi
+        done
+
+        if [[ "$REMOVED" -eq 0 ]]; then
+          # Final fallback: nuke the dir and prune dangling registry
+          rm -rf "$WORKTREE" 2>/dev/null && REMOVED=1
+          for repo in "${CANDIDATES[@]}"; do
+            git -C "$repo" worktree prune 2>/dev/null || true
+          done
+          heartbeat "$TASK_ID" warn "worktree removed by rm -rf fallback (no owning repo found)"
+        fi
       fi
     fi
   else

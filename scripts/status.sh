@@ -66,6 +66,7 @@ else
             UNION ALL SELECT 'status    ', status FROM tasks WHERE id='$TASK_ID'
             UNION ALL SELECT 'model     ', COALESCE(model,'') FROM tasks WHERE id='$TASK_ID'
             UNION ALL SELECT 'worktree  ', COALESCE(worktree,'') FROM tasks WHERE id='$TASK_ID'
+            UNION ALL SELECT 'owner_repo', COALESCE(worktree_owner_repo,'') FROM tasks WHERE id='$TASK_ID'
             UNION ALL SELECT 'tmux      ', COALESCE(tmux_window,'') FROM tasks WHERE id='$TASK_ID'
             UNION ALL SELECT 'pid       ', COALESCE(CAST(pid AS TEXT),'') FROM tasks WHERE id='$TASK_ID'
             UNION ALL SELECT 'created   ', created_at FROM tasks WHERE id='$TASK_ID'
@@ -81,6 +82,14 @@ else
   db_query "SELECT 'summary', COALESCE(summary,'') FROM results WHERE task_id='$TASK_ID'
             UNION ALL SELECT 'sha_before', COALESCE(sha_before,'') FROM results WHERE task_id='$TASK_ID'
             UNION ALL SELECT 'sha_after',  COALESCE(sha_after,'')  FROM results WHERE task_id='$TASK_ID';"
+
+  # FARM-2.4: combined transition line — easier than scanning two rows.
+  # Renders gracefully when either side is null: shows '(unset)' so the
+  # operator can tell at a glance whether spawn or finalize dropped its write.
+  SHA_TRANSITION=$(db_query "SELECT COALESCE(NULLIF(sha_before,''),'(unset)') || ' -> ' || COALESCE(NULLIF(sha_after,''),'(unset)') FROM results WHERE task_id='$TASK_ID';" 2>/dev/null)
+  if [[ -n "$SHA_TRANSITION" && "$SHA_TRANSITION" != "(unset) -> (unset)" ]]; then
+    echo "SHA: $SHA_TRANSITION"
+  fi
 
   # FARM-2.2: cost summary if results.metrics_json populated.
   METRICS_RAW=$(db_query "SELECT COALESCE(metrics_json,'') FROM results WHERE task_id='$TASK_ID';" 2>/dev/null)

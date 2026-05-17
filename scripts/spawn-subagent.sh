@@ -86,6 +86,25 @@ if [[ "$WT_CLEANUP" != "none" ]]; then
   fi
   heartbeat "$TASK_ID" info "worktree created: $WORKTREE (branch $BRANCH)"
 
+  # FARM-2.3: record the owning repo so finalize/cleanup/kill skip the
+  # O(repos x worktrees) scan during teardown. Best-effort — a sqlite hiccup
+  # here must NOT abort spawn; the scan fallback still works.
+  if ! python3 "$ROOT/scripts/lib/db.py" set-worktree-owner-repo \
+        "$TASK_ID" "$REPO" 2>/tmp/set-owner-repo.err; then
+    heartbeat "$TASK_ID" warn "set-worktree-owner-repo failed: $(cat /tmp/set-owner-repo.err 2>/dev/null)"
+  fi
+
+  # FARM-2.4: capture sha_before right after worktree creation so the
+  # executor trail is introspectable end-to-end. Same best-effort policy.
+  if SHA_BEFORE=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null); then
+    if ! python3 "$ROOT/scripts/lib/db.py" set-sha \
+          "$TASK_ID" before "$SHA_BEFORE" 2>/tmp/set-sha-before.err; then
+      heartbeat "$TASK_ID" warn "set-sha before failed: $(cat /tmp/set-sha-before.err 2>/dev/null)"
+    fi
+  else
+    heartbeat "$TASK_ID" warn "git rev-parse HEAD failed in fresh worktree; sha_before not recorded"
+  fi
+
   # FARM-1.1: install enforcement git-hooks bundle into the fresh worktree.
   # The installer is repo-local to agent-farm; for non-agent-farm worktrees
   # (PROTEA, thesis, lab, ...) we still source the installer from

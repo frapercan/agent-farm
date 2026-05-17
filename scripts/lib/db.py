@@ -13,6 +13,8 @@ Usage from bash:
     python3 ~/Thesis2/agent-farm/scripts/lib/db.py mark-killed <task_id> [reason]
     python3 ~/Thesis2/agent-farm/scripts/lib/db.py mark-crashed <task_id> [reason]
     python3 ~/Thesis2/agent-farm/scripts/lib/db.py set-metrics <task_id> <metrics_json_str>
+    python3 ~/Thesis2/agent-farm/scripts/lib/db.py set-worktree-owner-repo <task_id> <repo_path>
+    python3 ~/Thesis2/agent-farm/scripts/lib/db.py set-sha <task_id> before|after <sha>
 
 FARM-2.1: every lifecycle entrypoint also appends a row to the events
 table inside the same transaction (so a task move to a terminal state and
@@ -23,6 +25,14 @@ the results row if missing) and annotates the most recent kind=end event
 for the task with the parsed metrics under payload.metrics. If no end
 event exists yet (set-metrics called before set-ended) a kind=end row is
 NOT inserted; we just stamp the results column.
+
+FARM-2.3: set-worktree-owner-repo records the owning repo at spawn time
+so finalize/cleanup/kill skip the O(repos x worktrees) scan. No event
+row is emitted; the column is plumbing, not lifecycle.
+
+FARM-2.4: set-sha writes results.sha_before (right after worktree
+creation) or results.sha_after (right before teardown). Upserts the
+results row when needed; emits no event.
 
 All commands print nothing on success unless they're a query. Exit non-zero on error.
 """
@@ -290,6 +300,61 @@ def cmd_set_metrics(task_id: str, metrics_json: str) -> int:
     return 0
 
 
+def cmd_set_worktree_owner_repo(task_id: str, repo: str) -> int:
+    """Record the owning repo of the task's worktree (FARM-2.3).
+
+    Called by spawn-subagent.sh immediately after `git worktree add` so the
+    finalize/cleanup/kill teardown path can look the column up instead of
+    scanning every repo under ~/Thesis2/repositories.
+
+    No event is emitted; this is plumbing, not lifecycle.
+    """
+    if not repo:
+        print("set-worktree-owner-repo: repo must be non-empty", file=sys.stderr)
+        return 2
+    with conn() as c:
+        cur = c.cursor()
+        row = cur.execute("SELECT 1 FROM tasks WHERE id=?", (task_id,)).fetchone()
+        if row is None:
+            print(f"set-worktree-owner-repo: unknown task_id: {task_id}", file=sys.stderr)
+            return 1
+        cur.execute(
+            "UPDATE tasks SET worktree_owner_repo=? WHERE id=?",
+            (repo, task_id),
+        )
+    return 0
+
+
+def cmd_set_sha(task_id: str, which: str, sha: str) -> int:
+    """Write results.sha_before or results.sha_after (FARM-2.4).
+
+    `which` must be 'before' or 'after'. Upserts the results row when it
+    doesn't yet exist so callers don't have to special-case the first write.
+    No event is emitted.
+    """
+    if which not in ("before", "after"):
+        print(f"set-sha: which must be 'before' or 'after', got {which!r}", file=sys.stderr)
+        return 2
+    if not sha:
+        print("set-sha: sha must be non-empty", file=sys.stderr)
+        return 2
+    column = "sha_before" if which == "before" else "sha_after"
+    with conn() as c:
+        cur = c.cursor()
+        row = cur.execute("SELECT 1 FROM tasks WHERE id=?", (task_id,)).fetchone()
+        if row is None:
+            print(f"set-sha: unknown task_id: {task_id}", file=sys.stderr)
+            return 1
+        # Upsert; preserves whichever sibling column already holds a value.
+        cur.execute(
+            f"""INSERT INTO results(task_id, {column})
+                VALUES(?, ?)
+                ON CONFLICT(task_id) DO UPDATE SET {column}=excluded.{column}""",
+            (task_id, sha),
+        )
+    return 0
+
+
 def cmd_mark_crashed(task_id: str, reason: str = "") -> int:
     """Record a cleanup-detected crash. The companion set-ended call moves
     the task to status=crashed; this kind=cleanup event documents that
@@ -320,6 +385,8 @@ COMMANDS = {
     "mark-killed": cmd_mark_killed,
     "mark-crashed": cmd_mark_crashed,
     "set-metrics": cmd_set_metrics,
+    "set-worktree-owner-repo": cmd_set_worktree_owner_repo,
+    "set-sha": cmd_set_sha,
 }
 
 
