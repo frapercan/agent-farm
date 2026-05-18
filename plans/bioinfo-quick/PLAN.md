@@ -250,7 +250,7 @@ tags: [plumbing, dataset]
 id: LP.2
 phase: LP
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   Lab consumes the new KnnContext / FeatureBuildContext from protea-contracts v0.2.0
@@ -258,4 +258,5 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [plumbing, contracts]
+note: "shipped via lab PR #26 (2026-05-18)"
 ```
