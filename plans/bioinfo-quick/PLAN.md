@@ -234,7 +234,7 @@ note: "2026-05-18 agent reconcile: feature importance audit completed on v226 li
 id: LP.1
 phase: LP
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   pull_dataset retries transient MinIO/S3 errors with exponential backoff
@@ -242,6 +242,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [plumbing, dataset]
+note: "shipped via lab PR #27 (2026-05-18)"
 ```
 
 ### LP.2 — training_dump_helpers shim refresh after T-CONTEXTS
