@@ -36,7 +36,7 @@ Hard constraints:
 id: LB.1
 phase: LB
 loop: bioinfo-quick
-status: blocked
+status: pending
 deps: []
 acceptance: |-
   PROTEA-side executor publishes Dataset bench-v1-K5-v226-lineage
@@ -47,8 +47,8 @@ priority: P0
 tags: [dataset, lineage, lafa]
 ```
 
-Blocked on executor F2C.5 / T-RES.1 prep work. v22 reranker training
-cannot start without this Dataset.
+Blockers F2C.5 (PR #402 merged) and T-RES.1 (done) resolved. v22 reranker
+training can now proceed.
 
 ### LB.2 — anc2vec leakage retrofix on PROTEA-side cafaeval
 
