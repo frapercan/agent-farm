@@ -199,7 +199,7 @@ note: "2026-05-18 agent reconcile: champions.md + scripts/update_champions.py + 
 id: LM.2
 phase: LM
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   spec_catalog.md lists every spec tested + outcome (ship / drop / iterate)
@@ -207,6 +207,7 @@ acceptance: |-
 estimated_hours: 3
 priority: P3
 tags: [method, registry]
+note: "shipped via lab PR #28 (2026-05-18)"
 ```
 
 ### LM.3 — per-aspect feature importance audit
