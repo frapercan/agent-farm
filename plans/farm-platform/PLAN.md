@@ -1043,7 +1043,8 @@ agent: frontend-designer (UI) + executor (write endpoints).
 id: FARM-UI.7
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via PROTEA PR #413 + agent-farm PR #80 (2026-05-18)"
 deps: [FARM-2.1]
 acceptance: |-
   Loki-docker-driver added to the agent-farm tmux session (or a sidecar that tails state/tasks.sqlite events)
@@ -1076,7 +1077,8 @@ Suggested agent: executor.
 id: FARM-UI.8
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via PROTEA PR #414 + agent-farm PR #81 (2026-05-18)"
 deps: [FARM-UI.2, FARM-UI.3, FARM-UI.4, FARM-UI.5]
 acceptance: |-
   apps/web/e2e/farm-mobile.spec.ts covers /en/farm/, /en/farm/<id>/, /en/farm/plan/, /en/farm/cost/ at viewport 390x844 (existing mobile profile)
@@ -1418,7 +1420,8 @@ Suggested agent: executor.
 id: FARM-FEAT.9
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via agent-farm PR #75 (2026-05-18)"
 deps: []
 acceptance: |-
   tests/test_plan_parser.py covers: phase-header detection, slice-id extraction, json_extract joining, --next fallback
