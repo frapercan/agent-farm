@@ -183,6 +183,7 @@ bash ~/Thesis2/agent-farm/scripts/cleanup.sh --apply
 
 ## See also
 
+- `docs/features/` (one markdown page per first-class capability, auto-indexed by `docs/features/README.md`)
 - `docs/token-savings.md` — concrete cost analysis, daily budget table,
   the 5 levers that keep this cheap
 - `prompts/conductor.md` — conductor system prompt (read first if you're
