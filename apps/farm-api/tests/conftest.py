@@ -106,6 +106,30 @@ def farm_root(tmp_path: Path) -> Path:
     # Worktrees directory (empty by default; some tests will seed).
     (tmp_path / "worktrees").mkdir()
 
+    # Agents directory with two fixture specs so /agents/budgets has
+    # something deterministic to surface. Mirrors the real shape under
+    # agent-farm/agents/<name>.yaml (subset of fields the endpoint reads).
+    agents_dir = tmp_path / "agents"
+    agents_dir.mkdir()
+    (agents_dir / "executor.yaml").write_text(
+        "name: executor\n"
+        "kind: subagent\n"
+        "model: opus-4.7\n"
+        "cost_budget:\n"
+        "  expected_tokens: 120000\n"
+        "  max_usd_per_day: 12.00\n"
+    )
+    (agents_dir / "janitor.yaml").write_text(
+        "name: janitor\n"
+        "kind: subagent\n"
+        "model: haiku-4.5\n"
+        "cost_budget:\n"
+        "  expected_tokens: 30000\n"
+        "  max_usd_per_day: 2.00\n"
+    )
+    # A malformed file to verify the endpoint silently skips it.
+    (agents_dir / "broken.yaml").write_text(": not a mapping :\n")
+
     return tmp_path
 
 

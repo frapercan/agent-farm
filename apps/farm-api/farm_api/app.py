@@ -19,7 +19,7 @@ from typing import Any
 from fastapi import FastAPI
 
 from farm_api.config import Settings
-from farm_api.routes import cost, events, plan, tasks, worktrees
+from farm_api.routes import agents, cost, events, plan, tasks, worktrees
 
 log = logging.getLogger("farm_api")
 
@@ -48,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(plan.router)
     app.include_router(cost.router)
     app.include_router(worktrees.router)
+    app.include_router(agents.router)
 
     # Write routes: only attached when fully configured. A bare
     # FARM_API_WRITE=1 without a token is treated as misconfig.
