@@ -194,7 +194,14 @@ fi
 # slice titles by convention and are not publishable prose. The em-dash rule
 # per CLAUDE.md applies only to publishable prose (thesis chapters, READMEs,
 # papers, ADRs). See FARM-2.7 follow-up context for details.
-prose_paths=$(git diff --cached --name-only --diff-filter=AM -- 'thesis/*' 'docs/*' '*.md' 'README*' ':(exclude)plans/**' 2>/dev/null || true)
+#
+# docs/features/**.md files are also excluded: they carry YAML frontmatter
+# delimited by '---' which is structurally not an em-dash. The auto-rendered
+# docs/features/README.md also contains markdown table separators. The
+# coverage gate in scripts/check-features-coverage.sh + the parametrised
+# tests in tests/test_features_surface.py enforce the no-em-dash policy on
+# the actual prose content of every feature page. FARM-FEAT.11 context.
+prose_paths=$(git diff --cached --name-only --diff-filter=AM -- 'thesis/*' 'docs/*' '*.md' 'README*' ':(exclude)plans/**' ':(exclude)docs/features/**' 2>/dev/null || true)
 if [[ -n "$prose_paths" ]]; then
   # shellcheck disable=SC2086
   added=$(git diff --cached -U0 -- $prose_paths 2>/dev/null | grep -E '^\+' | grep -vE '^\+\+\+' || true)

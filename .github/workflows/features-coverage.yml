@@ -1,0 +1,23 @@
+name: features-coverage
+
+on:
+  pull_request:
+    paths:
+      - 'agents/**'
+      - 'commands/**'
+      - 'scripts/**'
+      - 'docs/features/**'
+      - '.github/workflows/**'
+      - '.github/workflows/features-coverage.yml'
+
+jobs:
+  features-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render features index in --check mode
+        run: bash scripts/render-features-index.sh --check
+
+      - name: Coverage gate
+        run: bash scripts/check-features-coverage.sh
