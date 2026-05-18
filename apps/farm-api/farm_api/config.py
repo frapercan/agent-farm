@@ -19,6 +19,11 @@ Env vars:
                         ~/Thesis2/worktrees.
   FARM_API_PLANS        Path to the plans directory. Defaults to
                         $AGENT_FARM_ROOT/plans.
+  FARM_API_SCRIPTS      Path to the agent-farm scripts directory used by
+                        the write endpoints (spawn / kill / cleanup).
+                        Defaults to $AGENT_FARM_ROOT/scripts. The sidecar
+                        invokes the scripts as subprocesses and surfaces
+                        stdout / exit code in the response body.
 """
 
 from __future__ import annotations
@@ -40,8 +45,10 @@ class Settings:
     db_path: Path
     worktrees_path: Path
     plans_path: Path
+    scripts_path: Path
     write_enabled: bool
     auth_token: str | None
+    farm_root: Path
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -58,6 +65,11 @@ class Settings:
         plans_env = os.environ.get("FARM_API_PLANS")
         plans_path = Path(plans_env).expanduser() if plans_env else root / "plans"
 
+        scripts_env = os.environ.get("FARM_API_SCRIPTS")
+        scripts_path = (
+            Path(scripts_env).expanduser() if scripts_env else root / "scripts"
+        )
+
         write_enabled = os.environ.get("FARM_API_WRITE", "") == "1"
         auth_token = os.environ.get("FARM_API_AUTH_TOKEN") or None
 
@@ -65,6 +77,8 @@ class Settings:
             db_path=db_path,
             worktrees_path=worktrees_path,
             plans_path=plans_path,
+            scripts_path=scripts_path,
             write_enabled=write_enabled,
             auth_token=auth_token,
+            farm_root=root,
         )
