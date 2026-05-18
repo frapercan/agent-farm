@@ -36,7 +36,7 @@ Hard constraints:
 id: LB.1
 phase: LB
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   PROTEA-side executor publishes Dataset bench-v1-K5-v226-lineage
@@ -45,10 +45,11 @@ acceptance: |-
 estimated_hours: 2
 priority: P0
 tags: [dataset, lineage, lafa]
+note: "2026-05-18 agent reconcile: Dataset row id=3517bc8b-4562-49e0-8c67-99afc5fdc67f published to PROTEA on 2026-05-14 (13 train pairs v160-v226, eval v226-v230, 24.35M train rows, schema_sha 6d97a624b8a7). v22 booster (study_v23 lambdarank, lineage features) trained on the dataset and registered as nine v226full_lineage_<cell> RerankerModel rows via POST /v1/reranker-models/import-by-reference on 2026-05-14. LR.1 PR #18 merged 2026-05-18. Cafaeval Fmax NK+LK selective avg 0.6215 +/- 0.0014 (LB.2 multi-seed)."
 ```
 
 Blockers F2C.5 (PR #402 merged) and T-RES.1 (done) resolved. v22 reranker
-training can now proceed.
+training completed and registered. See LR.1 PR #18 for full closure artefacts.
 
 ### LB.2 — anc2vec leakage retrofix on PROTEA-side cafaeval
 
@@ -95,7 +96,7 @@ tags: [stats, ci, chapter-6]
 id: LR.1
 phase: LR
 loop: bioinfo-quick
-status: blocked
+status: done
 deps: [LB.1]
 acceptance: |-
   v22 booster trained with lineage feature on bench-v1-K5-v226-lineage
@@ -104,11 +105,12 @@ acceptance: |-
 estimated_hours: 8
 priority: P0
 tags: [research, lineage, training]
+note: "2026-05-18 agent reconcile: study_v23 lambdarank booster (v6+lineage-leakfree bundle, 34 features, anc2vec/emb_pca dropped) trained on bench-v1-K5-v226-lineage. Nine v226full_lineage_<cell> RerankerModel rows registered in PROTEA (dataset_id 3517bc8b, external_source protea-reranker-lab@28d9ce0-study_v23). Per-cell lab_fmax delta CSV in experiments/lr1/lineage_delta.csv. LR.1 PR #18 merged 2026-05-18."
 ```
 
-Active study. Reranker design: 13 train pairs (12 historical + v220-v226
-new), eval window v226-v230, single prediction_set per submission, lab
-Fmax internal + cafa-evaluator f_micro_w as the LAFA-aligned metric.
+Active study completed. Reranker design: 13 train pairs (12 historical + v220-v226
+new), eval window v226-v230. Nine per-cell boosters registered in PROTEA. Cafaeval
+NK+LK selective avg 0.6215 +/- 0.0014 (LB.2 multi-seed sweep).
 
 ### LR.2 — GeOKG embeddings vs anc2vec
 
