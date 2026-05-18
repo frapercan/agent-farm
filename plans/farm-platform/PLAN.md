@@ -1737,38 +1737,74 @@ incremental progress visible.
 transversal re-benchmark would cover"` (cell count + compute estimate
 + storage estimate 12-60 GB). Suggested agent: bioinfo-quick.
 
-### FARM-EXP.9 — Re-run pre-leakage pre-computed cells on bench-v1-K5-filtered
+### FARM-EXP.9a — Orchestration + partial pass on bench-v1-K5-filtered
 
 ```yaml
-id: FARM-EXP.9
+id: FARM-EXP.9a
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.2]
 acceptance: |-
   Identify the ~80-100 pre-computed cells on bench-v1-K5 (pre-leakage) per axis-map §"Pre-computed cells in snapshot"
-  Re-run each on bench-v1-K5-filtered so they count toward the re-benchmark
-  Per-cell run.json + paired CI vs prior pre-leakage run logged with a note that the numbers are NOT comparable to the old bench-v1-K5 cells
-  Champion table (FARM-EXP.4) updated where the leakage-free re-run changes the winner
-estimated_hours: 12
+  Ship the partial pass orchestrator (cells_to_rerun.csv, partial_ci.csv, summary.json) so cells trained on the filtered dataset can be aggregated incrementally
+  Per-cell run.json + paired CI for the cells that DID complete this pass
+estimated_hours: 4
 priority: P1
-tags: [benchmark, lineage]
+tags: [benchmark, lineage, orchestration]
 requires_human: false
+note: "Shipped via lab PR #24 (2026-05-18). 25 / 94 cells completed in this pass (all 18 NK+LK replication seeds + 3 pk-bpo seeds + 2 pk-mfo seeds + 2 nk-bpo alignment ablations). Remaining 69 cells live in FARM-EXP.9b."
 ```
 
-**Goal**: reuse the pre-computed coverage rather than starting from
-scratch; ~80-100 cells already trained.
+**Goal**: split FARM-EXP.9's code task from the compute task. The
+orchestration + summary scripts are shippable now; the bulk compute
+moves to FARM-EXP.9b.
+
+**Repos touched**: protea-reranker-lab.
+
+**Notes**: Split decision 2026-05-18 — `[[farm-exp-9-split-needed]]`
+memory documents why the original 12 h estimate collapsed under a 4 h
+executor budget. Cites `context/experiment-axis-map.md §"Pre-computed
+cells in snapshot"` + thesis Tab `tab:improvement` warning that
+bench-v1-K5 and bench-v1-K5-filtered rows are not comparable.
+Suggested agent: bioinfo-quick.
+
+### FARM-EXP.9b — 69 remaining cells compute pass
+
+```yaml
+id: FARM-EXP.9b
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.9a]
+acceptance: |-
+  Run the remaining 69 cells from FARM-EXP.9a's cells_to_rerun.csv against bench-v1-K5-filtered
+  Per-cell run.json with paired CI vs prior pre-leakage run; note that the numbers are NOT comparable to the old bench-v1-K5 cells
+  Champion table (FARM-EXP.4) updated where the leakage-free re-run changes the winner
+  Pass-2 infrastructure from the developer's local `6342d70` commit (27 hparam specs + standalone runner + summary script) consolidated into a fresh PR off origin/develop
+estimated_hours: 90
+priority: P1
+tags: [benchmark, lineage, compute-long]
+requires_human: false
+note: "Compute-heavy: ~60-90 min per cell under 12-CPU contention. Needs a long-running bioinfo-quick or a deploy-keeper-style runner with extended budget. Memory [[farm-exp-9-split-needed]] explains the constraint."
+```
+
+**Goal**: actually run the bulk compute that FARM-EXP.9 originally
+bundled. Decouples shippable orchestration code (9a) from a 70-100 h
+compute job (9b) that cannot fit a normal 4 h executor budget.
 
 **Repos touched**: protea-reranker-lab.
 
 **Out of scope**:
 1. Re-running cells that never trained against ESMC-300M (those land
    in FARM-EXP.8).
+2. Champion auto-promotion to `champions.md` — covered by FARM-EXP.4
+   acceptance bullet 4 once 9b finishes.
 
-**Notes**: Cites `context/experiment-axis-map.md §"Pre-computed cells
-in snapshot"` + thesis Tab `tab:improvement` warning that
-bench-v1-K5 and bench-v1-K5-filtered rows are not comparable.
-Suggested agent: bioinfo-quick.
+**Notes**: After 9b completes, the chapter-6 results refresh
+(FARM-EXP.11) can unblock. Suggested agent: bioinfo-quick with
+extended budget, OR a headless one-shot runner spawned via the
+new declarative `worktree.repo` mechanism from FARM-FEAT.2.
 
 ### FARM-EXP.10 — Selective rerank resurrection: recompute, not archaeology
 
@@ -1811,7 +1847,7 @@ id: FARM-EXP.11
 phase: F-EXP-RESET
 loop: farm-platform
 status: pending
-deps: [FARM-EXP.3, FARM-EXP.4, FARM-EXP.8, FARM-EXP.9]
+deps: [FARM-EXP.3, FARM-EXP.4, FARM-EXP.8, FARM-EXP.9b]
 acceptance: |-
   thesis/chapters/06_evaluation.tex regenerated to use the axis-tuple form throughout (zero vN reranker shorthand)
   Three results tables (one per aspect BPO/MFO/CCO) replace the prior consolidated table
