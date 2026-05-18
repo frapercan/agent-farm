@@ -1173,7 +1173,7 @@ commands aspirational). Suggested agent: doc-writer.
 id: FARM-FEAT.2
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   spawn.sh resolves worktree.repo / worktree.base_branch / worktree.cleanup from the agent yaml for kind=headless persistent=false
