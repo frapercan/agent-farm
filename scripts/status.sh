@@ -30,6 +30,11 @@ if [[ "$ARG" == "--events" ]]; then
 fi
 
 if [[ -z "$ARG" ]]; then
+  # Run zombie reconciliation first (unless disabled)
+  if [[ "${FARM_SKIP_ZOMBIE_RECONCILE:-0}" != "1" ]]; then
+    python3 "$ROOT/scripts/lib/zombie_reconcile.py" --quiet
+  fi
+
   echo "Live tasks:"
   printf '%-30s %-20s %-10s %-10s %-12s %s\n' \
     "task_id" "agent" "kind" "status" "model" "started_at"
