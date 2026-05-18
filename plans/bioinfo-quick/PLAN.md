@@ -78,7 +78,7 @@ pending and is the closing artefact.
 id: LB.3
 phase: LB
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   Each cell × aspect reported as paired bootstrap CI vs baseline
@@ -86,6 +86,7 @@ acceptance: |-
 estimated_hours: 6
 priority: P2
 tags: [stats, ci, chapter-6]
+note: "2026-05-18 agent reconcile: paired bootstrap CI (N=10000) completed; 6/6 NK+LK cells strictly positive at 95% CI on bench-v1-K5-v226-lineage. Artefact at experiments/lb3/per_cell_paired_ci.csv on lab/develop. Script: scripts/lb3_paired_ci.py. Shipped via lab PR #19 (feat/lb3-paired-ci). Memory: project_lb3_paired_ci_2026_05_18."
 ```
 
 ## LR — Research initiatives
@@ -181,7 +182,7 @@ Selective avg cafaeval Fmax 0.6215 supersedes the legacy 0.4562 record.
 id: LM.1
 phase: LM
 loop: bioinfo-quick
-status: pending
+status: done
 deps: []
 acceptance: |-
   champions.md per-cell × aspect; auto-updated by training scripts
@@ -189,6 +190,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [method, tracking]
+note: "2026-05-18 agent reconcile: champions.md + scripts/update_champions.py + scripts/render_champions_bootstrap.py shipped via lab PR #23 (feat/lm1-champion-tracking, commit 3c735e3 on lab/develop). Auto-updater fires after each training batch in FARM-EXP.8 orchestrator."
 ```
 
 ### LM.2 — spec catalog + outcome registry
@@ -213,7 +215,7 @@ tags: [method, registry]
 id: LM.3
 phase: LM
 loop: bioinfo-quick
-status: pending
+status: done
 deps: [LR.1]
 acceptance: |-
   Per-aspect (P/F/C) feature importance table; identifies cross-aspect
@@ -221,6 +223,7 @@ acceptance: |-
 estimated_hours: 4
 priority: P3
 tags: [method, interpretability]
+note: "2026-05-18 agent reconcile: feature importance audit completed on v226 lineage champion; 9 aspect-stable generalist features dominate NK+LK; alignment+taxonomy families score 0 gain; PK cells lineage-dominated (motivates selective-deploy). Artefacts at experiments/lm3/feature_importance_per_aspect.csv and experiments/lm3/feature_importance_summary.md on lab/develop. Script: scripts/lm3_feature_importance.py. Shipped via lab PR #20 (feat/lm3-feature-importance, commit 766c1c2). Memory: project_lm3_feature_importance_2026_05_18."
 ```
 
 ## LP — Plumbing
