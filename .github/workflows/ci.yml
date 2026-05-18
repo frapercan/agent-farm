@@ -1,0 +1,69 @@
+name: CI
+
+# Runs the pytest suite + a scoped ruff lint on every pull request and
+# every push to main, so a regression in scripts/lib/, plans/render.py,
+# or tests/ fails fast at PR time instead of after a deploy.
+#
+# The ruff step is intentionally scoped to the test files this slice
+# introduces (test_db.py + test_render.py + test_plan_parser.py).
+# A repo-wide ruff sweep is queued separately (existing offences in
+# tests/ predate FARM-FEAT.9 and would block this gate today).
+#
+# mypy is not run in CI because it is not installed in the developer's
+# local environment (FARM-FEAT.2 finding); adding it here would diverge
+# CI from local. A future slice can flip it on once mypy lands on PATH.
+#
+# Slice: FARM-FEAT.9 (farm-platform loop).
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # Runtime + test deps. The repo has no pyproject `dependencies`
+          # block, so we install the minimal set the test suite imports.
+          pip install pyyaml pytest pytest-cov
+
+      - name: Run pytest
+        run: python -m pytest -q
+
+  ruff:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Ruff lint (scoped to FARM-FEAT.9 test files)
+        run: |
+          set -euo pipefail
+          ruff check \
+            tests/test_db.py \
+            tests/test_render.py \
+            tests/test_plan_parser.py
