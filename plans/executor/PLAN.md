@@ -988,14 +988,14 @@ Deferred per D25 decision; not blocked, scope-out for post-defensa.
 id: T-OPS.10
 phase: F5
 loop: executor
-status: pending
+status: done
 deps: [T-OPS.2, T-OPS.3, T-OPS.4, T-OPS.5]
 acceptance: |-
   deploy/README.md covers compose, Helm, Swarm, SLURM with worked examples
 estimated_hours: 4
 priority: P2
 tags: [deployment, docs]
-note: "2026-05-17 janitor: pending; no merged PR found"
+note: "shipped via PROTEA PR #415 (2026-05-18)"
 ```
 
 ### T-OPS.11 — E2E deploy test
