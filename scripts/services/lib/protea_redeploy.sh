@@ -22,7 +22,19 @@ SIBLINGS_DIR="${PROTEA_SIBLINGS_DIR:-$HOME/Thesis2/worktrees/_siblings}"
 REPOS_DIR="${PROTEA_REPOS_DIR:-$HOME/Thesis2/repositories}"
 LOG_FILE="${PROTEA_REDEPLOY_LOG:-$AGENT_FARM_ROOT/state/logs/protea_redeploy.log}"
 
+# Worker-healthcheck (FARM-DK-WORKER-HEALTHCHECK).
+# Threshold of consecutive ticks a worker must be missing before we
+# count the worker-healthcheck as failed and force BOOTSTRAP. Default 2
+# (i.e. one transient miss during a manual `manage.sh restart` does not
+# trigger a redundant redeploy). Override via env for tests.
+WORKER_MISS_THRESHOLD="${PROTEA_WORKER_MISS_THRESHOLD:-2}"
+# Persistent miss-count state file. One key per worker name, value is
+# the number of consecutive ticks the worker has been missing. Stored
+# under agent-farm state/ so it survives between ticks.
+WORKER_MISS_STATE="${PROTEA_WORKER_MISS_STATE:-$AGENT_FARM_ROOT/state/deploy_keeper_worker_miss_count}"
+
 mkdir -p "$(dirname "$LOG_FILE")"
+mkdir -p "$(dirname "$WORKER_MISS_STATE")"
 
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
@@ -46,6 +58,133 @@ self_heal_heartbeat() {
     return 0
   fi
   python3 "$db_py" heartbeat "$TASK_ID" "$level" "$msg" >/dev/null 2>&1 || true
+  return 0
+}
+
+# verify_workers_alive (FARM-DK-WORKER-HEALTHCHECK)
+#
+# Scans $DEPLOY_PATH/logs/pids/worker-*.pid (the source-of-truth set
+# written by scripts/manage.sh on start, removed on stop) and checks
+# each PID with `kill -0`. Workers whose process has died are
+# accumulated into a per-worker miss counter persisted at
+# $WORKER_MISS_STATE. A worker is only reported as missing once it has
+# been absent for $WORKER_MISS_THRESHOLD consecutive ticks; this
+# debouncer prevents a one-tick blip during a manual `manage.sh
+# restart` from triggering a runaway redeploy.
+#
+# Sets one global consumed by the main loop below:
+#   WORKERS_MISSING_NAMES (comma-separated list of breached workers,
+#   only meaningful when the function returns non-zero)
+#
+# Returns 0 if all workers are alive (or no pid files exist yet, which
+# is the "stack is down entirely" case, handled by the existing api
+# healthcheck and not duplicated here). Returns 1 iff at least one
+# worker is missing for >= $WORKER_MISS_THRESHOLD ticks.
+#
+# Does NOT touch the API or frontend pid file; those are healthchecked
+# upstream by the curl on /jobs. Scope is intentionally worker-only.
+verify_workers_alive() {
+  WORKERS_MISSING_NAMES=""
+
+  local pids_dir="$DEPLOY_PATH/logs/pids"
+  if [[ ! -d "$pids_dir" ]]; then
+    # No pid dir at all means the stack has never started (fresh
+    # bootstrap) or has been hard-cleared. The existing BOOTSTRAP=1
+    # branch above handles "no uvicorn yet"; do not double-fire.
+    return 0
+  fi
+
+  # Iterate worker pid files only. The API and frontend pid files
+  # share the same dir but are watched by the api healthcheck.
+  local missing_now=()
+  local present_now=()
+  local pidfile name pid
+  shopt -s nullglob
+  for pidfile in "$pids_dir"/worker-*.pid; do
+    name=$(basename "$pidfile" .pid)
+    pid=$(cat "$pidfile" 2>/dev/null | tr -d '[:space:]' || true)
+    if [[ -z "$pid" || ! "$pid" =~ ^[0-9]+$ ]]; then
+      missing_now+=("$name")
+      continue
+    fi
+    if kill -0 "$pid" 2>/dev/null; then
+      present_now+=("$name")
+    else
+      missing_now+=("$name")
+    fi
+  done
+  shopt -u nullglob
+
+  # Load prior miss counts (one "name<TAB>count" per line).
+  declare -A miss_count=()
+  if [[ -f "$WORKER_MISS_STATE" ]]; then
+    while IFS=$'\t' read -r mname mcount; do
+      [[ -z "$mname" ]] && continue
+      [[ "$mcount" =~ ^[0-9]+$ ]] || continue
+      miss_count["$mname"]="$mcount"
+    done < "$WORKER_MISS_STATE"
+  fi
+
+  # Reset counters for workers that are alive this tick.
+  local p
+  for p in "${present_now[@]}"; do
+    miss_count["$p"]=0
+  done
+
+  # Increment counters for workers missing this tick.
+  local m breached=()
+  for m in "${missing_now[@]}"; do
+    miss_count["$m"]=$(( ${miss_count["$m"]:-0} + 1 ))
+    if (( miss_count["$m"] >= WORKER_MISS_THRESHOLD )); then
+      breached+=("$m")
+    fi
+  done
+
+  # Persist updated counts (atomic via temp + mv).
+  local tmp_state="${WORKER_MISS_STATE}.tmp"
+  : > "$tmp_state"
+  local k
+  for k in "${!miss_count[@]}"; do
+    printf '%s\t%s\n' "$k" "${miss_count[$k]}" >> "$tmp_state"
+  done
+  mv -f "$tmp_state" "$WORKER_MISS_STATE"
+
+  if (( ${#breached[@]} > 0 )); then
+    # Map worker-* names back to their queue strings for the operator log line:
+    #   worker-evaluations          -> protea.evaluations
+    #   worker-predictions-batch-1  -> protea.predictions.batch
+    #   worker-embeddings-coord     -> protea.embeddings
+    #   worker-reaper               -> reaper
+    local queues=()
+    for m in "${breached[@]}"; do
+      local q="${m#worker-}"
+      # strip trailing -batch-N to collapse all batch siblings to a single
+      # queue label
+      q="${q%-batch-[0-9]*}"
+      case "$q" in
+        embeddings-coord)    q="protea.embeddings" ;;
+        embeddings-write)    q="protea.embeddings.write" ;;
+        embeddings)          q="protea.embeddings.batch" ;;
+        predictions-coord)   q="protea.predictions" ;;
+        predictions-write)   q="protea.predictions.write" ;;
+        predictions)         q="protea.predictions.batch" ;;
+        ping|jobs|training|evaluations) q="protea.$q" ;;
+        reaper)              q="reaper" ;;
+        *)                   q="protea.$q" ;;
+      esac
+      queues+=("$q")
+    done
+    # de-dup while preserving order
+    local seen="" dedup=()
+    for q in "${queues[@]}"; do
+      case ",$seen," in
+        *",$q,"*) ;;
+        *) dedup+=("$q"); seen="$seen,$q" ;;
+      esac
+    done
+    WORKERS_MISSING_NAMES=$(IFS=','; printf '%s' "${dedup[*]}")
+    return 1
+  fi
   return 0
 }
 
@@ -145,8 +284,26 @@ BOOTSTRAP=0
 # for a new commit. If the api isn't returning 200 on /jobs, force a
 # full redeploy. -m 3 + --fail keeps this cheap on the happy path.
 PROTEA_API_HEALTH_URL="${PROTEA_API_HEALTH_URL:-http://localhost:8000/jobs}"
+API_OK=1
 if ! curl -sf -m 3 -o /dev/null "$PROTEA_API_HEALTH_URL"; then
+  API_OK=0
   log "api healthcheck ${PROTEA_API_HEALTH_URL} non-200; forcing BOOTSTRAP"
+  BOOTSTRAP=1
+fi
+
+# Worker-set healthcheck (FARM-DK-WORKER-HEALTHCHECK). The API can be
+# OK while individual worker processes have died independently (the
+# 2026-05-18 4h+ orphan-jobs incident, see project_orphan_jobs_2026_05_18).
+# verify_workers_alive applies a per-worker debounce counter so a single
+# transient miss during a manual `manage.sh restart` does not trigger a
+# redundant redeploy; only workers absent for $WORKER_MISS_THRESHOLD
+# consecutive ticks count as missing.
+if ! verify_workers_alive; then
+  if [[ "$API_OK" -eq 1 ]]; then
+    log "api healthcheck OK, but workers missing: ${WORKERS_MISSING_NAMES}; forcing BOOTSTRAP"
+  else
+    log "workers also missing: ${WORKERS_MISSING_NAMES}"
+  fi
   BOOTSTRAP=1
 fi
 
