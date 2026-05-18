@@ -1775,7 +1775,7 @@ Suggested agent: bioinfo-quick.
 id: FARM-EXP.9b
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.9a]
 acceptance: |-
   Run the remaining 69 cells from FARM-EXP.9a's cells_to_rerun.csv against bench-v1-K5-filtered
@@ -1786,7 +1786,7 @@ estimated_hours: 90
 priority: P1
 tags: [benchmark, lineage, compute-long]
 requires_human: false
-note: "Compute-heavy: ~60-90 min per cell under 12-CPU contention. Needs a long-running bioinfo-quick or a deploy-keeper-style runner with extended budget. Memory [[farm-exp-9-split-needed]] explains the constraint. Status: pass-2 infrastructure shipped via lab PR #31 (2026-05-18); compute running in tmux farm-exp-9b-runner."
+note: "Shipped via lab PR #32 (2026-05-18); harvest summary at experiments/farm_exp_9b/summary.md. Runner completed 94/94 cells (27 rep x 3 seeds + 39 ablations + 27 hparam + 1 standalone). Champion table unchanged (FARM-EXP.5 writer slice required for auto-promoter). Key results on bench-v1-K5-filtered (NOT comparable to v226): NK avg 0.6654, LK avg 0.6590, PK avg 0.2320."
 ```
 
 **Goal**: actually run the bulk compute that FARM-EXP.9 originally
@@ -1812,9 +1812,8 @@ new declarative `worktree.repo` mechanism from FARM-FEAT.2.
 id: FARM-EXP.10
 phase: F-EXP-RESET
 loop: farm-platform
-status: done
+status: pending
 deps: [FARM-EXP.2]
-note: "Closed via lab PRs #15/#18/#19/#21/#29 + PROTEA ADR D34 (#387/#394/#405). Closure artefact: lab PR #30 (2026-05-18). ADR accepted K=5 LB.2 multiseed instead of K=10 per no-archaeology policy."
 acceptance: |-
   Re-train the selective-rerank-at-K=10 cell on bench-v1-K5-v226-lineage (and optionally v230) using the current selective rerank policy
   Store under runs/transversal/<shortid>/ with run.json per F-EXP-RESET layout; pin eval_set_name explicitly

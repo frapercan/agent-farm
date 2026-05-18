@@ -13,7 +13,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 - **executor**: nothing pickable (blocked deps or all done / requires_human)
 
-- **farm-platform**: `FARM-EXP.8` (P1) · `FARM-EXP.9b` (P1) · `FARM-EXP.7` (P2)
+- **farm-platform**: `FARM-EXP.8` (P1) · `FARM-EXP.10` (P2) · `FARM-EXP.7` (P2)
 - **thesis-writer**: nothing pickable (blocked deps or all done / requires_human)
 
 
@@ -135,23 +135,23 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 | id | phase | status | priority | title |
 |---|---|---|---|---|
+| [FARM-EXP.10](farm-platform/PLAN.md#farm-exp10--selective-rerank-resurrection-recompute-not-archaeology) | F-EXP-RESET | ⬜ pending | P2 | FARM-EXP.10 — Selective rerank resurrection: recompute, not archaeology |
 | [FARM-EXP.11](farm-platform/PLAN.md#farm-exp11--per-aspect-results-table-for-thesis-chapter-6) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.11 — Per-aspect results table for thesis chapter 6 |
 | [FARM-EXP.7](farm-platform/PLAN.md#farm-exp7--in-tree-eval-cell-for-8-plm-ensemble) | F-EXP-RESET | ⬜ pending | P2 | FARM-EXP.7 — In-tree eval cell for 8-PLM ensemble |
 | [FARM-EXP.8](farm-platform/PLAN.md#farm-exp8--constrained-120-cell-grid-execution) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.8 — Constrained 120-cell grid execution |
-| [FARM-EXP.9b](farm-platform/PLAN.md#farm-exp9b--69-remaining-cells-compute-pass) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.9b — 69 remaining cells compute pass |
 | [FARM-FEAT.3](farm-platform/PLAN.md#farm-feat3--decide-on-per_action-cleanup-mode) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.3 — Decide on per_action cleanup mode |
 | [FARM-FEAT.6](farm-platform/PLAN.md#farm-feat6--generic-persistent-service-factory) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.6 — Generic persistent-service factory |
 | [FARM-FEAT.7](farm-platform/PLAN.md#farm-feat7--adopt-libworktreesh-helpers) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.7 — Adopt lib/worktree.sh helpers |
 | [FARM-FEAT.8](farm-platform/PLAN.md#farm-feat8--cost_budget-enforcement-advisory---warn-on-overage) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.8 — cost_budget enforcement (advisory -> warn-on-overage) |
 | [FARM-UI.9](farm-platform/PLAN.md#farm-ui9--ux-reviewer-audit-of-farm-dashboard) | F-UI | ⬜ pending | P3 | FARM-UI.9 — ux-reviewer audit of farm dashboard |
 | [FARM-EXP.1](farm-platform/PLAN.md#farm-exp1--experimentrun-axis-columns--unique-shortid) | F-EXP-RESET | ✅ done | P0 | FARM-EXP.1 — ExperimentRun axis columns + UNIQUE shortid |
-| [FARM-EXP.10](farm-platform/PLAN.md#farm-exp10--selective-rerank-resurrection-recompute-not-archaeology) | F-EXP-RESET | ✅ done | P2 | FARM-EXP.10 — Selective rerank resurrection: recompute, not archaeology |
 | [FARM-EXP.2](farm-platform/PLAN.md#farm-exp2--transversal-cell-catalog) | F-EXP-RESET | ✅ done | P0 | FARM-EXP.2 — Transversal cell catalog |
 | [FARM-EXP.3](farm-platform/PLAN.md#farm-exp3--bootstrap_cispy-grouping-by-axis) | F-EXP-RESET | ✅ done | P1 | FARM-EXP.3 — bootstrap_cis.py grouping by axis |
 | [FARM-EXP.4](farm-platform/PLAN.md#farm-exp4--champion-tracking-auto-updater) | F-EXP-RESET | ✅ done | P1 | FARM-EXP.4 — Champion tracking auto-updater |
 | [FARM-EXP.5](farm-platform/PLAN.md#farm-exp5--feature_schema_sha-guard-on-protea-scoring-router) | F-EXP-RESET | ✅ done | P1 | FARM-EXP.5 — feature_schema_sha guard on PROTEA scoring router |
 | [FARM-EXP.6](farm-platform/PLAN.md#farm-exp6--reject-vn-reranker-tokens-in-publishable-prose) | F-EXP-RESET | ✅ done | P2 | FARM-EXP.6 — Reject vN reranker tokens in publishable prose |
 | [FARM-EXP.9a](farm-platform/PLAN.md#farm-exp9a--orchestration--partial-pass-on-bench-v1-k5-filtered) | F-EXP-RESET | ✅ done | P1 | FARM-EXP.9a — Orchestration + partial pass on bench-v1-K5-filtered |
+| [FARM-EXP.9b](farm-platform/PLAN.md#farm-exp9b--69-remaining-cells-compute-pass) | F-EXP-RESET | ✅ done | P1 | FARM-EXP.9b — 69 remaining cells compute pass |
 | [FARM-1.1](farm-platform/PLAN.md#farm-11--worktree-git-hooks-bundle-commit-msg--pre-push--pre-commit) | F-FARM-1 | ✅ done | P0 | FARM-1.1 — Worktree git-hooks bundle (commit-msg + pre-push + pre-commit) |
 | [FARM-1.10](farm-platform/PLAN.md#farm-110--protea-contracts-all_features-producer-coverage-ci) | F-FARM-1 | ✅ done | P1 | FARM-1.10 — protea-contracts ALL_FEATURES producer-coverage CI |
 | [FARM-1.11](farm-platform/PLAN.md#farm-111--deploy-keeper-supervisor-exponential-backoff) | F-FARM-1 | ✅ done | P2 | FARM-1.11 — Deploy-keeper supervisor exponential backoff |
