@@ -20,12 +20,12 @@ permissions: acceptEdits     # default | acceptEdits | bypassPermissions
 worktree:
   repo: ~/Thesis2/repositories/PROTEA   # default. Override for lab/thesis agents.
   base_branch: origin/develop           # what to branch from (origin/main for lab+thesis)
-  cleanup: ephemeral                    # ephemeral | per_action | none
+  cleanup: ephemeral                    # ephemeral | none
                                         # - ephemeral: 1 worktree per task, deleted on exit
-                                        # - per_action: agent creates a fresh worktree per action,
-                                        #   not one bound to its lifetime (deploy-keeper pattern)
                                         # - none: no worktree at all, or uses a stable external
                                         #   worktree (declare its path below to protect it)
+                                        # D31 (docs/decisions/D31-per-action-worktree.md)
+                                        # records why per_action was removed.
   # path: ~/Thesis2/worktrees/<stable>  # ONLY for cleanup: none agents that use an external
                                         # stable worktree (e.g. deploy-keeper -> protea-deploy).
                                         # cleanup.sh + worktree-remove hook protect this path

@@ -88,7 +88,7 @@ Total first-class capabilities: **64**.
 
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
-| [cleanup-modes](cleanup-modes.md) | partial | `agents/_template.yaml`, `scripts/cleanup.sh` | `python3 -c "import yaml; yaml.safe_load(open('agents/_template.yaml'))"` | `docs/features/cleanup.md` | agent-farm conductor loop |
+| [cleanup-modes](cleanup-modes.md) | working | `agents/_template.yaml`, `scripts/cleanup.sh`, `scripts/finalize-subagent.sh`, `docs/decisions/D31-per-action-worktree.md` | `python3 -c "import yaml; yaml.safe_load(open('agents/_template.yaml'))"` | `docs/features/cleanup.md` | agent-farm conductor loop |
 
 ## 9-schema-state
 

@@ -1211,7 +1211,7 @@ executor.
 id: FARM-FEAT.3
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   ADR docs/decisions/D31-per-action-worktree.md decides: adopt for deploy-keeper OR delete the mode from _template.yaml
@@ -1234,6 +1234,22 @@ requires_human: false
 **Notes**: Cites `context/feature-inventory.md §8.2` + §12.5
 (per_action documented but no agent uses it). Suggested agent:
 executor (decision + edit) plus doc-writer for the ADR.
+
+Resolution (2026-05-18): ADR
+`docs/decisions/D31-per-action-worktree.md` chose the delete path.
+`agents/_template.yaml` now documents two canonical modes
+(`ephemeral`, `none`); the `per_action` line is removed and a back
+reference to D31 sits in its place. `docs/features/cleanup-modes.md`
+flipped from `state: partial` to `state: working` and lists both
+production-tenant modes plus the agents that use each. No script
+required editing: `scripts/spawn.sh`, `scripts/spawn-subagent.sh` and
+`scripts/finalize-subagent.sh` already treated `cleanup != "none"` as
+the single ephemeral path, and `scripts/cleanup.sh` only reads the
+value to populate the protected-paths set, so the acceptance line
+about `cleanup.sh special-case removed` was vacuous (the special-case
+never existed in code). Eleven non-template agent yamls audited; all
+declare either `ephemeral` or `none`, so no agent migration was
+needed.
 
 ### FARM-FEAT.4 — Wire deploy-keeper service.triggers
 
