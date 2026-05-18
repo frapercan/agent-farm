@@ -12,6 +12,11 @@ model: haiku-4.5             # mechanical: validate FASTA, dispatch, poll, repor
 permissions: bypassPermissions
 
 worktree:
+  # FARM-FEAT.2: spawn.sh now creates a real worktree when cleanup != none
+  # and injects WORKTREE/REPO into the launch prompt. Flip cleanup to
+  # `ephemeral` (and set `repo:` below) if/when an embeddings-runner
+  # variant needs filesystem access; the default below stays HTTP-only.
+  repo: ~/Thesis2/repositories/PROTEA
   base_branch: origin/develop
   cleanup: none              # operates against PROTEA HTTP API
 

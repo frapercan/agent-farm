@@ -25,6 +25,7 @@ PERSISTENT=$(yaml_get "$YAML" "persistent")
 MODEL=$(yaml_get "$YAML" "model")
 PERMS=$(yaml_get "$YAML" "permissions")
 PROMPT_FILE=$(yaml_get "$YAML" "system_prompt_file")
+WT_REPO=$(yaml_get "$YAML" "worktree.repo")
 WT_BASE=$(yaml_get "$YAML" "worktree.base_branch")
 WT_CLEANUP=$(yaml_get "$YAML" "worktree.cleanup")
 
@@ -58,20 +59,103 @@ else
   PROMPT_PATH="$ROOT/$PROMPT_FILE"
   [[ -f "$PROMPT_PATH" ]] || die "system_prompt_file missing: $PROMPT_PATH"
 
-  # Per-task ephemeral worktree (if cleanup=ephemeral)
+  # FARM-FEAT.2: declarative ephemeral worktree for headless one-shots.
+  # When the agent yaml declares `worktree.cleanup != none`, resolve repo +
+  # base from the yaml (defaults: repo=PROTEA, base=origin/develop) and
+  # create a real git worktree under $AGENT_FARM_WORKTREES/<task_id>. The
+  # composed prompt below injects WORKTREE/REPO/RESULTS_DIR so the agent
+  # finds the path through its launch prompt (same shape spawn-subagent.sh
+  # uses for kind=subagent).
   WT_PATH=""
-  if [[ "$WT_CLEANUP" == "ephemeral" ]]; then
+  WT_REPO_RESOLVED=""
+  if [[ -n "$WT_CLEANUP" && "$WT_CLEANUP" != "none" ]]; then
+    # Default repo = PROTEA; agent yamls override via worktree.repo.
+    WT_REPO_RESOLVED="${WT_REPO:-$HOME/Thesis2/repositories/PROTEA}"
+    WT_REPO_RESOLVED="${WT_REPO_RESOLVED/#\~/$HOME}"
+    if [[ ! -d "$WT_REPO_RESOLVED/.git" ]]; then
+      heartbeat "$TASK_ID" error "worktree.repo not a git dir: $WT_REPO_RESOLVED (set worktree.repo in $YAML)"
+      task_set_ended "$TASK_ID" "failed" "1"
+      die "worktree.repo not a git dir: $WT_REPO_RESOLVED"
+    fi
+
+    BASE="${WT_BASE:-origin/develop}"
+
     mkdir -p "$AGENT_FARM_WORKTREES"
     WT_PATH="$AGENT_FARM_WORKTREES/$TASK_ID"
-    # NOTE: assumes a git repo exists at $HOME/Thesis2 or PROTEA. Caller's
-    # responsibility to be in the right git context. For now we skip the
-    # actual `git worktree add` here and let the agent do it if needed.
-    # Future: make worktree creation declarative via spec.repo.
-    heartbeat "$TASK_ID" info "ephemeral worktree planned at $WT_PATH (creation deferred)"
+    BRANCH="task/$TASK_ID"
+
+    # Refresh base (best-effort; offline runs use local ref).
+    git -C "$WT_REPO_RESOLVED" fetch --quiet origin "${BASE#origin/}" 2>/dev/null || \
+      heartbeat "$TASK_ID" warn "git fetch failed (offline?); using local ref"
+
+    if ! git -C "$WT_REPO_RESOLVED" worktree add -b "$BRANCH" "$WT_PATH" "$BASE" 2>/tmp/wt-err.log; then
+      heartbeat "$TASK_ID" error "worktree creation failed: $(cat /tmp/wt-err.log)"
+      task_set_ended "$TASK_ID" "failed" "1"
+      die "git worktree add failed: $(cat /tmp/wt-err.log)"
+    fi
+    heartbeat "$TASK_ID" info "worktree created: $WT_PATH (branch $BRANCH, repo $WT_REPO_RESOLVED)"
+
+    # FARM-2.3: record owning repo for O(1) teardown lookup in finalize/cleanup.
+    if ! python3 "$ROOT/scripts/lib/db.py" set-worktree-owner-repo \
+          "$TASK_ID" "$WT_REPO_RESOLVED" 2>/tmp/set-owner-repo.err; then
+      heartbeat "$TASK_ID" warn "set-worktree-owner-repo failed: $(cat /tmp/set-owner-repo.err 2>/dev/null)"
+    fi
+
+    # FARM-2.4: capture sha_before for the executor audit trail.
+    if SHA_BEFORE=$(git -C "$WT_PATH" rev-parse HEAD 2>/dev/null); then
+      if ! python3 "$ROOT/scripts/lib/db.py" set-sha \
+            "$TASK_ID" before "$SHA_BEFORE" 2>/tmp/set-sha-before.err; then
+        heartbeat "$TASK_ID" warn "set-sha before failed: $(cat /tmp/set-sha-before.err 2>/dev/null)"
+      fi
+    else
+      heartbeat "$TASK_ID" warn "git rev-parse HEAD failed in fresh worktree; sha_before not recorded"
+    fi
+
+    # FARM-1.1: install enforcement git-hooks bundle into the fresh worktree.
+    INSTALL_HOOKS="$ROOT/scripts/lib/install-hooks.sh"
+    if [[ -x "$INSTALL_HOOKS" ]]; then
+      if bash "$INSTALL_HOOKS" "$WT_PATH" 2>>/tmp/install-hooks.log; then
+        heartbeat "$TASK_ID" info "install-hooks: bundle installed into $WT_PATH"
+      else
+        heartbeat "$TASK_ID" warn "install-hooks failed (non-fatal): see /tmp/install-hooks.log"
+      fi
+    else
+      heartbeat "$TASK_ID" warn "install-hooks.sh not found at $INSTALL_HOOKS; worktree has no enforcement hooks"
+    fi
   fi
 
   WINDOW="$TASK_ID"
-  CMD_PROMPT="$(cat "$PROMPT_PATH")"$'\n\nTask spec (JSON):\n'"$SPEC"
+
+  # FARM-FEAT.2: compose the launch prompt with the same spawn-context block
+  # spawn-subagent.sh writes for kind=subagent, so headless agents resolve
+  # WORKTREE/REPO/RESULTS_DIR by reading the prompt. The block is omitted
+  # when no worktree was created (cleanup=none HTTP-only agents).
+  RESULTS_DIR="$ROOT/results/$TASK_ID"
+  mkdir -p "$RESULTS_DIR"
+  COMPOSED="$RESULTS_DIR/composed_prompt.md"
+  {
+    cat "$PROMPT_PATH"
+    echo
+    echo "---"
+    echo
+    echo "## Spawn context (auto-injected by spawn.sh)"
+    echo
+    echo "- TASK_ID: \`$TASK_ID\`"
+    if [[ -n "$WT_PATH" ]]; then
+      echo "- WORKTREE: \`$WT_PATH\`"
+      echo "- REPO: \`$WT_REPO_RESOLVED\` (base: \`${WT_BASE:-origin/develop}\`)"
+    fi
+    echo "- AGENT_FARM_ROOT: \`$ROOT\`"
+    echo "- RESULTS_DIR: \`$RESULTS_DIR\`"
+    echo
+    echo "## Task spec (JSON)"
+    echo
+    echo '```json'
+    echo "$SPEC"
+    echo '```'
+  } > "$COMPOSED"
+
+  CMD_PROMPT="$(cat "$COMPOSED")"
   PERM_FLAG=""
   case "$PERMS" in
     bypassPermissions) PERM_FLAG="--dangerously-skip-permissions" ;;
@@ -84,8 +168,7 @@ else
   # We tee instead of redirect so the operator still sees output live in
   # the tmux window. The trailing `db.py set-metrics` call is best-effort:
   # parse_claude_cost.py is robust to partial / interleaved output.
-  RESULTS_DIR="$ROOT/results/$TASK_ID"
-  mkdir -p "$RESULTS_DIR"
+  # RESULTS_DIR already created above when composing the prompt.
   STREAM_LOG="$RESULTS_DIR/stream.jsonl"
 
   POST_CMD="STREAM_LOG='$STREAM_LOG'; \
