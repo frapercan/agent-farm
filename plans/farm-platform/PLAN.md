@@ -1694,6 +1694,7 @@ estimated_hours: 16
 priority: P1
 tags: [benchmark, lineage, observability]
 requires_human: false
+annotation: "Partial: 9-cell esmc_300m × K=5 grid done; full 120-cell grid requires PLM embedding caches not locally available."
 ```
 
 **Goal**: execute the constrained grid. This is the largest single
