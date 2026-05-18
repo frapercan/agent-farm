@@ -18,6 +18,7 @@ cites the relevant memories and slices.
 
 ## Source coordinates
 
+- `docs/decisions/D31-per-action-worktree.md`
 - `docs/decisions/D32-lab-runner-vs-bioinfo-quick.md`
 - `docs/decisions/D33-cafaeval-protea-scope.md`
 
