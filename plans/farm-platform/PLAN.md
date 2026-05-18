@@ -1458,7 +1458,8 @@ doc-writer.
 id: FARM-FEAT.11
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via agent-farm PR #73 (2026-05-18)"
 deps: []
 acceptance: |-
   agent-farm/docs/features/ holds one markdown file per first-class capability listed in context/feature-inventory.md (sections 1-13)
