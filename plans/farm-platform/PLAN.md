@@ -1812,8 +1812,9 @@ new declarative `worktree.repo` mechanism from FARM-FEAT.2.
 id: FARM-EXP.10
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.2]
+note: "Closed via lab PRs #15/#18/#19/#21/#29 + PROTEA ADR D34 (#387/#394/#405). Closure artefact: lab PR #30 (2026-05-18). ADR accepted K=5 LB.2 multiseed instead of K=10 per no-archaeology policy."
 acceptance: |-
   Re-train the selective-rerank-at-K=10 cell on bench-v1-K5-v226-lineage (and optionally v230) using the current selective rerank policy
   Store under runs/transversal/<shortid>/ with run.json per F-EXP-RESET layout; pin eval_set_name explicitly
