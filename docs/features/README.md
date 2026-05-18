@@ -13,7 +13,7 @@ Total first-class capabilities: **63**.
 ## 1-agents
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [bioinfo-quick](bioinfo-quick.md) | working | `agents/bioinfo-quick.yaml`, `prompts/bioinfo-quick.md` | `python3 -c "import yaml; yaml.safe_load(open('agents/bioinfo-quick.yaml'))"` | `docs/decisions/D32-lab-runner-vs-bioinfo-quick.md` | agent-farm conductor loop |
 | [deploy-keeper](deploy-keeper.md) | working | `agents/deploy-keeper.yaml`, `prompts/deploy-keeper.md`, `scripts/services/deploy-keeper-supervisor.sh`, `scripts/services/deploy-keeper-tick.sh` | `bash scripts/services/deploy-keeper-tick.sh --dry-run` | `docs/features/deploy-keeper-supervisor.md` | agent-farm conductor loop |
 | [doc-writer](doc-writer.md) | working | `agents/doc-writer.yaml`, `prompts/doc-writer.md` | `python3 -c "import yaml; yaml.safe_load(open('agents/doc-writer.yaml'))"` | `docs/features/README.md` | agent-farm conductor loop |
@@ -29,7 +29,7 @@ Total first-class capabilities: **63**.
 ## 2-conductor
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [bootstrap-autowork](bootstrap-autowork.md) | working | `prompts/bootstrap-autowork.md` | `test -s prompts/bootstrap-autowork.md` | `docs/features/conductor.md` | agent-farm conductor loop |
 | [conductor](conductor.md) | working | `prompts/conductor.md`, `prompts/bootstrap-autowork.md`, `scripts/launch-conductor.sh` | `bash -n scripts/launch-conductor.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [launch-conductor](launch-conductor.md) | working | `scripts/launch-conductor.sh` | `bash -n scripts/launch-conductor.sh` | `docs/features/conductor.md` | agent-farm conductor loop |
@@ -37,7 +37,7 @@ Total first-class capabilities: **63**.
 ## 3-spawning
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [finalize-subagent](finalize-subagent.md) | working | `scripts/finalize-subagent.sh` | `bash -n scripts/finalize-subagent.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [spawn](spawn.md) | working | `scripts/spawn.sh` | `bash -n scripts/spawn.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [spawn-subagent](spawn-subagent.md) | partial | `scripts/spawn-subagent.sh` | `bash -n scripts/spawn-subagent.sh` | `docs/features/README.md` | agent-farm conductor loop |
@@ -45,7 +45,7 @@ Total first-class capabilities: **63**.
 ## 4-lifecycle
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [cleanup](cleanup.md) | working | `scripts/cleanup.sh` | `bash scripts/cleanup.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [kill](kill.md) | working | `scripts/kill.sh` | `bash -n scripts/kill.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [status](status.md) | working | `scripts/status.sh`, `scripts/lib/events_view.py` | `bash scripts/status.sh --help 2>&1 \| head -5` | `docs/features/README.md` | agent-farm conductor loop |
@@ -54,7 +54,7 @@ Total first-class capabilities: **63**.
 ## 5-slash-commands
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [/agent-farm-agents](slash-agent-farm-agents.md) | working | `commands/agent-farm-agents.md` | `test -s commands/agent-farm-agents.md` | `docs/features/README.md` | agent-farm conductor loop |
 | [/agent-farm-cleanup](slash-agent-farm-cleanup.md) | working | `commands/agent-farm-cleanup.md` | `test -s commands/agent-farm-cleanup.md` | `docs/features/cleanup.md` | agent-farm conductor loop |
 | [/agent-farm-conductor](slash-agent-farm-conductor.md) | working | `commands/agent-farm-conductor.md`, `commands/install.sh` | `test -s commands/agent-farm-conductor.md` | `docs/features/README.md` | agent-farm conductor loop |
@@ -67,7 +67,7 @@ Total first-class capabilities: **63**.
 ## 6-services
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [deploy-keeper-supervisor](deploy-keeper-supervisor.md) | working | `scripts/services/deploy-keeper-supervisor.sh`, `scripts/services/deploy-keeper-tick.sh` | `bash -n scripts/services/deploy-keeper-supervisor.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
 | [deploy-keeper-tick](deploy-keeper-tick.md) | working | `scripts/services/deploy-keeper-tick.sh` | `bash -n scripts/services/deploy-keeper-tick.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
 | [volume-audit](volume-audit.md) | working | `scripts/services/volume-audit.service`, `scripts/services/volume-audit-watch.sh` | `bash -n scripts/services/volume-audit-watch.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
@@ -76,7 +76,7 @@ Total first-class capabilities: **63**.
 ## 7-worktree
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [install-dev-hooks](install-dev-hooks.md) | working | `scripts/install-dev-hooks.sh` | `bash -n scripts/install-dev-hooks.sh` | `scripts/lib/README-hooks.md` | agent-farm conductor loop |
 | [install-hooks](install-hooks.md) | working | `scripts/lib/install-hooks.sh`, `scripts/lib/README-hooks.md` | `bash -n scripts/lib/install-hooks.sh` | `scripts/lib/README-hooks.md` | agent-farm conductor loop |
 | [lib-worktree.sh](lib-worktree-sh.md) | partial | `scripts/lib/worktree.sh` | `bash -n scripts/lib/worktree.sh` | `scripts/lib/README-hooks.md` | agent-farm conductor loop |
@@ -87,13 +87,13 @@ Total first-class capabilities: **63**.
 ## 8-cleanup-modes
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [cleanup-modes](cleanup-modes.md) | partial | `agents/_template.yaml`, `scripts/cleanup.sh` | `python3 -c "import yaml; yaml.safe_load(open('agents/_template.yaml'))"` | `docs/features/cleanup.md` | agent-farm conductor loop |
 
 ## 9-schema-state
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [cost-report](cost-report.md) | working | `scripts/cost-report.sh`, `scripts/lib/cost_report.py`, `scripts/lib/parse_claude_cost.py` | `bash -n scripts/cost-report.sh` | `docs/token-savings.md` | agent-farm conductor loop |
 | [db.py](db-py.md) | working | `scripts/lib/db.py` | `python3 -c "import sys; sys.path.insert(0, 'scripts/lib'); import db"` | `docs/features/README.md` | agent-farm conductor loop |
 | [events-view](events-view.md) | working | `scripts/lib/events_view.py`, `state/migrations/001_events.sql` | `python3 -c "import sys; sys.path.insert(0, 'scripts/lib'); import events_view"` | `docs/features/status.md` | agent-farm conductor loop |
@@ -105,21 +105,21 @@ Total first-class capabilities: **63**.
 ## 10-repos-scope
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [decisions-adr](decisions-adr.md) | working | `docs/decisions/` | `ls docs/decisions/` | `docs/features/README.md` | agent-farm conductor loop |
 | [repo-scope](repo-scope.md) | working | `prompts/janitor.md`, `scripts/cleanup.sh` | `test -d ~/Thesis2/repositories` | `docs/features/README.md` | agent-farm conductor loop |
 
 ## 11-backup-recovery
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [pgdump-nightly](pgdump-nightly.md) | working | `scripts/install-nightly-pgdump-cron.sh` | `bash -n scripts/install-nightly-pgdump-cron.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [restore-drill](restore-drill.md) | working | `scripts/restore-drill.sh`, `scripts/install-restore-drill-cron.sh` | `bash -n scripts/restore-drill.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 
 ## 12-ci-gates
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [branch-protection](branch-protection.md) | working | `scripts/apply-branch-protection.sh`, `tests/test_apply_branch_protection.py` | `python3 -m pytest tests/test_apply_branch_protection.py -q` | `docs/runbook-branch-protection.md` | agent-farm conductor loop |
 | [coauthor-guard](coauthor-guard.md) | working | `.github/workflows/coauthor-guard.yml` | `yamllint .github/workflows/coauthor-guard.yml \|\| python3 -c "import yaml; yaml.safe_load(open('.github/workflows/coauthor-guard.yml'))"` | `scripts/lib/README-hooks.md` | agent-farm conductor loop |
 | [feature-producer-coverage](feature-producer-coverage.md) | working | `.github/workflows/feature-producer-coverage.yml`, `scripts/lib/feature_producer_coverage.py`, `tests/test_feature_producer_coverage.py` | `python3 -m pytest tests/test_feature_producer_coverage.py -q` | `docs/features/README.md` | agent-farm conductor loop |
@@ -135,7 +135,7 @@ Total first-class capabilities: **63**.
 ## 13-apps
 
 | Feature | State | Source | Smoke | Runbook | Owner |
-|:-|:-|:-|:-|:-|:-|
+|---|---|---|---|---|---|
 | [farm-api](farm-api.md) | working | `apps/farm-api/farm_api/`, `apps/farm-api/pyproject.toml`, `apps/farm-api/tests/` | `cd apps/farm-api && poetry run pytest -q` | `docs/runbook-farm-api.md` | agent-farm conductor loop |
 
 ## States
