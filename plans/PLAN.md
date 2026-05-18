@@ -141,7 +141,6 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-EXP.8](farm-platform/PLAN.md#farm-exp8--constrained-120-cell-grid-execution) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.8 — Constrained 120-cell grid execution |
 | [FARM-FEAT.6](farm-platform/PLAN.md#farm-feat6--generic-persistent-service-factory) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.6 — Generic persistent-service factory |
 | [FARM-FEAT.7](farm-platform/PLAN.md#farm-feat7--adopt-libworktreesh-helpers) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.7 — Adopt lib/worktree.sh helpers |
-| [FARM-FEAT.8](farm-platform/PLAN.md#farm-feat8--cost_budget-enforcement-advisory---warn-on-overage) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.8 — cost_budget enforcement (advisory -> warn-on-overage) |
 | [FARM-UI.9](farm-platform/PLAN.md#farm-ui9--ux-reviewer-audit-of-farm-dashboard) | F-UI | ⬜ pending | P3 | FARM-UI.9 — ux-reviewer audit of farm dashboard |
 | [FARM-EXP.1](farm-platform/PLAN.md#farm-exp1--experimentrun-axis-columns--unique-shortid) | F-EXP-RESET | ✅ done | P0 | FARM-EXP.1 — ExperimentRun axis columns + UNIQUE shortid |
 | [FARM-EXP.2](farm-platform/PLAN.md#farm-exp2--transversal-cell-catalog) | F-EXP-RESET | ✅ done | P0 | FARM-EXP.2 — Transversal cell catalog |
@@ -177,6 +176,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-FEAT.3](farm-platform/PLAN.md#farm-feat3--decide-on-per_action-cleanup-mode) | F-FEAT | ✅ done | P3 | FARM-FEAT.3 — Decide on per_action cleanup mode |
 | [FARM-FEAT.4](farm-platform/PLAN.md#farm-feat4--wire-deploy-keeper-servicetriggers) | F-FEAT | ✅ done | P2 | FARM-FEAT.4 — Wire deploy-keeper service.triggers |
 | [FARM-FEAT.5](farm-platform/PLAN.md#farm-feat5--resolve-dangling-lab-runner-plan-loop) | F-FEAT | ✅ done | P1 | FARM-FEAT.5 — Resolve dangling lab-runner plan loop |
+| [FARM-FEAT.8](farm-platform/PLAN.md#farm-feat8--cost_budget-enforcement-advisory---warn-on-overage) | F-FEAT | ✅ done | P3 | FARM-FEAT.8 — cost_budget enforcement (advisory -> warn-on-overage) |
 | [FARM-FEAT.9](farm-platform/PLAN.md#farm-feat9--populate-agent-farmtests) | F-FEAT | ✅ done | P2 | FARM-FEAT.9 — Populate agent-farm/tests/ |
 | [FARM-UI.1](farm-platform/PLAN.md#farm-ui1--farm-api-fastapi-sidecar) | F-UI | ✅ done | P1 | FARM-UI.1 — farm-api FastAPI sidecar |
 | [FARM-UI.2](farm-platform/PLAN.md#farm-ui2--enfarm-routes-list--detail) | F-UI | ✅ done | P1 | FARM-UI.2 — /en/farm/ routes (list + detail) |
