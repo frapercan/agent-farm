@@ -908,7 +908,8 @@ ASCII sketch of /en/farm/ list (mobile):
 id: FARM-UI.3
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via PROTEA PR #409 (2026-05-18)"
 deps: [FARM-UI.1, FARM-UI.2]
 acceptance: |-
   apps/web/components/FarmJobsWidget.tsx (cloned from FloatingJobsWidget.tsx) polls /api/farm/tasks?status=running every 10s, visibility-aware
@@ -939,7 +940,8 @@ frontend-designer.
 id: FARM-UI.4
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via PROTEA PR #410 (2026-05-18)"
 deps: [FARM-UI.1, FARM-UI.2]
 acceptance: |-
   apps/web/app/[locale]/farm/plan/page.tsx renders a cytoscape-dagre DAG of all slices from /api/farm/plan
@@ -972,7 +974,8 @@ visualization) + GoGraph.tsx as the existing cytoscape-dagre anchor
 id: FARM-UI.5
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via PROTEA PR #412 (2026-05-18) + agent-farm PR #77 (2026-05-18)"
 deps: [FARM-UI.1, FARM-2.2]
 acceptance: |-
   apps/web/app/[locale]/farm/cost/page.tsx shows cost rollup
@@ -1006,7 +1009,8 @@ agent: frontend-designer.
 id: FARM-UI.6
 phase: F-UI
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via agent-farm PR #71 (2026-05-18) + PROTEA PR #411 (2026-05-18)"
 deps: [FARM-UI.1, FARM-UI.2]
 acceptance: |-
   apps/web/components/CommandPalette.tsx gains a "farm:" namespace with verbs: spawn next pickable, kill <task>, cleanup --apply, view task <id>
