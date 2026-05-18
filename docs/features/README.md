@@ -94,7 +94,7 @@ Total first-class capabilities: **64**.
 
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
-| [cost-report](cost-report.md) | working | `scripts/cost-report.sh`, `scripts/lib/cost_report.py`, `scripts/lib/parse_claude_cost.py` | `bash -n scripts/cost-report.sh` | `docs/token-savings.md` | agent-farm conductor loop |
+| [cost-report](cost-report.md) | working | `scripts/cost-report.sh`, `scripts/lib/cost_report.py`, `scripts/lib/parse_claude_cost.py`, `scripts/lib/budget_check.py` | `bash -n scripts/cost-report.sh` | `docs/token-savings.md` | agent-farm conductor loop |
 | [db.py](db-py.md) | working | `scripts/lib/db.py` | `python3 -c "import sys; sys.path.insert(0, 'scripts/lib'); import db"` | `docs/features/README.md` | agent-farm conductor loop |
 | [events-view](events-view.md) | working | `scripts/lib/events_view.py`, `state/migrations/001_events.sql` | `python3 -c "import sys; sys.path.insert(0, 'scripts/lib'); import events_view"` | `docs/features/status.md` | agent-farm conductor loop |
 | [init-sqlite](init-sqlite.md) | working | `scripts/init.sh`, `state/schema.sql` | `bash -n scripts/init.sh` | `docs/features/README.md` | agent-farm conductor loop |

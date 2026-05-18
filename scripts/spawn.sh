@@ -179,12 +179,23 @@ if [[ -n \"\$METRICS\" && \"\$METRICS\" != '{}' ]]; then \
   printf '%s' \"\$METRICS\" > \"$RESULTS_DIR/metrics.json\"; \
   python3 \"\$AGENT_FARM_ROOT/scripts/lib/db.py\" set-metrics \"\$TASK_ID\" \"\$METRICS\" >/dev/null 2>&1 || true; \
   python3 \"\$AGENT_FARM_ROOT/scripts/lib/db.py\" heartbeat \"\$TASK_ID\" info \"metrics recorded: \$METRICS\" >/dev/null 2>&1 || true; \
+fi; \
+if [[ -f \"\$AGENT_FARM_ROOT/scripts/lib/budget_check.py\" ]]; then \
+  python3 \"\$AGENT_FARM_ROOT/scripts/lib/budget_check.py\" emit-finalize \"\$TASK_ID\" >/dev/null 2>&1 || true; \
 fi"
 
   tmux new-window -t "$AGENT_FARM_TMUX_SESSION" -n "$WINDOW" -c "$HOME/Thesis2" \
     "claude -p \"$CMD_PROMPT\" $PERM_FLAG --output-format stream-json --verbose 2>&1 | tee '$STREAM_LOG'; $POST_CMD; echo 'exited; press enter'; read"
   task_set_started "$TASK_ID" "$WT_PATH" "$AGENT_FARM_TMUX_SESSION:$WINDOW" ""
   heartbeat "$TASK_ID" info "claude -p launched in tmux window $WINDOW (stream.jsonl capture on)"
+fi
+
+# FARM-FEAT.8: advisory cost_budget check on spawn. If the agent's prior
+# 24h spend already hit/exceeded its max_usd_per_day, emit a warn-level
+# heartbeat on this new task. Spawn proceeds (advisory, not a hard gate).
+if [[ -f "$ROOT/scripts/lib/budget_check.py" ]]; then
+  python3 "$ROOT/scripts/lib/budget_check.py" emit-spawn "$TASK_ID" \
+    >/dev/null 2>>/tmp/budget-check.err || true
 fi
 
 # Kill placeholder if present

@@ -1388,7 +1388,8 @@ defined but unused.
 id: FARM-FEAT.8
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
+note: "shipped via agent-farm PR (FARM-FEAT.8) on 2026-05-18"
 deps: [FARM-2.2]
 acceptance: |-
   finalize-subagent.sh sums per-agent metrics_json over the rolling 24h window

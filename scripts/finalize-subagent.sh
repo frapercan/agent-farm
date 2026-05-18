@@ -245,6 +245,18 @@ if [[ -n "$METRICS_PARSED" && "$METRICS_PARSED" != "{}" ]]; then
   fi
 fi
 
+# FARM-FEAT.8: advisory cost_budget check. Sums the agent's metrics_json
+# over the last 24h and emits an error-level heartbeat (which records a
+# kind=heartbeat event row carrying level=error) when the rolling sum
+# exceeds the cap, or a warn-level heartbeat when it crosses the warn
+# ratio. No hard gate: the task has already finished by the time we get
+# here; this signal lets the operator decide whether to throttle next
+# spawns. Best-effort: never blocks finalize.
+if [[ -f "$ROOT/scripts/lib/budget_check.py" ]]; then
+  python3 "$ROOT/scripts/lib/budget_check.py" emit-finalize "$TASK_ID" \
+    >/dev/null 2>>/tmp/budget-check.err || true
+fi
+
 cat <<EOF
 task_id=$TASK_ID
 status=$STATUS

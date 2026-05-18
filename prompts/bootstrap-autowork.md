@@ -45,6 +45,14 @@ so the user can chat with you while they run.
    Read `stale_count` from the JSON output. Include it in the boot
    summary as: "Drift linter: N stale entries." If N > 0, list them
    as bullets. Do NOT block the boot sequence regardless of the count.
+3b. Cost-budget rollup (FARM-FEAT.8, advisory, non-blocking). Run
+   `python3 ~/Thesis2/agent-farm/scripts/lib/budget_check.py overages --only-alerts`.
+   Each line names an agent currently in the `NEAR` (>= 80% of cap) or
+   `OVER` (> 100% of cap) band against its `cost_budget.max_usd_per_day`
+   advisory cap over the last 24h. Empty output prints
+   `(no cost_budget alerts)`. Include the count in the boot summary as:
+   "Cost budget: K agent(s) near/over cap." If any OVER lines appear,
+   list them as bullets. Do NOT block the boot sequence regardless of K.
 4. If deploy-keeper is NOT running, spawn it now (headless):
    `bash ~/Thesis2/agent-farm/scripts/spawn.sh deploy-keeper`.
    If the user explicitly said "no deploy hoy", skip this.

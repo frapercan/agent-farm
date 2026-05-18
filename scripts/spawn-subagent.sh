@@ -153,6 +153,15 @@ COMPOSED="$RESULTS/composed_prompt.md"
 task_set_started "$TASK_ID" "$WORKTREE" "" ""
 heartbeat "$TASK_ID" info "ready for Agent tool dispatch"
 
+# FARM-FEAT.8: advisory cost_budget check on spawn. If the agent was
+# already at/over its max_usd_per_day in the previous 24h, emit a
+# warn-level heartbeat on this new task so the operator sees it in the
+# next status report. Spawn still proceeds (advisory, not a hard gate).
+if [[ -f "$ROOT/scripts/lib/budget_check.py" ]]; then
+  python3 "$ROOT/scripts/lib/budget_check.py" emit-spawn "$TASK_ID" \
+    >/dev/null 2>>/tmp/budget-check.err || true
+fi
+
 # Map model name to Claude Code's --model accepted values
 case "$MODEL" in
   haiku-4.5*)  CLAUDE_MODEL="haiku" ;;
