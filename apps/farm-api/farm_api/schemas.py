@@ -70,6 +70,22 @@ class CostBucket(BaseModel):
     usd: float
 
 
+class AgentBudget(BaseModel):
+    """Per-agent cost budget read from agents/<name>.yaml.
+
+    `max_usd_per_day` is the advisory daily cap the operator sets in the
+    agent's spec (cost_budget.max_usd_per_day). The dashboard overlays
+    it against actual spend reported by /cost so over-budget agents are
+    flagged at a glance.
+    """
+
+    name: str
+    kind: str | None = None
+    model: str | None = None
+    expected_tokens: int | None = None
+    max_usd_per_day: float | None = None
+
+
 class WorktreeInfo(BaseModel):
     name: str
     path: str
