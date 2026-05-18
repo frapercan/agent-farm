@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **63**.
+Total first-class capabilities: **64**.
 
 ## 1-agents
 
@@ -121,6 +121,7 @@ Total first-class capabilities: **63**.
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
 | [branch-protection](branch-protection.md) | working | `scripts/apply-branch-protection.sh`, `tests/test_apply_branch_protection.py` | `python3 -m pytest tests/test_apply_branch_protection.py -q` | `docs/runbook-branch-protection.md` | agent-farm conductor loop |
+| [ci](ci.md) | working | `.github/workflows/ci.yml` | `python3 -m pytest tests/test_db.py tests/test_render.py tests/test_plan_parser.py -q` | `tests/test_db.py` | agent-farm conductor loop |
 | [coauthor-guard](coauthor-guard.md) | working | `.github/workflows/coauthor-guard.yml` | `yamllint .github/workflows/coauthor-guard.yml \|\| python3 -c "import yaml; yaml.safe_load(open('.github/workflows/coauthor-guard.yml'))"` | `scripts/lib/README-hooks.md` | agent-farm conductor loop |
 | [feature-producer-coverage](feature-producer-coverage.md) | working | `.github/workflows/feature-producer-coverage.yml`, `scripts/lib/feature_producer_coverage.py`, `tests/test_feature_producer_coverage.py` | `python3 -m pytest tests/test_feature_producer_coverage.py -q` | `docs/features/README.md` | agent-farm conductor loop |
 | [features-surface](features-surface.md) | working | `docs/features/`, `scripts/render-features-index.sh`, `scripts/check-features-coverage.sh`, `scripts/lib/features/render_index.py`, `scripts/lib/features/coverage.py`, `.github/workflows/features-coverage.yml` | `bash scripts/check-features-coverage.sh` | `docs/features/README.md` | agent-farm conductor loop |
