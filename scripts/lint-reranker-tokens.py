@@ -49,11 +49,16 @@ import re
 import sys
 from pathlib import Path
 
-# Exact GOA snapshot allowlist. Edits here propagate to every consumer
-# via the reusable workflow; do not duplicate elsewhere.
+# Exact allowlist: GOA snapshots + canonical dataset version tokens.
+# Edits here propagate to every consumer via the reusable workflow;
+# do not duplicate elsewhere.
+# Canonical dataset slug families (bench-v1-K5-*, bench-v2-K10-*, etc.)
+# include version tokens v1, v2, ... that are canonical references and
+# cannot be renamed without breaking traceability in plans and memory.
 GOA_ALLOWLIST: frozenset[str] = frozenset({
     "v160", "v200", "v210", "v215", "v220",
     "v226", "v227", "v229", "v230",
+    "v1", "v2",
 })
 
 # Word-bounded vN token. Case-sensitive; the GOA shorthand is always

@@ -41,13 +41,14 @@ linter = _load_module()
 
 
 class TestAllowlist:
-    def test_allowlist_has_exactly_nine_tokens(self) -> None:
-        assert len(linter.GOA_ALLOWLIST) == 9
+    def test_allowlist_has_exactly_eleven_tokens(self) -> None:
+        assert len(linter.GOA_ALLOWLIST) == 11
 
     def test_allowlist_exact_membership(self) -> None:
         expected = {
             "v160", "v200", "v210", "v215", "v220",
             "v226", "v227", "v229", "v230",
+            "v1", "v2",
         }
         assert set(linter.GOA_ALLOWLIST) == expected
 
@@ -128,15 +129,15 @@ class TestScanFile:
         finally:
             tmp.unlink(missing_ok=True)
 
-    def test_bare_v2_still_flagged(self) -> None:
-        """A bare ``v2`` (no .digit following) must still be flagged."""
+    def test_bare_v2_allowed_as_canonical_dataset_version(self) -> None:
+        """A bare ``v2`` is allowed as a canonical dataset version token."""
         import tempfile, pathlib
         tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
         tmp.write_text("The re-ranker v2 model was used.\n")
         try:
             offences = linter.scan_file(tmp)
             tokens = [t for _, _, t in offences]
-            assert "v2" in tokens
+            assert "v2" not in tokens
         finally:
             tmp.unlink(missing_ok=True)
 
@@ -158,15 +159,15 @@ class TestScanFile:
         finally:
             tmp.unlink(missing_ok=True)
 
-    def test_bare_v1_after_non_bench_still_flagged(self) -> None:
-        """A bare ``v1`` not preceded by bench- must still be flagged."""
+    def test_bare_v1_allowed_as_canonical_dataset_version(self) -> None:
+        """A bare ``v1`` is allowed as a canonical dataset version token."""
         import tempfile, pathlib
         tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
         tmp.write_text("Re-ranker v1 trains on per-aspect data.\n")
         try:
             offences = linter.scan_file(tmp)
             tokens = [t for _, _, t in offences]
-            assert "v1" in tokens
+            assert "v1" not in tokens
         finally:
             tmp.unlink(missing_ok=True)
 
@@ -221,15 +222,15 @@ class TestScanFile:
         finally:
             tmp.unlink(missing_ok=True)
 
-    def test_standalone_v1_still_flagged_after_q3(self) -> None:
-        """Standalone ``v1`` (no leading slash) must still fire."""
+    def test_standalone_v1_allowed_as_dataset_version(self) -> None:
+        """Standalone ``v1`` is allowed as a canonical dataset version token."""
         import tempfile, pathlib
         tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
         tmp.write_text("The v1 reranker was trained on per-aspect data.\n")
         try:
             offences = linter.scan_file(tmp)
             tokens = [t for _, _, t in offences]
-            assert "v1" in tokens
+            assert "v1" not in tokens
         finally:
             tmp.unlink(missing_ok=True)
 
