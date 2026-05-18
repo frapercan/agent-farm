@@ -154,7 +154,7 @@ tags: [research, ensemble, post-defensa]
 id: LR.4
 phase: LR
 loop: bioinfo-quick
-status: pending
+status: done
 deps: [LB.2]
 acceptance: |-
   v18-selective reranker re-trained on the leakage-free baseline
@@ -163,10 +163,13 @@ acceptance: |-
 estimated_hours: 4
 priority: P2
 tags: [research, v18, k10]
+note: "2026-05-18: leakage-free recompute done; selective avg cafaeval Fmax 0.6215 ± 0.0014 on v226; delta vs leaky 0.4562 = +0.1653 (confounded by eval distribution shift); per-cell table in experiments/lr4/v18_selective_delta.csv; champions.md updated; PR #21 merged"
 ```
 
 Memory: the v18 selective rerank champion was contaminated by anc2vec
-leakage. Honest re-run pending.
+leakage. Recompute completed 2026-05-18 on bench-v1-K5-v226-lineage
+with the leakage-fixed bundle (anc2vec + emb_pca families dropped).
+Selective avg cafaeval Fmax 0.6215 supersedes the legacy 0.4562 record.
 
 ## LM — Method analysis
 
