@@ -68,7 +68,7 @@ Total first-class capabilities: **64**.
 
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
-| [deploy-keeper-supervisor](deploy-keeper-supervisor.md) | working | `scripts/services/deploy-keeper-supervisor.sh`, `scripts/services/deploy-keeper-tick.sh` | `bash -n scripts/services/deploy-keeper-supervisor.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
+| [deploy-keeper-supervisor](deploy-keeper-supervisor.md) | working | `scripts/services/deploy-keeper-supervisor.sh`, `scripts/services/deploy-keeper-tick.sh`, `scripts/services/deploy-keeper-trigger.sh` | `bash -n scripts/services/deploy-keeper-supervisor.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
 | [deploy-keeper-tick](deploy-keeper-tick.md) | working | `scripts/services/deploy-keeper-tick.sh` | `bash -n scripts/services/deploy-keeper-tick.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
 | [volume-audit](volume-audit.md) | working | `scripts/services/volume-audit.service`, `scripts/services/volume-audit-watch.sh` | `bash -n scripts/services/volume-audit-watch.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [volume-watcher](volume-watcher.md) | working | `scripts/services/volume-watcher.sh` | `bash -n scripts/services/volume-watcher.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |

@@ -1235,7 +1235,7 @@ executor (decision + edit) plus doc-writer for the ADR.
 id: FARM-FEAT.4
 phase: F-FEAT
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-2.5]
 acceptance: |-
   deploy-keeper-supervisor.sh implements new_commit_on:origin/develop via a lightweight git fetch + rev-parse loop (no polling, runs every 60s in addition to the yaml poll_interval)
@@ -1261,6 +1261,23 @@ documentation only.
 **Notes**: Cites `context/feature-inventory.md §6.1` + §12.6
 (supervisor only implements time-based polling). Suggested agent:
 executor.
+
+Resolution (2026-05-18): supervisor reads `service.triggers` via
+`yaml_get`, dispatches `new_commit_on:<ref>` (lightweight git fetch +
+rev-parse, armed on first sighting), `ngrok_tunnel_down` (curl -sfI
+with `NGROK_BACKOFF_SEC` floor), and `manual` (marker file consumed
+between ticks). New script `scripts/services/deploy-keeper-trigger.sh`
+writes the marker file and, when reachable, nudges the deploy-keeper
+tmux window via `send-keys` so an attached operator sees the fire.
+Trigger evaluation runs on a `TRIGGER_CHECK_INTERVAL_SEC` cadence
+(default 60s) inside `nap_with_triggers`, independent of the yaml
+`poll_interval`. Bash test `tests/test_deploy_keeper_triggers.sh`
+covers all three trigger kinds plus the trigger-script smoke; the
+new-commit and ngrok cases assert the early tick fires at virtual
+t<=90s with a 3600s poll_interval. CommandPalette wire-up (the
+`farm: deploy-keeper trigger` verb) is deferred to FARM-UI.6, which
+will shell out to `deploy-keeper-trigger.sh` via the existing
+`/spawn` / writes router pattern.
 
 ### FARM-FEAT.5 — Resolve dangling lab-runner plan loop
 
