@@ -1076,7 +1076,7 @@ note: "2026-05-16 janitor reconcile: shipped via PR #304 (2026-05-12); additiona
 id: T-RES.2
 phase: F6
 loop: executor
-status: pending
+status: deferred
 deps: [T-RES.1]
 acceptance: |-
   GeOKG GO embeddings integrated as alternative to anc2vec
@@ -1085,7 +1085,7 @@ estimated_hours: 16
 priority: P2
 requires_human: true
 tags: [research, embeddings, go]
-note: "2026-05-16 janitor: still pending; no merged PR found; awaiting bioinfo-quick decision"
+note: "Deferred per GeOKG NO-GO decision 2026-05-17 (project_geokg_nogo_2026_05_17). Preconditions to revisit: full-text Fmax gain >0.005 + Zenodo coverage parity on v226."
 ```
 
 ### T-RES.3 — ensemble multi-K
