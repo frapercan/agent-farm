@@ -1786,7 +1786,7 @@ estimated_hours: 90
 priority: P1
 tags: [benchmark, lineage, compute-long]
 requires_human: false
-note: "Compute-heavy: ~60-90 min per cell under 12-CPU contention. Needs a long-running bioinfo-quick or a deploy-keeper-style runner with extended budget. Memory [[farm-exp-9-split-needed]] explains the constraint."
+note: "Compute-heavy: ~60-90 min per cell under 12-CPU contention. Needs a long-running bioinfo-quick or a deploy-keeper-style runner with extended budget. Memory [[farm-exp-9-split-needed]] explains the constraint. Status: pass-2 infrastructure shipped via lab PR #31 (2026-05-18); compute running in tmux farm-exp-9b-runner."
 ```
 
 **Goal**: actually run the bulk compute that FARM-EXP.9 originally
