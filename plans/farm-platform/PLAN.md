@@ -1980,7 +1980,7 @@ on first build. Suggested agent: executor (PROTEA dispatch +
 artifact-store monitoring); long-running compute pass requires
 budget extension or split into batches of 6-8 cells per executor run.
 
-### FARM-EXP.14 — Per-PLM reranker sweep (selective per-cell recipe)
+### FARM-EXP.14 — Per-PLM reranker sweep (full binary × lambdarank grid)
 
 ```yaml
 id: FARM-EXP.14
@@ -1989,45 +1989,49 @@ loop: farm-platform
 status: pending
 deps: [FARM-EXP.13]
 acceptance: |-
-  Per-cell recipe selection mirrors the v23-v26 study verdict (runs/SUMMARY_v23-v26.md): 5 NK+LK cells (lk-bpo, lk-cco, nk-bpo, nk-cco, nk-mfo) train under v27-binary (objective=binary, neg_pos_ratio=10, num_boost_round=10000, early_stopping_rounds=100, learning_rate=0.05, num_leaves=63, min_data_in_leaf=100, val_strategy=protein_group, val_fraction=0.2); lk-mfo trains under v22-lambdarank (objective=lambdarank, otherwise same hparams as study_v22 baseline including drop_features for anc2vec_* + emb_pca_*); the 3 PK cells (pk-bpo, pk-cco, pk-mfo) are NOT reranked and fall through to FARM-EXP.15 KNN-only baseline
-  Single-seed pass (seed=42) ships first: 6 cells × 8 PLMs × 3 K = 144 reranker runs (120 binary + 24 lambdarank) producing runs/transversal/<shortid>/ artefacts with run.json + model.txt + predictions.parquet
-  Multi-seed pass (seeds 42/43/44) ships only on the per-(K, cell) champion PLM identified from the single-seed pass: 3 K × 6 cells = 18 champions × 2 extra seeds = 36 runs (or fewer if the same PLM wins across cells)
-  Champion table (FARM-EXP.4) auto-updates per axis tuple; champions.md lists winners per (eval, aspect, K) split, with the PK row explicitly pointing at FARM-EXP.15 baseline
-  Per-cell paired CI (vs the FARM-EXP.15 KNN-only baseline) at 95% via FARM-EXP.3 bootstrap_cis
-  Wall-clock estimate logged in run.json: ~10-15 min per binary single-seed run, ~25-30 min per lambdarank single-seed run (lambdarank converges slower at full 13.6M train rows); ~28-38 h serial total; champion multi-seed adds ~8-12 h
-estimated_hours: 20
+  Full single-seed grid: 9 cells × 8 PLMs × 3 K × 2 objectives = 432 reranker runs, where:
+    - binary arm = v27-binary recipe (objective=binary, neg_pos_ratio=10, num_boost_round=10000, early_stopping_rounds=100, learning_rate=0.05, num_leaves=63, min_data_in_leaf=100, val_strategy=protein_group, val_fraction=0.2)
+    - lambdarank arm = v22-lambdarank recipe (objective=lambdarank, drop_features = anc2vec_* + emb_pca_*, otherwise same hparams as study_v22 baseline)
+  Both arms produce runs/transversal/<shortid>/ artefacts with run.json + model.txt + predictions.parquet
+  Post-hoc per-cell selection: for each (PLM, K, cell) tuple, the winner among {binary, lambdarank, KNN-only baseline from FARM-EXP.15} is determined by cafaeval Fmax with paired 95% CI vs KNN-only; the loser arms are retained for the full chapter-6 appendix table but excluded from the headline "champion" column
+  Multi-seed pass (seeds 42/43/44) ships only on the per-(K, cell) champion (PLM × objective): 3 K × 9 cells = 27 champions × 2 extra seeds = 54 runs (or fewer if the same PLM+objective wins across cells)
+  Champion table (FARM-EXP.4) auto-updates per axis tuple; champions.md lists winners per (eval, aspect, K) split with the objective family explicitly tagged (rr=reranker:v27-binary or rr=reranker:v22-lambdarank or rr=knn-baseline)
+  Per-cell paired CI vs FARM-EXP.15 KNN-only baseline at 95% via FARM-EXP.3 bootstrap_cis; an additional paired CI binary-vs-lambdarank reported per cell for the appendix
+  Wall-clock estimate logged in run.json: ~10-15 min per binary single-seed run, ~25-30 min per lambdarank single-seed run (lambdarank converges slower at full 13.6M train rows); ~144 h serial total for the full grid; champion multi-seed adds ~12-18 h
+  Build manifest CSV at agent-farm/plans/farm-platform/artefacts/farm_exp_14_grid_log.csv with: plm, k, cell, objective, seed, fmax, auprc, smin, wall_seconds, status
+estimated_hours: 48
 priority: P0
 tags: [benchmark, reranker, lineage, compute-long]
 requires_human: false
 ```
 
-**Goal**: replicate over each PLM the per-cell champion recipe from
-the leakage-fixed v22→v26 study sweep. The objective is NOT uniform
-across cells: binary wins NK+LK (+0.03-0.04 extra fmax via calibrated
-[0,1] scores), lambdarank wins lk-mfo (+0.118 vs baseline; binary
-+0.110 NS), and PK is unreachable by reranking under current features
-(binary breaks PK via neg_pos_ratio subsampling, lambdarank+lineage
-overfits the DAG-closure shortcut — verdict `[[project_lm3_feature_importance_2026_05_18]]`).
+**Goal**: compute the full per-(PLM, K, cell, objective) grid so the
+post-hoc winner per cell is supported by data on every PLM rather
+than extrapolated from the single-PLM ProstT5 verdict in
+`runs/SUMMARY_v23-v26.md`. Honest scientific reporting requires both
+arms on every cell; the post-hoc selection then justifies the
+production deployment policy.
 
 **Repos touched**: protea-reranker-lab.
 
 **Out of scope**:
 1. All-PLM multi-manifest trainer (FARM-EXP.16).
 2. Ensemble of per-PLM rerankers (FARM-EXP.17).
-3. PK-cell rescue (would need a new feature family + a new objective
-   tuned for the propagated-label regime; would also benefit from
-   FARM-EXP.18 InterProScan signal).
-4. Hyperparameter retuning per PLM (assumes the binary/lambdarank
-   per-cell choice generalises; if a PLM yields obviously degraded
-   Fmax the user can spawn a per-PLM tuning follow-up).
+3. Per-PLM hyperparameter retuning (assumes the v27-binary and
+   v22-lambdarank hparams generalise across PLMs; if a PLM yields
+   degraded Fmax under both arms the user can spawn a per-PLM
+   tuning follow-up).
 
-**Notes**: The recipe selection is anchored by `runs/SUMMARY_v23-v26.md`
-(per-cell optimal config table at line 44) and validated multi-seed by
-`[[v27-binary-multiseed-2026-05-18]]` (0.7291 ± 0.0028 NK+LK), with
-the lambdarank lk-mfo arm carried over from `[[lb2-leakage-fixed-champion]]`
-(0.6215 selective avg). Multi-seed CI half-widths capped at 0.0091
-per LB.2 audit. Suggested agent: bioinfo-quick with extended budget;
-consider splitting per-PLM batches across 4 executor passes.
+**Notes**: Compute budget driver: ~144 h serial single-seed + ~12-18 h
+multi-seed champion. Splits cleanly across multiple executor passes
+by (PLM, K) batch (24 batches × ~6 h each). Anchored by
+`runs/SUMMARY_v23-v26.md` (per-cell ProstT5 verdict; v26-binary wins
+5/6 NK+LK, v22-lambdarank wins lk-mfo, PK unreachable by reranking
+under either objective on ProstT5) and `[[v27-binary-multiseed-2026-05-18]]`
+(0.7291 ± 0.0028 NK+LK multi-seed on ProstT5). FARM-EXP.14 verifies
+whether that per-cell verdict holds on the other 7 PLMs. Suggested
+agent: bioinfo-quick with extended budget; consider splitting per-PLM
+batches across 4-8 executor passes.
 
 ### FARM-EXP.15 — KNN-only baseline scores per (PLM, K, cell)
 

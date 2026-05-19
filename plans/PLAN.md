@@ -139,7 +139,7 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-EXP.11](farm-platform/PLAN.md#farm-exp11--per-aspect-results-table-for-thesis-chapter-6) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.11 — Per-aspect results table for thesis chapter 6 |
 | [FARM-EXP.12](farm-platform/PLAN.md#farm-exp12--plm-axis-explicit-in-dataset-naming) | F-EXP-RESET | ⬜ pending | P0 | FARM-EXP.12 — PLM axis explicit in dataset naming |
 | [FARM-EXP.13](farm-platform/PLAN.md#farm-exp13--per-plm-dataset-family-build-8-plms--k3510) | F-EXP-RESET | ⬜ pending | P0 | FARM-EXP.13 — Per-PLM dataset family build (8 PLMs × K∈{3,5,10}) |
-| [FARM-EXP.14](farm-platform/PLAN.md#farm-exp14--per-plm-reranker-sweep-selective-per-cell-recipe) | F-EXP-RESET | ⬜ pending | P0 | FARM-EXP.14 — Per-PLM reranker sweep (selective per-cell recipe) |
+| [FARM-EXP.14](farm-platform/PLAN.md#farm-exp14--per-plm-reranker-sweep-full-binary--lambdarank-grid) | F-EXP-RESET | ⬜ pending | P0 | FARM-EXP.14 — Per-PLM reranker sweep (full binary × lambdarank grid) |
 | [FARM-EXP.15](farm-platform/PLAN.md#farm-exp15--knn-only-baseline-scores-per-plm-k-cell) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.15 — KNN-only baseline scores per (PLM, K, cell) |
 | [FARM-EXP.16](farm-platform/PLAN.md#farm-exp16--all-plm-derived-reranker-multi-manifest-trainer) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.16 — All-PLM derived reranker (multi-manifest trainer) |
 | [FARM-EXP.17](farm-platform/PLAN.md#farm-exp17--plm-ensemble-of-single-plm-rerankers-supersedes-farm-exp7-scope) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.17 — PLM ensemble of single-PLM rerankers (supersedes FARM-EXP.7 scope) |
