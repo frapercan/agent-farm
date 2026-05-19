@@ -1891,3 +1891,282 @@ exists to enable.
 distinct artefacts that shared the same `vN` shorthand label in the
 prior thesis text, now disambiguated by axis tuple).
 Suggested agent: thesis-writer.
+
+### FARM-EXP.12 — PLM axis explicit in dataset naming
+
+```yaml
+id: FARM-EXP.12
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.2]
+acceptance: |-
+  ADR D36 (PROTEA) documents the per-PLM dataset naming convention `bench-v1-K{k}-v{val_band}-lineage-{plm_short}` with explicit canonical short keys (esm2_150m, esm2_650m, esm2_3b, prot_t5, prostt5, ankh_base, ankh_large, esmc_600m, esmc_300m)
+  Lab repo: rename current `datasets/bench-v1-K5-v226-lineage/` to `datasets/bench-v1-K5-v226-lineage-prostt5/` and update every yaml reference (experiments/_generated/**, experiments/leakage_fix/**, experiments/_catalog/transversal.yaml, scripts/* references) plus all `tags:` lists that mention the old name
+  Backward-compat symlink at the old path pointing to `-prostt5` for 1 release cycle, then removed in a follow-up slice
+  Existing `Dataset` row in PROTEA renamed via Alembic data-only migration (UNIQUE name constraint forces a single atomic UPDATE); a `Dataset.alias_names` JSONB column added or the old name kept in `Dataset.description` for traceability
+  champions.md updated so any axis tuple that referenced the old name now reads the `-prostt5` form
+  Pre-commit linter rejects new committed files that contain `bench-v1-K5-v226-lineage` without a `-{plm}` suffix
+estimated_hours: 5
+priority: P0
+tags: [naming, axis, schema, lineage]
+requires_human: false
+```
+
+**Goal**: the current dataset implicitly encodes ProstT5 as the PLM
+but does not name it, which makes the PLM axis invisible and blocks
+multi-PLM sweeps. Make the axis explicit at directory + manifest +
+Dataset-row level before generating per-PLM siblings.
+
+**Repos touched**: protea-reranker-lab, PROTEA (Alembic +
+artifact-store rekeying), thesis (only if it references the old name
+inline; FARM-EXP.11 handles the chapter-6 rewrite).
+
+**Out of scope**:
+1. Actually building the 7 sibling datasets for the other PLMs
+   (covered by FARM-EXP.13).
+2. PLM short-name harmonisation in `apps/lafa_knn_8plm/plm_encoders.py`
+   (already canonical per `[[project_canonical_8plm_embedding_configs]]`).
+
+**Notes**: Cites memory `[[project_canonical_8plm_embedding_configs]]`
+for the PLM short-name list. ADR D36 should reference D35 (the
+canonical embedding_config_id audit) and the `c0ae5b69` ProstT5 row.
+Suggested agent: executor (PROTEA + lab cross-repo).
+
+### FARM-EXP.13 — Per-PLM dataset family build (8 PLMs × K∈{3,5,10})
+
+```yaml
+id: FARM-EXP.13
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.12]
+acceptance: |-
+  24 datasets emitted via `POST /jobs` operation `export_research_dataset`: one per (plm × K) combination where plm ∈ {esm2_150m, esm2_650m, esm2_3b, prot_t5, prostt5, ankh_base, ankh_large, esmc_600m} and K ∈ {3, 5, 10}
+  Each job uses `embedding_config_id` from `[[project_canonical_8plm_embedding_configs]]`, `k` from the K axis, identical `train_versions` / `test_versions` to the current ProstT5 dataset, `output_name` = `bench-v1-K{k}-v226-lineage-{plm}`
+  `compute_alignments=true`, `compute_taxonomy=true`, `expand_votes_to_ancestors=true`, `use_embedding_pca=true` for parity with the current `c0ae5b69` build
+  All 24 `Dataset` rows present in PROTEA registry with consistent `schema_sha` (PLM-independent feature schema, only `anc2vec_*` + `emb_pca_*` values differ); a per-PLM `parent_schema_sha` is acceptable if the PCA cache forces a re-fingerprint
+  Each dataset registers an EvaluationSet pin via `eval_set_name = bench-v1-K{k}-v226-lineage-{plm}`
+  Build manifest CSV at `agent-farm/plans/farm-platform/artefacts/farm_exp_13_build_log.csv` with: plm, k, dataset_id, n_train_rows, n_eval_rows, total_seconds, status
+  Dispatch waits on `prot_t5` hydration job completion (job_id `b76ad98c-6834-4311-83b6-43dd0721957b` or successor) before scheduling its prot_t5 variants
+estimated_hours: 16
+priority: P0
+tags: [benchmark, lineage, dataset, compute-long]
+requires_human: false
+```
+
+**Goal**: materialise the per-PLM dataset family that the multi-PLM
+sweep consumes. PROTEA's `export_research_dataset` operation already
+accepts `embedding_config_id` + `k` + `output_name` as parameters; no
+code change required, only orchestration.
+
+**Repos touched**: PROTEA (job dispatch, artifact store, registry),
+protea-reranker-lab (consumer parquet pulls in subsequent slices).
+
+**Out of scope**:
+1. The `allplm` derived view (FARM-EXP.16 handles multi-manifest at
+   training time; no physical concat dataset is produced).
+2. Training rerankers on these datasets (FARM-EXP.14).
+3. `esmc_300m` baseline dataset (separate optional slice if the user
+   wants the legacy single-PLM reference column in the thesis
+   chapter-6 table).
+
+**Notes**: Per the dataset-builder audit (2026-05-19, see Explore
+report summary in conductor session): `anc2vec_neighbor/query` (6
+features) and `emb_pca` (16 features) are the only PLM-specific
+families; the other 46 features are PLM-invariant. PCA cache lives
+at `protea/artifacts/pca/{embedding_config_id}.npz`, refit per PLM
+on first build. Suggested agent: executor (PROTEA dispatch +
+artifact-store monitoring); long-running compute pass requires
+budget extension or split into batches of 6-8 cells per executor run.
+
+### FARM-EXP.14 — Per-PLM reranker sweep (v27-binary recipe)
+
+```yaml
+id: FARM-EXP.14
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.13]
+acceptance: |-
+  Replicate the v27-binary champion recipe (objective=binary, neg_pos_ratio=10, num_boost_round=10000, early_stopping_rounds=100, learning_rate=0.05, num_leaves=63, min_data_in_leaf=100, val_strategy=protein_group, val_fraction=0.2) over all 24 per-PLM datasets
+  Single-seed pass (seed=42) ships first: 24 × 9 cells = 216 reranker runs producing runs/transversal/<shortid>/ artefacts with run.json + model.txt + predictions.parquet
+  Multi-seed pass (seeds 42/43/44) ships only on the per-(K, cell) champion PLM identified from the single-seed pass: 3 K × 9 cells = 27 champions × 3 extra seeds ≈ 81 runs (or fewer if the same PLM wins across cells)
+  Champion table (FARM-EXP.4) auto-updates per axis tuple; champions.md lists winners per (eval, aspect, K) split
+  Per-cell paired CI (vs the FARM-EXP.15 KNN-only baseline) at 95% via FARM-EXP.3 bootstrap_cis
+  Wall-clock estimate logged in run.json: ~10-15 min per single-seed run, ~36-54 h serial total; champion multi-seed adds ~14-20 h
+estimated_hours: 24
+priority: P0
+tags: [benchmark, reranker, lineage, compute-long]
+requires_human: false
+```
+
+**Goal**: replicate over each PLM the recipe that produced the current
+champion (v27-binary multi-seed 0.7291 ± 0.0028 NK+LK on
+`bench-v1-K5-v226-lineage-prostt5`, per `[[v27-binary-multiseed-2026-05-18]]`)
+so the thesis chapter-6 table has one row per (PLM, K, cell) tuple.
+
+**Repos touched**: protea-reranker-lab.
+
+**Out of scope**:
+1. All-PLM multi-manifest trainer (FARM-EXP.16).
+2. Ensemble of per-PLM rerankers (FARM-EXP.17).
+3. Hyperparameter retuning per PLM (assumes the v27-binary recipe
+   generalises; if a PLM yields obviously degraded Fmax the user can
+   spawn a per-PLM tuning follow-up).
+
+**Notes**: The recipe is the validated winner per
+`[[lb2-leakage-fixed-champion]]` (0.6215 selective avg) and
+`[[v27-binary-multiseed-2026-05-18]]` (0.7291 NK+LK). Multi-seed CI
+half-widths capped at 0.0091 per LB.2 audit. Suggested agent:
+bioinfo-quick with extended budget; consider splitting per-PLM batches
+across 4 executor passes.
+
+### FARM-EXP.15 — KNN-only baseline scores per (PLM, K, cell)
+
+```yaml
+id: FARM-EXP.15
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.13]
+acceptance: |-
+  For each (PLM, K, cell) in the 24-dataset family: compute the KNN-only "scores" baseline (no reranker) and persist Fmax + AuPRC + coverage under runs/transversal/<shortid>/ with reranker=knn-baseline in the axis tuple
+  Lab CLI `scripts/run_knn_baseline.py` or equivalent path that reads the dataset's eval.parquet, applies the GO-transfer rule, and emits the same run.json schema as reranker runs (so FARM-EXP.4 champion table and FARM-EXP.3 paired-CI machinery treat both uniformly)
+  216 baseline cells logged in `agent-farm/plans/farm-platform/artefacts/farm_exp_15_baseline_log.csv` with: plm, k, cell, fmax, auprc, coverage
+  Paired bootstrap (10000 resamples) per (PLM, K) family confirms the reranker uplift sign vs baseline at 95% per FARM-EXP.3 grouping
+estimated_hours: 6
+priority: P1
+tags: [benchmark, baseline, lineage]
+requires_human: false
+```
+
+**Goal**: provide the "scores" column the user asked for explicitly.
+KNN-only is the cheapest single-PLM baseline and the reference against
+which every per-PLM reranker uplift is measured for paired CIs.
+
+**Repos touched**: protea-reranker-lab.
+
+**Out of scope**:
+1. The legacy `bench-v1-K5-filtered` pre-leakage rows (not comparable
+   per memory `[[no-archaeology-recompute]]`).
+
+**Notes**: Cheap pass: KNN scoring is already produced by the dataset
+build (it's the input to feature generation); this slice just
+formalises the read path and the per-cell metric write-out so the
+"scores" column exists in the chapter-6 table. Suggested agent:
+bioinfo-quick.
+
+### FARM-EXP.16 — All-PLM derived reranker (multi-manifest trainer)
+
+```yaml
+id: FARM-EXP.16
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.14]
+acceptance: |-
+  Lab trainer (`src/protea_reranker_lab/reranker.py` or sibling) accepts a list of dataset manifests instead of a single one, joins on (query_id, candidate_id, k_position), and concatenates the PLM-specific feature families (`anc2vec_*`, `emb_pca_*`) under per-PLM column prefixes (e.g. `anc2vec_query_known_cos__esmc_600m`)
+  No physical `allplm` dataset is written; the merge is a runtime view that the trainer composes from the per-PLM parquets
+  New study spec `study_v28_allplm_multimanifest` produces 3 K × 9 cells = 27 runs reading from the 8 PLM manifests at K∈{3,5,10}
+  Schema_sha encodes the multi-manifest fingerprint (sha256 of sorted manifest URIs + per-PLM column prefix list)
+  Paired CI vs the best single-PLM champion per (K, cell) confirmed at 95% (positive uplift expected, negative is a publishable finding too)
+estimated_hours: 14
+priority: P1
+tags: [benchmark, multi-plm, lineage, trainer]
+requires_human: false
+```
+
+**Goal**: deliver the user-asked "dataset con todos los PLM, para
+aplicarlo sobre todos los PLM" via runtime feature concatenation
+rather than a physical concat dataset. Keeps the per-PLM artefacts
+canonical and avoids a 10x disk footprint.
+
+**Repos touched**: protea-reranker-lab.
+
+**Out of scope**:
+1. PCA refit across the joined column space (each PLM's PCA stays
+   per-PLM; the trainer just concatenates the projected coordinates).
+2. Score-level ensemble (FARM-EXP.17).
+
+**Notes**: Trainer change is additive: existing single-manifest entry
+point stays intact; new entry point accepts `list[manifest_uri]`.
+Suggested agent: executor (codepath change in lab + 27 training runs
+under bioinfo-quick budget).
+
+### FARM-EXP.17 — PLM ensemble of single-PLM rerankers (supersedes FARM-EXP.7 scope)
+
+```yaml
+id: FARM-EXP.17
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.14]
+acceptance: |-
+  Score-level ensemble of the per-PLM rerankers from FARM-EXP.14: for each (K, cell), aggregate the 8 PLM-specific predicted scores via score_mean and score_max (two ensemble flavours)
+  Axis-tuple stanza in `experiments/_catalog/transversal.yaml`: plm=ensemble:8plm-canonical, k∈{3,5,10}, rr=reranker:v27-binary, feat=8plm-axis, eval=bench-v1-K{k}-v226-lineage-{plm}-family, prop=tpr_pred, ens∈{score_mean, score_max}
+  6 ensemble runs (3 K × 2 strategies) stored under runs/transversal/<shortid>/ with run.json that lists the contributing booster URIs
+  Paired CI per (K, cell) vs (a) best single-PLM reranker, (b) all-PLM multi-manifest reranker (FARM-EXP.16); table shows which strategy wins each cell
+  Lab Fmax + cafaeval Fmax both captured (decoupled evaluators per lab CLAUDE.md)
+estimated_hours: 8
+priority: P1
+tags: [benchmark, ensemble, lineage]
+requires_human: false
+```
+
+**Goal**: deliver the ensemble step the user marked as "PLM ensemble"
+on the roadmap. Subsumes FARM-EXP.7's narrower 1-K-only scope —
+FARM-EXP.7 stays formally pending only until this lands; when FARM-EXP.17
+ships, FARM-EXP.7 is marked superseded.
+
+**Repos touched**: protea-reranker-lab.
+
+**Out of scope**:
+1. Learned ensemble (a meta-reranker that learns weights over the 8
+   PLM scores). If FARM-EXP.16 already beats score_mean/score_max
+   that's evidence the learned approach is redundant; defer.
+
+**Notes**: Cites `[[v27-binary-multiseed-2026-05-18]]` for the single-PLM
+champion baseline. Suggested agent: bioinfo-quick.
+
+### FARM-EXP.18 — InterProScan feature family integration (deferred)
+
+```yaml
+id: FARM-EXP.18
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.17]
+acceptance: |-
+  PROTEA feature pipeline grows an `interproscan` family: protein-level domain/family signatures (Pfam, SUPERFAMILY, CDD, PANTHER subset) mapped to GO terms via the InterPro2GO crosswalk
+  `export_research_dataset` payload exposes `compute_interproscan: bool = false`; when true, the dump includes 6-12 new feature columns prefixed `ips_*` (e.g. ips_pfam_match_score, ips_panther_subfamily_match, ips_ipr2go_voter_count, ips_ipr2go_max_score)
+  3 K × 1 PLM (best single-PLM champion from FARM-EXP.14) × {ips_off, ips_on} = 6 reranker runs ship as an ablation showing the InterProScan uplift on the leakage-free v226 band
+  ADR D37 records the InterPro release pinned, the IPR2GO mapping snapshot SHA, and the data-licensing note (EBI redistributes InterProScan under an academic-use clause)
+  Champion table updated if ips_on beats ips_off at 95% paired CI on ≥2 of the 3 K values
+estimated_hours: 20
+priority: P2
+tags: [benchmark, interproscan, lineage, feature-family]
+requires_human: false
+```
+
+**Goal**: add the third roadmap dimension the user named explicitly
+("luego trabajaremos PLM ensemble, y interproscan"). Placed last
+because it widens the feature pipeline upstream of the lab and
+requires a new external dependency (InterProScan binary or the EBI
+REST API).
+
+**Repos touched**: PROTEA (feature pipeline + new operation),
+protea-reranker-lab (trainer reads new columns; no schema break
+because `ips_*` lives under its own feature family).
+
+**Out of scope**:
+1. Running InterProScan on the full UniProt training corpus —
+   start with the eval set + the K-NN reference set only and
+   evaluate the ROI before scaling.
+2. Per-PLM × InterProScan grid (deferred unless the 1-PLM ablation
+   shows uplift).
+
+**Notes**: InterProScan is CPU-bound (~30 s/protein) and the EBI REST
+quota is 25 req/min; budget the dump accordingly or pin a local
+InterProScan container. Suggested agent: executor (PROTEA feature
+pipeline change) followed by bioinfo-quick for the ablation runs.
