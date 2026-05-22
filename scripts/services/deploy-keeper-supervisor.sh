@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy-keeper-supervisor.sh — persistent loop that runs deploy-keeper-tick.sh
+# deploy-keeper-supervisor.sh -- persistent loop that runs deploy-keeper-tick.sh
 # every poll_interval. On tick failure (FAIL_KIND != prereq_fail) the
 # supervisor first runs a quick-retry ladder (FARM-1.11) of pure-bash
 # ticks; only after the ladder is exhausted does it escalate to a
@@ -19,8 +19,16 @@
 # loop still runs at poll_interval, so the triggers are an additive
 # fast-path, not a replacement.
 #
+# FARM-FEAT.6: the generic persistent-loop core (ladder, escalation,
+# cool-off pause, tick/nap overrides) lives in _supervisor-template.sh.
+# This file is the deploy-keeper-specific wrapper: it reads the yaml
+# poll_interval, owns the trigger subsystem, sets the template
+# parameters and the two service hooks (service_escalate +
+# service_nap_between_ticks), then sources the template to start the
+# loop. Runtime behaviour is unchanged from the pre-FARM-FEAT.6 version.
+#
 # Spawned by spawn.sh in tmux session. Reads:
-#   TASK_ID   — task UUID (set by spawn.sh)
+#   TASK_ID   -- task UUID (set by spawn.sh)
 #   AGENT_FARM_ROOT (default ~/Thesis2/agent-farm)
 #
 # Termination: Ctrl-C in tmux, or `kill.sh <task_id>`.
@@ -79,21 +87,15 @@ NGROK_LAST_FIRE_FILE="$TRIGGER_STATE_DIR/ngrok_last_fire"
 # Each retry is a pure-bash tick (no claude -p), so it costs ~$0.
 # Tunable for tests via QUICK_RETRY_LADDER_OVERRIDE (space-separated
 # seconds list; supervisor tests use shorter delays to keep wall time
-# reasonable).
+# reasonable). The template builds the ladder from this when set.
 if [[ -n "${QUICK_RETRY_LADDER_OVERRIDE:-}" ]]; then
   # shellcheck disable=SC2206
   QUICK_RETRY_LADDER_SEC=($QUICK_RETRY_LADDER_OVERRIDE)
 else
   QUICK_RETRY_LADDER_SEC=(30 120 300)
 fi
-PAUSE_AFTER_PAUSE_SEC=1800  # 30 min cool-off after the ladder is exhausted
 
-heartbeat "$TASK_ID" info "supervisor up; poll_interval=${POLL_INTERVAL_SEC}s; quick_retry_ladder=${QUICK_RETRY_LADDER_SEC[*]}s; pause_after=${PAUSE_AFTER_PAUSE_SEC}s"
-
-# Trap: on shutdown, mark task ended cleanly
-trap 'heartbeat "$TASK_ID" info "supervisor stopping (signal)"; task_set_ended "$TASK_ID" "killed" 130; exit 0' INT TERM
-
-# escalate_to_janitor <fail_kind> — spawn a janitor subagent (haiku, via
+# escalate_to_janitor <fail_kind> -- spawn a janitor subagent (haiku, via
 # scripts/spawn-subagent.sh) to investigate the failure. We do NOT block
 # on the janitor; spawn-subagent.sh inserts a pending task row and prints
 # K=V env so we can record the janitor's task_id back into our own
@@ -118,38 +120,10 @@ escalate_to_janitor() {
   return 0
 }
 
-# read_fail_env: populate FAIL_KIND + FAIL_EXIT from
-# /tmp/deploy-keeper-last-fail.env (default unknown when absent).
-read_fail_env() {
-  FAIL_KIND="unknown"
-  FAIL_EXIT="unknown"
-  local fail_env="/tmp/deploy-keeper-last-fail.env"
-  if [[ -f "$fail_env" ]]; then
-    # shellcheck disable=SC1090
-    source "$fail_env"
-  fi
-}
-
-# run_tick: invoke deploy-keeper-tick.sh. Tests can override
-# DEPLOY_KEEPER_TICK_CMD with a stub shell command (e.g. a fail/success
-# scripted shim) without touching production tick logic.
-run_tick() {
-  if [[ -n "${DEPLOY_KEEPER_TICK_CMD:-}" ]]; then
-    bash -c "$DEPLOY_KEEPER_TICK_CMD"
-  else
-    bash "$ROOT/scripts/services/deploy-keeper-tick.sh"
-  fi
-}
-
-# nap <seconds>: sleep, overridable for tests via SUPERVISOR_NAP_CMD
-# (a shell command that receives the seconds as argv-1 and is expected
-# to skip the wait quickly).
-nap() {
-  if [[ -n "${SUPERVISOR_NAP_CMD:-}" ]]; then
-    bash -c "$SUPERVISOR_NAP_CMD $1"
-  else
-    sleep "$1"
-  fi
+# Template hook: deploy-keeper escalates via the deploy-keeper-rescue
+# janitor (not the generic service-rescue default).
+service_escalate() {
+  escalate_to_janitor "$1"
 }
 
 # ---------------------------------------------------------------------
@@ -306,7 +280,7 @@ check_triggers() {
         ;;
       *)
         # Unknown trigger spec: warn once and skip. We do NOT abort the
-        # supervisor — a typo in the yaml shouldn't take the service
+        # supervisor -- a typo in the yaml shouldn't take the service
         # down, but the warn should make the typo discoverable.
         heartbeat "$TASK_ID" warn "[trigger] unknown spec in yaml: $trig (skipping)"
         ;;
@@ -324,6 +298,10 @@ check_triggers() {
 # Empty TRIGGERS list short-circuits to a plain nap (no overhead).
 nap_with_triggers() {
   local total="$1"
+  # Re-read triggers each call so a yaml edit propagates without
+  # respawn. read_triggers yields an empty list when the field is
+  # absent, which keeps the pre-FARM-FEAT.4 behaviour intact.
+  read_triggers
   if [[ "${#TRIGGERS[@]}" -eq 0 ]]; then
     nap "$total"
     return 1
@@ -349,70 +327,34 @@ nap_with_triggers() {
   return 1
 }
 
+# Template hook: deploy-keeper's inter-tick wait is the trigger-aware nap.
+service_nap_between_ticks() {
+  nap_with_triggers "$1"
+}
+
 # Initial trigger read at boot. Re-read on every loop iteration so
 # yaml edits propagate without a respawn.
 read_triggers
 heartbeat "$TASK_ID" info "triggers configured: ${TRIGGERS[*]:-<none>}"
 
-while true; do
-  TICK_START=$(date +%s)
-  # Re-read triggers each iteration so a yaml edit propagates without
-  # respawn. parse_yaml_field returns an empty list if the field is
-  # absent, which keeps the pre-FARM-FEAT.4 behaviour intact.
-  read_triggers
+# FARM-FEAT.6: template parameters. The generic loop core lives in
+# _supervisor-template.sh and is parameterised by these. shellcheck
+# cannot see through the dynamic source below, so it flags these as
+# unused; the template consumes them all.
+# shellcheck disable=SC2034
+{
+TICK_SCRIPT="$ROOT/scripts/services/deploy-keeper-tick.sh"
+# Tests inject a stub tick via DEPLOY_KEEPER_TICK_CMD; the template
+# reads TICK_CMD_OVERRIDE.
+TICK_CMD_OVERRIDE="${DEPLOY_KEEPER_TICK_CMD:-}"
+POLL_INTERVAL="$POLL_INTERVAL_SEC"
+MAX_CONSECUTIVE_FAILURES="${#QUICK_RETRY_LADDER_SEC[@]}"
+PAUSE_AFTER_PAUSE_SEC=1800  # 30 min cool-off after the ladder is exhausted
+FAIL_KIND_ENV_FILE="${DEPLOY_KEEPER_FAIL_ENV:-/tmp/deploy-keeper-last-fail.env}"
+}
 
-  if run_tick; then
-    # Happy path: sleep till next tick (account for tick duration).
-    TICK_DUR=$(($(date +%s) - TICK_START))
-    SLEEP_FOR=$((POLL_INTERVAL_SEC - TICK_DUR))
-    [[ "$SLEEP_FOR" -lt 30 ]] && SLEEP_FOR=30
-    # FARM-FEAT.4: nap_with_triggers chunks the sleep into
-    # TRIGGER_CHECK_INTERVAL_SEC slices and returns early when a
-    # trigger fires; falls through to a plain nap when no triggers
-    # are configured. Either way the outer loop runs another tick.
-    nap_with_triggers "$SLEEP_FOR" || true
-    continue
-  fi
-
-  # First failure: capture FAIL_KIND, decide whether to enter the ladder.
-  read_fail_env
-  heartbeat "$TASK_ID" warn "tick failed (FAIL_KIND=${FAIL_KIND:-unknown})"
-
-  if [[ "${FAIL_KIND:-unknown}" == "prereq_fail" ]]; then
-    # Daemon-level prereq fail (docker down etc.). The user is the
-    # recovery path; quick retries on a daemon-down condition are
-    # cheap-but-useless to escalate, so we still run the ladder (it
-    # may catch the daemon coming back) but never spawn a janitor.
-    heartbeat "$TASK_ID" error "prereq_fail (FAIL_EXIT=${FAIL_EXIT:-?}); ladder will retry but no janitor escalation"
-  fi
-
-  # FARM-1.11 quick-retry ladder. Pure bash ticks, no claude -p.
-  recovered=0
-  for delay in "${QUICK_RETRY_LADDER_SEC[@]}"; do
-    heartbeat "$TASK_ID" warn "[backoff] tick failed, quick-retry in ${delay}s"
-    nap "$delay"
-    if run_tick; then
-      heartbeat "$TASK_ID" info "[backoff-recovery] tick succeeded after quick-retry delay=${delay}s"
-      recovered=1
-      break
-    fi
-    # Refresh FAIL_KIND for next iteration (tick may have updated it).
-    read_fail_env
-  done
-
-  if [[ "$recovered" -eq 1 ]]; then
-    # Resume the normal poll cadence (with trigger short-circuit).
-    TICK_DUR=$(($(date +%s) - TICK_START))
-    SLEEP_FOR=$((POLL_INTERVAL_SEC - TICK_DUR))
-    [[ "$SLEEP_FOR" -lt 30 ]] && SLEEP_FOR=30
-    nap_with_triggers "$SLEEP_FOR" || true
-    continue
-  fi
-
-  # All quick retries failed → escalate + long pause.
-  heartbeat "$TASK_ID" error "[escalate] ${#QUICK_RETRY_LADDER_SEC[@]} consecutive tick failures; invoking claude -p janitor + ${PAUSE_AFTER_PAUSE_SEC}s pause"
-  if [[ "${FAIL_KIND:-unknown}" != "prereq_fail" ]]; then
-    escalate_to_janitor "${FAIL_KIND:-unknown}" || true
-  fi
-  nap "$PAUSE_AFTER_PAUSE_SEC"
-done
+# Source the template relative to THIS script (not $ROOT) so a test that
+# points AGENT_FARM_ROOT at a fake scaffold still loads the real loop.
+SUPERVISOR_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_supervisor-template.sh
+source "$SUPERVISOR_SELF_DIR/_supervisor-template.sh"

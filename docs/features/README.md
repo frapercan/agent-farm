@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **64**.
+Total first-class capabilities: **65**.
 
 ## 1-agents
 
@@ -70,6 +70,7 @@ Total first-class capabilities: **64**.
 |---|---|---|---|---|---|
 | [deploy-keeper-supervisor](deploy-keeper-supervisor.md) | working | `scripts/services/deploy-keeper-supervisor.sh`, `scripts/services/deploy-keeper-tick.sh`, `scripts/services/deploy-keeper-trigger.sh` | `bash -n scripts/services/deploy-keeper-supervisor.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
 | [deploy-keeper-tick](deploy-keeper-tick.md) | working | `scripts/services/deploy-keeper-tick.sh` | `bash -n scripts/services/deploy-keeper-tick.sh` | `docs/features/deploy-keeper.md` | agent-farm conductor loop |
+| [persistent-service-factory](persistent-service-factory.md) | working | `scripts/services/_supervisor-template.sh`, `docs/runbook-persistent-service.md`, `examples/queue-watcher/queue-watcher-supervisor.sh`, `examples/queue-watcher/queue-watcher-tick.sh`, `examples/queue-watcher/queue-watcher.yaml` | `bash -n scripts/services/_supervisor-template.sh` | `docs/runbook-persistent-service.md` | agent-farm conductor loop |
 | [volume-audit](volume-audit.md) | working | `scripts/services/volume-audit.service`, `scripts/services/volume-audit-watch.sh` | `bash -n scripts/services/volume-audit-watch.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [volume-watcher](volume-watcher.md) | working | `scripts/services/volume-watcher.sh` | `bash -n scripts/services/volume-watcher.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 
