@@ -9,6 +9,8 @@ set -euo pipefail
 ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 # shellcheck source=lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
+# shellcheck source=lib/worktree.sh
+source "$ROOT/scripts/lib/worktree.sh"
 
 TASK_ID="${1:-}"
 [[ -z "$TASK_ID" ]] && die "usage: kill.sh <task_id>"
@@ -37,32 +39,9 @@ fi
 if [[ -n "$WT" && -d "$WT" ]]; then
   # Be careful: only remove if path is under our managed dir
   if [[ "$WT" == "$AGENT_FARM_WORKTREES"/* ]]; then
-    removed=0
-    # FARM-2.3: O(1) lookup via owner_repo when present. The legacy path
-    # below scans every repo as a fallback so historical tasks (column
-    # null) still get cleaned up correctly.
-    if [[ -n "$OWNER_REPO" && -d "$OWNER_REPO/.git" ]]; then
-      if git -C "$OWNER_REPO" worktree list --porcelain 2>/dev/null \
-          | grep -q "^worktree $WT$"; then
-        git -C "$OWNER_REPO" worktree remove --force "$WT" 2>/dev/null && removed=1
-      fi
-    fi
-    if [[ "$removed" -eq 0 ]]; then
-      for repo in "$HOME/Thesis2/repositories"/*; do
-        [[ -d "$repo/.git" ]] || continue
-        if git -C "$repo" worktree list --porcelain 2>/dev/null \
-            | grep -q "^worktree $WT$"; then
-          git -C "$repo" worktree remove --force "$WT" 2>/dev/null && removed=1 && break
-        fi
-      done
-      if [[ "$removed" -eq 0 && -d "$HOME/Thesis2/thesis/.git" ]]; then
-        if git -C "$HOME/Thesis2/thesis" worktree list --porcelain 2>/dev/null \
-            | grep -q "^worktree $WT$"; then
-          git -C "$HOME/Thesis2/thesis" worktree remove --force "$WT" 2>/dev/null && removed=1
-        fi
-      fi
-    fi
-    rm -rf "$WT" 2>/dev/null || true
+    # FARM-2.3: pass owner_repo as hint for O(1) fast path; wt_remove falls
+    # back to a full repo scan when the hint is absent or stale.
+    wt_remove "$WT" "$OWNER_REPO"
     log "removed worktree $WT"
   else
     log "WARN: worktree $WT outside managed dir $AGENT_FARM_WORKTREES; not removing"

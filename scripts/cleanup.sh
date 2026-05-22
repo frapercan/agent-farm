@@ -15,6 +15,8 @@ set -uo pipefail
 ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 # shellcheck source=lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
+# shellcheck source=lib/worktree.sh
+source "$ROOT/scripts/lib/worktree.sh"
 
 APPLY=0
 [[ "${1:-}" == "--apply" ]] && APPLY=1
@@ -94,9 +96,9 @@ if tmux has-session -t "$AGENT_FARM_TMUX_SESSION" 2>/dev/null; then
 fi
 
 # 3. Worktrees under AGENT_FARM_WORKTREES not referenced by any running/pending
-#    task AND not in PROTECTED_PATHS → remove. FARM-2.3: prefer the
-#    tasks.worktree_owner_repo column when populated (O(1)); fall back to a
-#    scan across REPO_LIST when the column is null (historical tasks).
+#    task AND not in PROTECTED_PATHS → remove. Delegates to wt_remove, which
+#    uses the owner_repo hint (O(1)) when present and falls back to a full repo
+#    scan for historical tasks where the column is null.
 if [[ -d "$AGENT_FARM_WORKTREES" ]]; then
   active_wts=$(db_query "SELECT worktree FROM tasks WHERE status IN ('running','pending') AND worktree IS NOT NULL;" | sort -u)
   # Build a worktree -> owner_repo map from sqlite so we don't query per
@@ -114,22 +116,10 @@ if [[ -d "$AGENT_FARM_WORKTREES" ]]; then
     fi
     log "orphan worktree: $d"
     if [[ "$APPLY" -eq 1 ]]; then
-      removed=0
-      # FARM-2.3: O(1) lookup of owner_repo when present.
+      # FARM-2.3: pass owner_repo hint for O(1) fast path; wt_remove falls
+      # back to the full repo scan when the hint is absent or stale.
       owner=$(printf '%s\n' "$owner_map" | awk -F'\t' -v wt="$d" '$1==wt{print $2; exit}')
-      if [[ -n "$owner" && -d "$owner/.git" ]]; then
-        if git -C "$owner" worktree list --porcelain 2>/dev/null | grep -q "^worktree $d$"; then
-          git -C "$owner" worktree remove --force "$d" 2>/dev/null && removed=1
-        fi
-      fi
-      if [[ "$removed" -eq 0 ]]; then
-        for repo in "${REPO_LIST[@]}"; do
-          if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $d$"; then
-            git -C "$repo" worktree remove --force "$d" 2>/dev/null && removed=1 && break
-          fi
-        done
-      fi
-      [[ "$removed" -eq 0 ]] && rm -rf "$d" 2>/dev/null || true
+      wt_remove "$d" "$owner"
     fi
   done
   # Also clean stray top-level dirs left from sibling-bundle agents

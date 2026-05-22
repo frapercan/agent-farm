@@ -36,6 +36,8 @@ set -euo pipefail
 ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 # shellcheck source=lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
+# shellcheck source=lib/worktree.sh
+source "$ROOT/scripts/lib/worktree.sh"
 
 AGENT="${1:-}"
 SPEC="${2:-{}}"
@@ -71,18 +73,11 @@ heartbeat "$TASK_ID" info "spawn-subagent prep started: repo=$REPO base=$BASE"
 # Create worktree (only if cleanup mode wants one)
 WORKTREE=""
 if [[ "$WT_CLEANUP" != "none" ]]; then
-  mkdir -p "$AGENT_FARM_WORKTREES"
-  WORKTREE="$AGENT_FARM_WORKTREES/$TASK_ID"
   BRANCH="task/$TASK_ID"
-
-  # Refresh base
-  git -C "$REPO" fetch --quiet origin "${BASE#origin/}" 2>/dev/null || \
-    heartbeat "$TASK_ID" warn "git fetch failed (offline?); using local ref"
-
-  if ! git -C "$REPO" worktree add -b "$BRANCH" "$WORKTREE" "$BASE" 2>/tmp/wt-err.log; then
+  if ! WORKTREE=$(wt_create "$TASK_ID" "$REPO" "$BASE" 2>/tmp/wt-err.log); then
     heartbeat "$TASK_ID" error "worktree creation failed: $(cat /tmp/wt-err.log)"
     task_set_ended "$TASK_ID" "failed" "1"
-    die "git worktree add failed: $(cat /tmp/wt-err.log)"
+    die "wt_create failed: $(cat /tmp/wt-err.log)"
   fi
   heartbeat "$TASK_ID" info "worktree created: $WORKTREE (branch $BRANCH)"
 
