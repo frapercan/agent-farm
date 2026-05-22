@@ -1,0 +1,25 @@
+# queue-watcher (EXAMPLE, not productionised) -- demonstrates reuse of
+# scripts/services/_supervisor-template.sh for a second persistent
+# service. See docs/runbook-persistent-service.md.
+#
+# A real queue-watcher would poll the RabbitMQ management API and page a
+# janitor when a queue stalls (consumers=0 with a non-empty backlog).
+# This file is a placeholder: the tick is a stub that always succeeds.
+
+name: queue-watcher
+kind: headless
+persistent: true
+model: haiku-4.5             # nominal; the supervisor never spawns an LLM
+permissions: bypassPermissions
+
+worktree:
+  cleanup: none              # persistent services use a stable worktree
+
+service:
+  # Seconds between successful ticks. The supervisor wrapper reads this
+  # the same way deploy-keeper does (parse_yaml_duration). Accepts
+  # 30s / 5m / 1h style durations.
+  poll_interval: 2m
+  # Quick-retry ladder length before the supervisor escalates to a
+  # janitor and enters the cool-off pause.
+  max_consecutive_failures: 3

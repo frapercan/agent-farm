@@ -43,8 +43,11 @@ on a `TRIGGER_CHECK_INTERVAL_SEC` cadence (default 60s, independent of
 ## State
 
 working. FARM-FEAT.4 (2026-05-18) made `service.triggers` load-bearing:
-the field drives the trigger evaluator above. Out-of-scope (still): a
-generic supervisor factory, tracked under FARM-FEAT.6.
+the field drives the trigger evaluator above. FARM-FEAT.6 extracted the
+shared loop core into `scripts/services/_supervisor-template.sh`; this
+supervisor is now a thin wrapper that adds the trigger subsystem and
+custom escalation on top of the template (see
+`docs/features/persistent-service-factory.md`).
 
 ## Smoke test
 
