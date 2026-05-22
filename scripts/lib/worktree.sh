@@ -32,17 +32,27 @@ wt_remove() {
   local wt="$1" repo="${2:-}"
   [[ -d "$wt" ]] || return 0
 
-  # Find which repo registered this worktree if not provided
-  if [[ -z "$repo" ]]; then
-    for r in "$HOME/Thesis2/repositories/PROTEA" "$HOME/Thesis2"; do
-      if git -C "$r" worktree list --porcelain 2>/dev/null | grep -q "^worktree $wt$"; then
-        repo="$r"; break
-      fi
-    done
+  # If owner repo given, try it first (O(1) fast path — FARM-2.3).
+  if [[ -n "$repo" && -d "$repo/.git" ]]; then
+    if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $wt$"; then
+      git -C "$repo" worktree remove --force "$wt" 2>/dev/null || true
+      rm -rf "$wt" 2>/dev/null || true
+      return 0
+    fi
   fi
 
-  if [[ -n "$repo" ]] && [[ -d "$repo/.git" ]]; then
-    git -C "$repo" worktree remove --force "$wt" 2>/dev/null || true
+  # Fallback: scan all repos under the standard Thesis2 layout.
+  local r removed=0
+  for r in "$HOME/Thesis2/repositories"/*; do
+    [[ -d "$r/.git" ]] || continue
+    if git -C "$r" worktree list --porcelain 2>/dev/null | grep -q "^worktree $wt$"; then
+      git -C "$r" worktree remove --force "$wt" 2>/dev/null && removed=1 && break
+    fi
+  done
+  if [[ "$removed" -eq 0 && -d "$HOME/Thesis2/thesis/.git" ]]; then
+    if git -C "$HOME/Thesis2/thesis" worktree list --porcelain 2>/dev/null | grep -q "^worktree $wt$"; then
+      git -C "$HOME/Thesis2/thesis" worktree remove --force "$wt" 2>/dev/null || true
+    fi
   fi
   rm -rf "$wt" 2>/dev/null || true
 }

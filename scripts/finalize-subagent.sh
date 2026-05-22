@@ -34,6 +34,8 @@ set -uo pipefail
 ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 # shellcheck source=lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
+# shellcheck source=lib/worktree.sh
+source "$ROOT/scripts/lib/worktree.sh"
 
 TASK_ID=""
 STATUS="succeeded"
@@ -164,50 +166,23 @@ else
     elif [[ -n "$PROTECTED_PATH" && "$WORKTREE" == "$PROTECTED_PATH" ]]; then
       SKIP_REASON="worktree matches protected path in yaml"
     else
-      # FARM-2.3: prefer the recorded owner_repo column (O(1)) over a
-      # repository scan (O(repos x worktrees)). Falls back to the scan if
-      # the column is null (historical tasks) or the recorded repo no
-      # longer owns the worktree.
-      REMOVE_REPO=""
+      # FARM-2.3: pass owner_repo as hint for O(1) fast path; wt_remove
+      # falls back to the full repo scan when the hint is absent or stale.
+      # Determine in advance whether the fast path will succeed so we can
+      # emit a precise heartbeat matching the actual code path taken.
+      FAST_PATH=0
       if [[ -n "$OWNER_REPO" && -d "$OWNER_REPO/.git" ]]; then
         if git -C "$OWNER_REPO" worktree list --porcelain 2>/dev/null \
             | grep -q "^worktree $WORKTREE$"; then
-          REMOVE_REPO="$OWNER_REPO"
+          FAST_PATH=1
         fi
       fi
-
-      if [[ -n "$REMOVE_REPO" ]]; then
-        if git -C "$REMOVE_REPO" worktree remove --force "$WORKTREE" 2>/dev/null; then
-          REMOVED=1
-          heartbeat "$TASK_ID" info "worktree removed from $REMOVE_REPO (via owner_repo column)"
-        fi
+      wt_remove "$WORKTREE" "$OWNER_REPO"
+      REMOVED=1
+      if [[ "$FAST_PATH" -eq 1 ]]; then
+        heartbeat "$TASK_ID" info "worktree removed from $OWNER_REPO (via owner_repo column)"
       else
-        # Fallback: scan the candidate repos. Kept verbatim so historical
-        # tasks (column null) keep working unchanged.
-        CANDIDATES=()
-        for d in "$HOME/Thesis2/repositories"/*; do
-          [[ -d "$d/.git" ]] && CANDIDATES+=("$d")
-        done
-        [[ -d "$HOME/Thesis2/thesis/.git" ]] && CANDIDATES+=("$HOME/Thesis2/thesis")
-
-        for repo in "${CANDIDATES[@]}"; do
-          if git -C "$repo" worktree list --porcelain 2>/dev/null | grep -q "^worktree $WORKTREE$"; then
-            if git -C "$repo" worktree remove --force "$WORKTREE" 2>/dev/null; then
-              REMOVED=1
-              heartbeat "$TASK_ID" info "worktree removed from $repo (scan fallback)"
-            fi
-            break
-          fi
-        done
-
-        if [[ "$REMOVED" -eq 0 ]]; then
-          # Final fallback: nuke the dir and prune dangling registry
-          rm -rf "$WORKTREE" 2>/dev/null && REMOVED=1
-          for repo in "${CANDIDATES[@]}"; do
-            git -C "$repo" worktree prune 2>/dev/null || true
-          done
-          heartbeat "$TASK_ID" warn "worktree removed by rm -rf fallback (no owning repo found)"
-        fi
+        heartbeat "$TASK_ID" info "worktree removed (scan fallback)"
       fi
     fi
   else
