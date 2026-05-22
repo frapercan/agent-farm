@@ -1898,7 +1898,8 @@ Suggested agent: thesis-writer.
 id: FARM-EXP.12
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
+note: Reconciled to done; work shipped via PROTEA PR #420 + lab PRs #33/#34 (all merged).
 deps: [FARM-EXP.2]
 acceptance: |-
   ADR D36 (PROTEA) documents the per-PLM dataset naming convention `bench-v1-K{k}-v{val_band}-lineage-{plm_short}` with explicit canonical short keys (esm2_150m, esm2_650m, esm2_3b, prot_t5, prostt5, ankh_base, ankh_large, esmc_600m, esmc_300m)
