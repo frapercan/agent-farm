@@ -13,11 +13,38 @@ ROOT="${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}"
 TASK_ID="${TASK_ID:?TASK_ID env required}"
 # shellcheck source=../lib/common.sh
 source "$ROOT/scripts/lib/common.sh"
+# shellcheck source=../lib/stack_owner.sh
+source "$ROOT/scripts/lib/stack_owner.sh"
 
 LIB="$ROOT/scripts/services/lib"
 
 PROTEA_REPO="${PROTEA_REPO:-$HOME/Thesis2/repositories/PROTEA}"
 PROTEA_COMPOSE="${PROTEA_COMPOSE:-$PROTEA_REPO/docker-compose.yml}"
+
+# 0-pre) stack-owner gate (FARM-FEAT.12).
+# When a long export pipeline (FARM-EXP.13 + friends) holds the stack
+# lock, deploy-keeper MUST step aside: a blind restart would kill the
+# in-flight export and silently corrupt the run (memory:
+# feedback_deploykeeper_vs_export_stack_conflict 2026-05-20). The lock
+# is advisory; we honor it by exiting 0 ("tick succeeded as noop") so
+# the supervisor sleeps the full poll_interval and tries again.
+# owner=deploy means a previous deploy-keeper tick claimed the lock for
+# itself, which is fine; owner=free means no one is holding it. Any
+# OTHER value (today only "export") defers.
+STACK_OWNER_CURRENT=$(stack_owner_current | tr -d '[:space:]')
+case "$STACK_OWNER_CURRENT" in
+  free|deploy)
+    : ;;
+  export)
+    OWNER_TASK=$(STACK_OWNER_FILE="${STACK_OWNER_FILE:-$ROOT/state/stack-owner.json}" \
+                 bash -c "source $ROOT/scripts/lib/stack_owner.sh; _stack_owner_read_field task_id")
+    heartbeat "$TASK_ID" info "deferred-stack-owned-by-task task_id=${OWNER_TASK:-unknown} owner=export (skipping tick)"
+    exit 0
+    ;;
+  *)
+    heartbeat "$TASK_ID" warn "stack-owner lock in unexpected state '$STACK_OWNER_CURRENT'; proceeding (treating as free)"
+    ;;
+esac
 
 # 0) prereq sanity (docker hard fail; postgres/rabbit try one bring-up)
 if ! docker info >/dev/null 2>&1; then

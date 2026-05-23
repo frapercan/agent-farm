@@ -1526,6 +1526,54 @@ read-only audit; this slice converts it into living docs.
 + `context/feature-inventory.md` (140 features inventoried).
 Suggested agent: doc-writer.
 
+### FARM-FEAT.12 — Stack-ownership lock for deploy-keeper vs export
+
+```yaml
+id: FARM-FEAT.12
+phase: F-FEAT
+loop: farm-platform
+status: done
+note: "shipped via agent-farm PR (FARM-FEAT.12) on 2026-05-23"
+deps: []
+acceptance: |-
+  agent-farm/state/stack-owner.json is the single source of truth for who holds the PROTEA dev stack; record shape {owner, task_id, acquired_at, reason} with owner in {free, deploy, export}
+  scripts/lib/stack_owner.sh exposes acquire / release / current / status verbs as both a sourceable library and a standalone CLI, file-locked via flock with a bounded timeout (default 5s)
+  scripts/services/deploy-keeper-tick.sh checks stack_owner_current at the top of every tick; when owner=export the tick emits a deferred-stack-owned-by-task heartbeat and exits 0 (intentional noop) so the supervisor sleeps the full poll_interval; owner in {free, deploy} proceeds
+  docs/runbook-stack-owner-lock.md walks through acquire / release / deploy-keeper integration / operator checks / hard-reset recovery
+  tests/test_stack_owner_lock.sh covers two scenarios: (a) acquire export -> tick noops + deferred heartbeat, (b) release export -> tick proceeds; plus bad-input guardrails (reject owner=free, empty task_id, mismatched release exits 3)
+estimated_hours: 4
+priority: P1
+tags: [services, deploy-keeper, lock, coordination]
+requires_human: false
+```
+
+**Goal**: structural fix for the 2026-05-20 incident where an
+auto-spawned deploy-keeper killed an in-flight FARM-EXP.13 export by
+silently restarting the stack out from under it (memory:
+`feedback_deploykeeper_vs_export_stack_conflict`). The lock is advisory:
+the deploy-keeper supervisor CHOOSES to honor it because the two
+failure modes are asymmetric (a no-op tick costs nothing, a blind
+restart costs hours-to-days of GPU export progress). Per
+`project_deploy_keeper_coordination_directive` user mandate.
+
+**Repos touched**: agent-farm.
+
+**Out of scope**:
+1. Conductor-side acquire/release wrapper around long-export dispatch
+   (separate FARM follow-up, will reuse the same helper).
+2. Liveness probe in deploy-keeper (separate from the lock; the lock
+   handles "should I tick" while the probe handles "did my last tick
+   land").
+3. Per-process supervision (no daemon registry; the lock is one JSON
+   file + flock).
+
+**Notes**: Cites memory
+`project_deploy_keeper_coordination_directive` (user directive
+2026-05-22) + `feedback_deploykeeper_vs_export_stack_conflict`
+(landmine 2026-05-20) +
+`project_deploy_keeper_paused_2026_05_23` (today's incident that
+forced the slice). Suggested agent: executor (bash + tests scope).
+
 ## F-EXP-RESET — Transversal benchmark
 
 All slices use the axis-tuple form `(plm, k, reranker, features,
