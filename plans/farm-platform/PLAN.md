@@ -1574,7 +1574,57 @@ restart costs hours-to-days of GPU export progress). Per
 `project_deploy_keeper_paused_2026_05_23` (today's incident that
 forced the slice). Suggested agent: executor (bash + tests scope).
 
-## F-EXP-RESET — Transversal benchmark
+### FARM-FEAT.13 -- Conductor-side stack_owner_acquire wrapper
+
+```yaml
+id: FARM-FEAT.13
+phase: F-FEAT
+loop: farm-platform
+status: done
+note: "shipped via agent-farm PR (FARM-FEAT.13) on 2026-05-24"
+deps: [FARM-FEAT.12]
+acceptance: |-
+  scripts/services/lib/dispatch_with_lock.sh wraps any POST /v1/datasets dispatch:
+    signature dispatch_with_lock <task_id> <reason> -- <command...>
+    acquires stack-owner lock as owner=export under task_id before running command
+    releases lock in a trap-EXIT block so lock is always freed even on SIGTERM or command failure
+    exits 2 with diagnostic message (current holder task_id + acquired_at) when lock is contended; command is NOT run
+  prompts/bioinfo-quick.md has a hard rule: NEVER POST /v1/datasets without dispatch_with_lock
+  prompts/conductor.md documents dispatch_with_lock under "Subagent spawn recipe" for ad-hoc export tasks
+  tests/test_dispatch_with_lock.sh covers: happy path, failure path (lock released), contended path (exit 2 no-run), missing separator
+estimated_hours: 2
+priority: P0
+tags: [services, deploy-keeper, lock, coordination, conductor]
+requires_human: false
+```
+
+FARM-FEAT.12 shipped the server-side gate (deploy-keeper tick checks the lock
+before redeploying). FARM-FEAT.13 ships the client-side gate: the conductor and
+bioinfo-quick now acquire the lock BEFORE dispatching exports, so deploy-keeper
+always sees owner=export and defers. The 2026-05-23 17:12 incident happened
+because bioinfo-quick posted directly to /v1/datasets without holding the lock;
+deploy-keeper saw owner=free and redeployed mid-export, killing the in-flight
+EXP.13 training worker (memory: `project_deploy_keeper_paused_2026_05_23`).
+
+The wrapper is a single-file shell library at
+`scripts/services/lib/dispatch_with_lock.sh`. It sources
+`scripts/lib/stack_owner.sh` (FARM-FEAT.12) and is both sourceable (function
+`dispatch_with_lock`) and directly executable as a CLI.
+
+**Repos touched**: agent-farm.
+
+**Out of scope**:
+1. Per-cell lock granularity (the current design holds one lock for the full
+   export campaign; per-cell would need a queue mechanism).
+2. Auto-retry on contention (callers must decide whether to wait or stop; the
+   lock gives them the information to make that call).
+
+**Notes**: Cites memory `project_deploy_keeper_paused_2026_05_23`
+(2026-05-23 incident) + `feedback_spawn_subagent_wrong_repo` (context on
+why conductor-side fixes must be explicit in prompts).
+Suggested agent: executor (bash + shell tests scope).
+
+## F-EXP-RESET -- Transversal benchmark
 
 All slices use the axis-tuple form `(plm, k, reranker, features,
 eval_set, propagation, ensemble)` from
