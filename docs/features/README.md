@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **69**.
+Total first-class capabilities: **71**.
 
 ## 1-agents
 
