@@ -2280,3 +2280,355 @@ because `ips_*` lives under its own feature family).
 quota is 25 req/min; budget the dump accordingly or pin a local
 InterProScan container. Suggested agent: executor (PROTEA feature
 pipeline change) followed by bioinfo-quick for the ablation runs.
+
+## F-AUTH — Single auth system, manual approvals, multi-instance
+
+Design rationale captured in ADR D37
+(`docs/source/adr/D37-feat-auth-v2-users-roles-multi-instance.rst` in PROTEA).
+This phase supersedes the partial FEAT-AUTH (PR #456) and the prior
+ADR D6 Authentik-OIDC decision.
+
+Four roles form a strict linear order: guest < researcher < operator < admin.
+A single `require_role(min_role)` FastAPI dependency replaces the legacy
+`_require_admin_token` throughout. Each PROTEA deployment is sovereign with
+its own User table; no cross-instance identity plane.
+
+Waves:
+- Wave 3 (slices 1-5): foundation, migrations, bootstrap, login/signup, legacy token drop, endpoint gating.
+- Wave 4 (slices 6-9): anonymous quota, per-user rate limits, session revocation, audit log.
+- Wave 5 (slices 10-11): frontend pages and optional SMTP.
+
+Hard constraints inherited from CLAUDE.md apply to every slice. Additionally:
+- NEVER introduce a new `_require_admin_token` call; all such calls are removed in FARM-AUTH.4.
+- NEVER store the raw API key secret after initial creation; only the sha256 hash is persisted.
+- NEVER skip Alembic migration for schema changes; each new table ships its own `alembic revision`.
+
+### FARM-AUTH.1 — User table + password helpers (Wave 3)
+
+```yaml
+id: FARM-AUTH.1
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  Alembic migration creates `user` table: id (UUID PK), email (unique not null), username (unique not null), display_name, password_hash (argon2id text), role (enum: guest/researcher/operator/admin), status (enum: pending/active/deactivated), intended_use (text), created_at, last_login_at, deactivated_at
+  protea/api/auth/passwords.py exports hash_password(plaintext)->str and verify_password(plaintext, stored_hash)->bool using argon2-cffi; no bcrypt fallback
+  Unit tests tests/test_auth_passwords.py: hash is not plaintext, verify returns True on match and False on mismatch, two calls produce different hashes (random salt)
+  alembic upgrade head runs without error on a clean DB
+  ORM model protea/infrastructure/orm/models/user.py imported in models/__init__.py
+estimated_hours: 6
+priority: P0
+tags: [auth, schema, migration, security]
+requires_human: false
+```
+
+**Goal**: establish the identity foundation that every subsequent F-AUTH slice depends on.
+
+**Touches**: `alembic/versions/<hash>_auth_user_table.py`, `protea/infrastructure/orm/models/user.py`, `protea/api/auth/passwords.py`, `tests/test_auth_passwords.py`, `protea/infrastructure/orm/models/__init__.py`.
+
+**Depends on**: none.
+
+**Acceptance**: `pytest tests/test_auth_passwords.py` passes; `alembic upgrade head` completes on a fresh schema.
+
+**Notes**: argon2-cffi must be added explicitly to pyproject.toml if not already a direct dep. Suggested agent: executor.
+
+### FARM-AUTH.2 — Bootstrap admin: env var + CLI subcommand (Wave 3)
+
+```yaml
+id: FARM-AUTH.2
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.1]
+acceptance: |-
+  On startup, if PROTEA_BOOTSTRAP_ADMIN_EMAIL is set and no User row with role=admin exists, PROTEA creates the admin; password read from PROTEA_BOOTSTRAP_ADMIN_PASSWORD if set, otherwise generated and printed to stderr once
+  Bootstrap is idempotent: second startup with same env var does nothing
+  `protea-cli admin add-user` Click subcommand accepts email, role (default researcher), and password-prompt flag; exits 0 on success, 1 if email already exists
+  Unit test mocks the session and asserts admin row created on first call, skipped on second
+estimated_hours: 5
+priority: P0
+tags: [auth, bootstrap, cli]
+requires_human: false
+```
+
+**Goal**: ensure every PROTEA deployment can reach /admin from day one without manual DB surgery.
+
+**Touches**: `protea/api/startup.py` (or lifespan hook), `protea/cli/admin.py`, `tests/test_auth_bootstrap.py`.
+
+**Depends on**: FARM-AUTH.1.
+
+**Acceptance**: `PROTEA_BOOTSTRAP_ADMIN_EMAIL=x@y.test pytest tests/test_auth_bootstrap.py` passes; second invocation is a no-op.
+
+**Notes**: Bootstrap runs inside the FastAPI lifespan event before first request. The CLI subcommand is a separate entry point for break-glass use without starting the full API. Suggested agent: executor.
+
+### FARM-AUTH.3 — Login + signup endpoints (Wave 3)
+
+```yaml
+id: FARM-AUTH.3
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.1]
+acceptance: |-
+  POST /auth/signup accepts {email, display_name, intended_use}; creates User row with status=pending, role=researcher; returns 201 with {id, email, status}; rejects duplicate email with 409
+  POST /auth/login accepts {email, password}; on success returns 200 and sets HttpOnly+Secure+SameSite=Strict JWT cookie; on failure returns 401; records last_login_at on success; rejects pending-status users with 403
+  JWT payload includes sub (user_id), role, jti (UUID), exp signed with PROTEA_JWT_SECRET
+  GET /auth/me returns {id, email, role, status} for authenticated user, 401 if no valid cookie
+  POST /auth/logout clears session cookie; returns 204
+  pytest tests/test_auth_endpoints.py covers all five scenarios above
+estimated_hours: 8
+priority: P0
+tags: [auth, api, jwt]
+requires_human: false
+```
+
+**Goal**: wire the identity flow end-to-end so subsequent slices can depend on a real authenticated session.
+
+**Touches**: `protea/api/routers/auth.py`, `protea/api/auth/jwt.py` (extend existing), `tests/test_auth_endpoints.py`.
+
+**Depends on**: FARM-AUTH.1.
+
+**Acceptance**: `pytest tests/test_auth_endpoints.py -v` passes; login response carries Set-Cookie with correct attributes.
+
+**Notes**: Reconcile with any session JWT already introduced in PR #456; schema must match ADR D37. Suggested agent: executor.
+
+### FARM-AUTH.4 — Drop legacy _require_admin_token (Wave 3)
+
+```yaml
+id: FARM-AUTH.4
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.3]
+acceptance: |-
+  _require_admin_token function deleted from codebase; PROTEA_ADMIN_TOKEN env var removed from settings.py and system.yaml template
+  All /admin/* and /maintenance/* routes formerly calling _require_admin_token now call require_role("admin") or require_role("operator") per ADR D37 endpoint map
+  `grep -r '_require_admin_token' protea/` returns empty
+  `grep -r 'PROTEA_ADMIN_TOKEN' protea/ docs/` returns empty (legacy docs updated)
+  pytest covers: GET /admin/audit returns 403 for a researcher session and 200 for an admin session
+estimated_hours: 5
+priority: P0
+tags: [auth, cleanup, breaking-change]
+requires_human: false
+```
+
+**Goal**: eliminate the dual auth surface so there is exactly one guard on every protected endpoint.
+
+**Touches**: `protea/api/routers/admin.py`, `protea/api/routers/maintenance.py`, `protea/api/auth/dependencies.py` (new `require_role`), `protea/config/settings.py`, `tests/test_auth_roles.py`.
+
+**Depends on**: FARM-AUTH.3.
+
+**Acceptance**: `grep -r '_require_admin_token' protea/` returns empty; `pytest tests/test_auth_roles.py` passes.
+
+**Notes**: Document the migration path in the PR description: callers that used PROTEA_ADMIN_TOKEN bearer must switch to an operator/admin API key. Suggested agent: executor.
+
+### FARM-AUTH.5 — Endpoint gating sweep (Wave 3)
+
+```yaml
+id: FARM-AUTH.5
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.4]
+acceptance: |-
+  Every POST, PATCH, and DELETE endpoint in the PROTEA FastAPI surface has an explicit require_role dependency; default minimum is researcher
+  Endpoints requiring operator or admin have explicit downgrade annotation matching ADR D37 endpoint map
+  Parametrised pytest tests/test_auth_gating.py walks every registered route via app.routes and asserts unauthenticated POST/PATCH/DELETE returns 401 (not 200/403)
+  GET endpoints listed as guest-accessible in ADR D37 return 200 without a session cookie
+estimated_hours: 6
+priority: P1
+tags: [auth, api, security]
+requires_human: false
+```
+
+**Goal**: guarantee no POST/PATCH/DELETE accidentally accepts unauthenticated requests after the legacy token is dropped.
+
+**Touches**: all router files under `protea/api/routers/`, `tests/test_auth_gating.py`.
+
+**Depends on**: FARM-AUTH.4.
+
+**Acceptance**: `pytest tests/test_auth_gating.py` passes; parametrised test covers every route registered in the app.
+
+**Notes**: Use FastAPI `app.routes` to enumerate routes in the test. Endpoints not explicitly annotated default to `require_role("researcher")` via a router-level dependency. Suggested agent: executor.
+
+### FARM-AUTH.6 — Anonymous quick-annotate with IP-hash quota (Wave 4)
+
+```yaml
+id: FARM-AUTH.6
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.5]
+acceptance: |-
+  POST /annotate?save_history=false accepts unauthenticated requests up to 10 sequences per day per daily-rotated-salt IP hash
+  Quota exhaustion returns 429 with Retry-After header set to seconds until midnight UTC
+  IP hash uses same daily-salt rotation as VisitorCounter; plaintext IP is never stored
+  pytest tests/test_auth_anonymous_annotate.py: 10 requests succeed, 11th returns 429; mocked new day resets counter
+estimated_hours: 5
+priority: P1
+tags: [auth, quota, anonymous, annotate]
+requires_human: false
+```
+
+**Goal**: let unauthenticated visitors try PROTEA without creating an account, bounded by a per-IP daily limit.
+
+**Touches**: `protea/api/routers/annotate.py`, `protea/api/auth/quota.py` (new, shared with FARM-AUTH.7), `tests/test_auth_anonymous_annotate.py`.
+
+**Depends on**: FARM-AUTH.5.
+
+**Acceptance**: `pytest tests/test_auth_anonymous_annotate.py` passes; 429 body includes `retry_after_seconds`.
+
+**Notes**: Fail-open on DB error: if the quota row cannot be read or written, allow the request. Suggested agent: executor.
+
+### FARM-AUTH.7 — Per-user quota table + rate-limit middleware (Wave 4)
+
+```yaml
+id: FARM-AUTH.7
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.6]
+acceptance: |-
+  Alembic migration creates `quota` table: key (composite text of user_id+resource+period_start), resource (enum: annotate/job), period_start (date), count (integer), limit (integer)
+  Researcher defaults: 1000 annotate sequences/day, 100 job dispatches/day; configurable under quota.limits in system.yaml
+  Middleware increments quota.count on every authenticated POST /annotate and POST /jobs; returns 429 with Retry-After on limit breach
+  pytest tests/test_auth_quota.py: researcher hits annotate limit and gets 429; admin is not rate-limited (no quota row for admin)
+estimated_hours: 6
+priority: P1
+tags: [auth, quota, middleware]
+requires_human: false
+```
+
+**Goal**: provide per-user anti-abuse protection with configurable limits per role.
+
+**Touches**: `alembic/versions/<hash>_auth_quota_table.py`, `protea/api/auth/quota.py`, `protea/config/system.yaml` (quota.limits block), `tests/test_auth_quota.py`.
+
+**Depends on**: FARM-AUTH.6 (reuses quota.py module started there).
+
+**Acceptance**: `pytest tests/test_auth_quota.py` passes; `alembic upgrade head` completes; admin role has no quota limit.
+
+**Notes**: Admin and operator roles are exempt by default; the YAML config may override. Suggested agent: executor.
+
+### FARM-AUTH.8 — Session revocation table + middleware (Wave 4)
+
+```yaml
+id: FARM-AUTH.8
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.3]
+acceptance: |-
+  Alembic migration creates `session_revocation` table: jti (text PK), user_id (FK User), revoked_at (timestamp), reason (text)
+  JWT middleware checks jti against session_revocation on every authenticated request; revoked jti returns 401
+  POST /auth/logout inserts current jti into session_revocation and clears the cookie
+  POST /auth/logout-all (researcher+) revokes all active sessions for the user via a revoke_before timestamp on the User row
+  DELETE /admin/sessions/{user_id} (admin only) force-revokes all sessions for the target user
+  pytest tests/test_auth_revocation.py: logout then cookie reuse returns 401; logout-all invalidates all sessions; admin force-logout works
+estimated_hours: 7
+priority: P1
+tags: [auth, session, revocation, security]
+requires_human: false
+```
+
+**Goal**: enable per-session and account-wide revocation to support forced logout after role changes or compromise.
+
+**Touches**: `alembic/versions/<hash>_auth_session_revocation.py`, `protea/api/auth/jwt.py` (middleware extension), `protea/api/routers/auth.py` (new endpoints), `tests/test_auth_revocation.py`.
+
+**Depends on**: FARM-AUTH.3.
+
+**Acceptance**: `pytest tests/test_auth_revocation.py` passes; revoked jti returns 401 on next use.
+
+**Notes**: logout-all is implemented via a `revoke_before` timestamp on the User row to avoid scanning unbounded rows. Suggested agent: executor.
+
+### FARM-AUTH.9 — Audit log table + insert helpers (Wave 4)
+
+```yaml
+id: FARM-AUTH.9
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.4, FARM-AUTH.8]
+acceptance: |-
+  Alembic migration creates `audit_log` table: id (UUID PK), actor_user_id (FK User nullable), action (text not null), target (text), payload (JSONB), occurred_at (timestamp default utcnow); append-only (no UPDATE/DELETE)
+  protea/api/auth/audit.py exports log_action(session, actor_id, action, target, payload); call is fire-and-forget (errors logged, never raised)
+  Wrapped actions: login-ok, login-fail, role-change, api-key-mint, api-key-revoke, user-deactivate, db-reset, signup-approve
+  GET /admin/audit (admin only) returns paginated JSON list of rows, filterable by actor_user_id and action
+  pytest tests/test_auth_audit.py: login-ok inserts a row; login-fail inserts a row with actor_user_id=None; GET /admin/audit returns 200 for admin and 403 for researcher
+estimated_hours: 6
+priority: P1
+tags: [auth, audit, observability]
+requires_human: false
+```
+
+**Goal**: provide an append-only audit trail for all security-relevant actions, required for any multi-user deployment.
+
+**Touches**: `alembic/versions/<hash>_auth_audit_log.py`, `protea/api/auth/audit.py`, `protea/api/routers/admin.py` (new GET /admin/audit endpoint), `tests/test_auth_audit.py`.
+
+**Depends on**: FARM-AUTH.4 (admin router finalised), FARM-AUTH.8 (session middleware complete).
+
+**Acceptance**: `pytest tests/test_auth_audit.py` passes; GET /admin/audit returns 403 for non-admin sessions.
+
+**Notes**: Index on `occurred_at` for the paginated viewer. No UPDATE or DELETE on this table, by convention enforced in audit.py. Suggested agent: executor.
+
+### FARM-AUTH.10 — Frontend: signup, login, profile, admin/users pages (Wave 5)
+
+```yaml
+id: FARM-AUTH.10
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.5, FARM-AUTH.9]
+acceptance: |-
+  /signup: email + display_name + intended_use form; POST /auth/signup; shows confirmation on 201; shows conflict error on 409
+  /login: email + password; POST /auth/login; redirects to / on success; magic-link button hidden when GET /auth/smtp-enabled returns false
+  /profile (researcher+): change-password form, own API key list with create/revoke, quota usage bar, job history table
+  /admin/users (admin): three tabs Pending/Active/Deactivated; per-row: approve+role-pick, deactivate, reset-password, mint-key-on-behalf
+  AuthChip in layout header: avatar initials + username + role badge when authenticated; Sign in link when guest; dropdown: Profile, Admin console (admin only), Operator console (operator only), Sign out
+  Playwright smoke test: signup form submits and shows confirmation; login form redirects on success
+estimated_hours: 12
+priority: P1
+tags: [auth, frontend, ui]
+requires_human: false
+```
+
+**Goal**: deliver the complete auth user experience before F-AUTH is considered production-ready.
+
+**Touches**: `apps/web/app/signup/page.tsx`, `apps/web/app/login/page.tsx`, `apps/web/app/profile/page.tsx`, `apps/web/app/admin/users/page.tsx`, `apps/web/components/AuthChip.tsx`, `apps/web/lib/api.ts` (new auth endpoints).
+
+**Depends on**: FARM-AUTH.5 (all API endpoints gated), FARM-AUTH.9 (audit log populated on approve action).
+
+**Acceptance**: `npm run build` in `apps/web/` exits 0; Playwright signup and login smoke tests pass.
+
+**Notes**: SameSite=Strict cookie policy is the primary CSRF protection for same-origin deployments. Suggested agent: executor.
+
+### FARM-AUTH.11 — Optional SMTP: magic-link login + email password reset (Wave 5)
+
+```yaml
+id: FARM-AUTH.11
+phase: F-AUTH
+loop: farm-platform
+status: pending
+deps: [FARM-AUTH.10]
+acceptance: |-
+  PROTEA_SMTP_HOST, PROTEA_SMTP_PORT, PROTEA_SMTP_USER, PROTEA_SMTP_PASSWORD, PROTEA_SMTP_FROM env vars; all optional; SMTP features disabled if PROTEA_SMTP_HOST is unset
+  GET /auth/smtp-enabled returns {enabled: bool}; frontend uses this to show/hide magic-link button
+  POST /auth/magic-link accepts {email}; if SMTP enabled generates signed one-time token (30-min TTL), sends link, returns 202; if SMTP disabled returns 503 with {detail: "SMTP not configured"}
+  GET /auth/magic-link?token=<t> validates token, creates session cookie, redirects to /profile; returns 400 on invalid or expired token
+  POST /auth/password-reset-request and POST /auth/password-reset follow same SMTP-gated pattern
+  pytest tests/test_auth_smtp.py mocks SMTP: magic-link token is single-use, expired token returns 400, reset updates password hash
+estimated_hours: 8
+priority: P2
+tags: [auth, smtp, email, optional]
+requires_human: false
+```
+
+**Goal**: add email-driven convenience flows for deployments that have SMTP configured, without breaking those that do not.
+
+**Touches**: `protea/api/auth/smtp.py` (new), `protea/api/routers/auth.py` (new endpoints), `protea/config/settings.py` (SMTP env vars), `tests/test_auth_smtp.py`.
+
+**Depends on**: FARM-AUTH.10 (frontend shows/hides magic-link button).
+
+**Acceptance**: `pytest tests/test_auth_smtp.py` passes with SMTP mocked; deploying without SMTP env vars leaves all existing functionality intact.
+
+**Notes**: Magic-link token stored in a dedicated one-time-token table (not session_revocation), deleted on use or expiry. Suggested agent: executor.
