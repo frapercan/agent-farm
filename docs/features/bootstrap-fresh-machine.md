@@ -19,11 +19,11 @@ configured box is a no-op: every step is gated on `command -v <tool>` or
 ## What it installs
 
 | Component | Version pinned | Method |
-|-----------|---------------|--------|
+| --- | --- | --- |
 | build-essential, curl, git, gnupg, ca-certificates | distro default | apt |
 | postgresql-client (psql) | distro default | apt |
 | Python | 3.12 | deadsnakes PPA (Ubuntu) / apt (Debian) |
-| pipx | latest | pip install --user |
+| pipx | latest | `pip install --user` |
 | Poetry | latest stable | pipx |
 | Node.js | 20 | NodeSource setup script |
 | npm | bundled with Node | apt |
