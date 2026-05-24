@@ -121,6 +121,7 @@ Total first-class capabilities: **69**.
 
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
+| [bootstrap-fresh-machine](bootstrap-fresh-machine.md) | working | `scripts/bootstrap-fresh-machine.sh` | `bash -n scripts/bootstrap-fresh-machine.sh` | `docs/features/bootstrap-fresh-machine.md` | agent-farm conductor loop |
 | [pgdump-nightly](pgdump-nightly.md) | working | `scripts/install-nightly-pgdump-cron.sh` | `bash -n scripts/install-nightly-pgdump-cron.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [restore-drill](restore-drill.md) | working | `scripts/restore-drill.sh`, `scripts/install-restore-drill-cron.sh` | `bash -n scripts/restore-drill.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 
