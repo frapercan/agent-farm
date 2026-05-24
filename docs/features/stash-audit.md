@@ -33,7 +33,7 @@ narrow, single-purpose, and have no escape hatch.
 ## Behaviour matrix
 
 | Scenario                                | Outcome              |
-|-----------------------------------------|----------------------|
+|::::::::::::::::::::::::::::::::::::::::::|::::::::::::::::::::::|
 | `git stash list` is empty               | scan passes          |
 | Stash entry present at checkout time    | scan fails, PR blocks |
 | Workflow file invalid YAML              | scan errors, PR blocks |
