@@ -34,3 +34,9 @@ venv/
 
 # Logs
 *.log
+
+# Terraform
+infra/terraform/github/.terraform/
+infra/terraform/github/terraform.tfstate
+infra/terraform/github/terraform.tfstate.backup
+infra/terraform/github/.terraform.lock.hcl
