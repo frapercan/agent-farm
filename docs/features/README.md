@@ -42,6 +42,12 @@ Total first-class capabilities: **69**.
 | [spawn](spawn.md) | working | `scripts/spawn.sh` | `bash -n scripts/spawn.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [spawn-subagent](spawn-subagent.md) | partial | `scripts/spawn-subagent.sh` | `bash -n scripts/spawn-subagent.sh` | `docs/features/README.md` | agent-farm conductor loop |
 
+## 4-infra
+
+| Feature | State | Source | Smoke | Runbook | Owner |
+|---|---|---|---|---|---|
+| [full-stack-compose](full-stack-compose.md) | working | `infra/compose/docker-compose.full-stack.yml` | `python3 -m pytest tests/test_full_stack_compose_yaml.py -q` | `infra/compose/README.md` | FARM-INFRA.4 |
+
 ## 4-lifecycle
 
 | Feature | State | Source | Smoke | Runbook | Owner |
@@ -115,6 +121,7 @@ Total first-class capabilities: **69**.
 
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
+| [bootstrap-fresh-machine](bootstrap-fresh-machine.md) | working | `scripts/bootstrap-fresh-machine.sh` | `bash -n scripts/bootstrap-fresh-machine.sh` | `docs/features/bootstrap-fresh-machine.md` | agent-farm conductor loop |
 | [pgdump-nightly](pgdump-nightly.md) | working | `scripts/install-nightly-pgdump-cron.sh` | `bash -n scripts/install-nightly-pgdump-cron.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [restore-drill](restore-drill.md) | working | `scripts/restore-drill.sh`, `scripts/install-restore-drill-cron.sh` | `bash -n scripts/restore-drill.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [restore-from-backup](restore-from-backup.md) | working | `scripts/restore-from-backup.sh` | `bash -n scripts/restore-from-backup.sh` | `docs/runbooks/restore.md` | agent-farm conductor loop |
