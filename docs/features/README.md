@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **68**.
+Total first-class capabilities: **69**.
 
 ## 1-agents
 
@@ -41,6 +41,12 @@ Total first-class capabilities: **68**.
 | [finalize-subagent](finalize-subagent.md) | working | `scripts/finalize-subagent.sh` | `bash -n scripts/finalize-subagent.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [spawn](spawn.md) | working | `scripts/spawn.sh` | `bash -n scripts/spawn.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [spawn-subagent](spawn-subagent.md) | partial | `scripts/spawn-subagent.sh` | `bash -n scripts/spawn-subagent.sh` | `docs/features/README.md` | agent-farm conductor loop |
+
+## 4-infra
+
+| Feature | State | Source | Smoke | Runbook | Owner |
+|---|---|---|---|---|---|
+| [full-stack-compose](full-stack-compose.md) | working | `infra/compose/docker-compose.full-stack.yml` | `python3 -m pytest tests/test_full_stack_compose_yaml.py -q` | `infra/compose/README.md` | FARM-INFRA.4 |
 
 ## 4-lifecycle
 
