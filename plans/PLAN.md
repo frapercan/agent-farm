@@ -155,6 +155,11 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [FARM-EXP.17](farm-platform/PLAN.md#farm-exp17--plm-ensemble-of-single-plm-rerankers-supersedes-farm-exp7-scope) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.17 — PLM ensemble of single-PLM rerankers (supersedes FARM-EXP.7 scope) |
 | [FARM-EXP.18](farm-platform/PLAN.md#farm-exp18--interproscan-feature-family-integration-deferred) | F-EXP-RESET | ⬜ pending | P2 | FARM-EXP.18 — InterProScan feature family integration (deferred) |
 | [FARM-EXP.7](farm-platform/PLAN.md#farm-exp7--in-tree-eval-cell-for-8-plm-ensemble) | F-EXP-RESET | ⬜ pending | P2 | FARM-EXP.7 — In-tree eval cell for 8-PLM ensemble |
+| [F-DATA-PACK.1](farm-platform/PLAN.md#f-data-pack1--manifest-schema-validator) | F-DATA-PACK | ⬜ pending | P0 | F-DATA-PACK.1 — Manifest schema validator |
+| [F-DATA-PACK.2](farm-platform/PLAN.md#f-data-pack2--readme-per-dataset-24-cells) | F-DATA-PACK | ⬜ pending | P1 | F-DATA-PACK.2 — README per dataset (24 cells) |
+| [F-DATA-PACK.3](farm-platform/PLAN.md#f-data-pack3--dataset-card-per-plm-8-cards) | F-DATA-PACK | ⬜ pending | P1 | F-DATA-PACK.3 — Dataset card per PLM (8 cards) |
+| [F-DATA-PACK.4](farm-platform/PLAN.md#f-data-pack4--faircoverage-provenance-doc) | F-DATA-PACK | ⬜ pending | P1 | F-DATA-PACK.4 — FAIR/coverage provenance doc |
+| [F-DATA-PACK.5](farm-platform/PLAN.md#f-data-pack5--zenodo--hugging-face-upload) | F-DATA-PACK | ⬜ pending | P1 | F-DATA-PACK.5 — Zenodo / Hugging Face upload |
 | [FARM-EXP.8](farm-platform/PLAN.md#farm-exp8--constrained-120-cell-grid-execution) | F-EXP-RESET | ⬜ pending | P1 | FARM-EXP.8 — Constrained 120-cell grid execution |
 | [FARM-FEAT.6](farm-platform/PLAN.md#farm-feat6--generic-persistent-service-factory) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.6 — Generic persistent-service factory |
 | [FARM-FEAT.7](farm-platform/PLAN.md#farm-feat7--adopt-libworktreesh-helpers) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.7 — Adopt lib/worktree.sh helpers |
@@ -253,6 +258,10 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 ### F-AUTH (11 slices)
 
 ⬜ 11 pending · **total 11**
+
+### F-DATA-PACK (5 slices)
+
+⬜ 5 pending · **total 5**
 
 ### F-EXP-RESET (19 slices)
 
