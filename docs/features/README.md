@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **68**.
+Total first-class capabilities: **69**.
 
 ## 1-agents
 
@@ -117,6 +117,7 @@ Total first-class capabilities: **68**.
 |---|---|---|---|---|---|
 | [pgdump-nightly](pgdump-nightly.md) | working | `scripts/install-nightly-pgdump-cron.sh` | `bash -n scripts/install-nightly-pgdump-cron.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
 | [restore-drill](restore-drill.md) | working | `scripts/restore-drill.sh`, `scripts/install-restore-drill-cron.sh` | `bash -n scripts/restore-drill.sh` | `docs/runbook-pg-volume-recovery.md` | agent-farm conductor loop |
+| [restore-from-backup](restore-from-backup.md) | working | `scripts/restore-from-backup.sh` | `bash -n scripts/restore-from-backup.sh` | `docs/runbooks/restore.md` | agent-farm conductor loop |
 
 ## 12-ci-gates
 

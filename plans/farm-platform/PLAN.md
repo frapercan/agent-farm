@@ -2746,7 +2746,7 @@ Suggested agent: executor.
 id: FARM-INFRA.3
 phase: F-INFRA
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   agent-farm/scripts/restore-from-backup.sh --dry-run lists the dump it would pick and the alembic head SHA, then exits 0 without touching the database
