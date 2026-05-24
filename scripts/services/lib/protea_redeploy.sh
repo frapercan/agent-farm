@@ -33,8 +33,26 @@ WORKER_MISS_THRESHOLD="${PROTEA_WORKER_MISS_THRESHOLD:-2}"
 # under agent-farm state/ so it survives between ticks.
 WORKER_MISS_STATE="${PROTEA_WORKER_MISS_STATE:-$AGENT_FARM_ROOT/state/deploy_keeper_worker_miss_count}"
 
+# API healthcheck debounce (FARM-DK-HC-DEBOUNCE).
+# A single transient 5xx / connection-pool blip during normal lifespan
+# events (prewarm, worker reap, brief restart) must NOT immediately
+# wipe the venv and loop into a bootstrap cascade.
+#
+# API_FAIL_THRESHOLD: number of CONSECUTIVE healthcheck failures
+#   required before the script forces a BOOTSTRAP. Default 3.
+# API_FAIL_WINDOW_SEC: maximum elapsed seconds across those consecutive
+#   failures; if the window has elapsed the counter resets (the stack
+#   was probably bounced intentionally). Default 90.
+# API_FAIL_STATE: persistent state file storing "count<TAB>first_fail_ts".
+#
+# Override all three via env for tests.
+API_FAIL_THRESHOLD="${PROTEA_API_FAIL_THRESHOLD:-3}"
+API_FAIL_WINDOW_SEC="${PROTEA_API_FAIL_WINDOW_SEC:-90}"
+API_FAIL_STATE="${PROTEA_API_FAIL_STATE:-$AGENT_FARM_ROOT/state/deploy_keeper_api_fail_count}"
+
 mkdir -p "$(dirname "$LOG_FILE")"
 mkdir -p "$(dirname "$WORKER_MISS_STATE")"
+mkdir -p "$(dirname "$API_FAIL_STATE")"
 
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
@@ -188,6 +206,69 @@ verify_workers_alive() {
   return 0
 }
 
+# api_healthcheck_failed_debounce (FARM-DK-HC-DEBOUNCE)
+#
+# Records the current API healthcheck failure into a persistent counter
+# and returns whether the BOOTSTRAP threshold has been breached.
+#
+# The state file stores two tab-separated fields:
+#   consecutive_count<TAB>first_failure_epoch
+#
+# If the window ($API_FAIL_WINDOW_SEC) has elapsed since the first
+# failure in the current run, the counter resets (the stack was likely
+# bounced intentionally and then recovered). This prevents a historic
+# failure from poisoning later ticks.
+#
+# Sets global API_HC_FAIL_COUNT (current consecutive count) for callers
+# that want to log it.
+#
+# Returns 0 if the failure count now meets or exceeds $API_FAIL_THRESHOLD
+# (i.e. "yes, really bootstrap").
+# Returns 1 if we are still within the grace window (single blip case).
+api_healthcheck_failed_debounce() {
+  API_HC_FAIL_COUNT=0
+  local now
+  now=$(date +%s)
+
+  local prev_count=0 prev_first_ts=0
+  if [[ -f "$API_FAIL_STATE" ]]; then
+    IFS=$'\t' read -r prev_count prev_first_ts < "$API_FAIL_STATE" 2>/dev/null || true
+    [[ "$prev_count"    =~ ^[0-9]+$ ]] || prev_count=0
+    [[ "$prev_first_ts" =~ ^[0-9]+$ ]] || prev_first_ts=0
+  fi
+
+  local elapsed=$(( now - prev_first_ts ))
+  local first_ts
+  if [[ "$prev_count" -eq 0 || "$elapsed" -gt "$API_FAIL_WINDOW_SEC" ]]; then
+    # Either first failure ever, or the window expired: start fresh.
+    prev_count=0
+    first_ts="$now"
+  else
+    first_ts="$prev_first_ts"
+  fi
+
+  local new_count=$(( prev_count + 1 ))
+  API_HC_FAIL_COUNT="$new_count"
+
+  # Atomic write.
+  local tmp_state="${API_FAIL_STATE}.tmp"
+  printf '%s\t%s\n' "$new_count" "$first_ts" > "$tmp_state"
+  mv -f "$tmp_state" "$API_FAIL_STATE"
+
+  if (( new_count >= API_FAIL_THRESHOLD )); then
+    return 0   # threshold breached: caller should bootstrap
+  fi
+  return 1     # still in grace window: do not bootstrap yet
+}
+
+# api_healthcheck_reset_debounce
+# Called on a successful healthcheck to clear the persistent counter.
+api_healthcheck_reset_debounce() {
+  local tmp_state="${API_FAIL_STATE}.tmp"
+  printf '0\t0\n' > "$tmp_state"
+  mv -f "$tmp_state" "$API_FAIL_STATE"
+}
+
 # Self-seed .env.local with the JWT secret + supporting envs. manage.sh
 # starts uvicorn via _start_bg (setsid + &) which needs vars EXPORTED,
 # not just shell-local; PROTEA's scripts/deploy.sh does `set -a;
@@ -283,12 +364,33 @@ BOOTSTRAP=0
 # Recover from "manage.sh crashed mid-tick, stack down" without waiting
 # for a new commit. If the api isn't returning 200 on /jobs, force a
 # full redeploy. -m 3 + --fail keeps this cheap on the happy path.
+#
+# DEBOUNCE (FARM-DK-HC-DEBOUNCE): a single transient 5xx must NOT
+# immediately bootstrap (which wipes the venv and causes a cascade).
+# We require $API_FAIL_THRESHOLD consecutive failures within
+# $API_FAIL_WINDOW_SEC seconds before acting. On success, reset.
 PROTEA_API_HEALTH_URL="${PROTEA_API_HEALTH_URL:-http://localhost:8000/jobs}"
 API_OK=1
-if ! curl -sf -m 3 -o /dev/null "$PROTEA_API_HEALTH_URL"; then
+HC_RESPONSE_BODY=""
+if HC_RESPONSE_BODY=$(curl -sf -m 3 "$PROTEA_API_HEALTH_URL" 2>&1); then
+  API_OK=1
+  api_healthcheck_reset_debounce
+else
   API_OK=0
-  log "api healthcheck ${PROTEA_API_HEALTH_URL} non-200; forcing BOOTSTRAP"
-  BOOTSTRAP=1
+  if api_healthcheck_failed_debounce; then
+    # Threshold breached: the stack is genuinely down.
+    # Only wipe the venv if uvicorn is actually broken inside it;
+    # a healthy venv with a crashed supervisor process does not need
+    # a full rebuild.
+    local_uvicorn_ok=0
+    if "$DEPLOY_PATH/.venv/bin/python" -c "import uvicorn" 2>/dev/null; then
+      local_uvicorn_ok=1
+    fi
+    log "api healthcheck ${PROTEA_API_HEALTH_URL} non-200 for ${API_HC_FAIL_COUNT} consecutive ticks (>= threshold ${API_FAIL_THRESHOLD}); uvicorn_importable=${local_uvicorn_ok}; response: ${HC_RESPONSE_BODY:0:200}; forcing BOOTSTRAP"
+    BOOTSTRAP=1
+  else
+    log "api healthcheck ${PROTEA_API_HEALTH_URL} non-200 (tick ${API_HC_FAIL_COUNT}/${API_FAIL_THRESHOLD}; within ${API_FAIL_WINDOW_SEC}s window); deferring BOOTSTRAP"
+  fi
 fi
 
 # Worker-set healthcheck (FARM-DK-WORKER-HEALTHCHECK). The API can be
@@ -315,14 +417,25 @@ fi
 CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null || true)
 FORCE_TAG=""; [[ "$FORCE" -eq 1 ]] && FORCE_TAG="force "
 SIB_TAG=""; [[ "$siblings_advanced" -eq 1 && "$LOCAL" == "$REMOTE" ]] && SIB_TAG="(siblings only) "
-log "redeploy $(git rev-parse --short "$LOCAL") to $(git rev-parse --short "$REMOTE") (${FORCE_TAG}${SIB_TAG})files=$(echo "$CHANGED" | wc -l)"
+# Fix: `echo "$CHANGED" | wc -l` reports 1 when CHANGED is empty
+# (echo outputs a bare newline). Use grep -c . so an empty string
+# correctly shows files=0 and a single-filename string shows files=1.
+FILES_COUNT=0
+[[ -n "$CHANGED" ]] && FILES_COUNT=$(printf '%s\n' "$CHANGED" | grep -c .)
+BOOT_TAG=""
+if [[ "$BOOTSTRAP" -eq 1 ]]; then
+  BOOT_TAG="bootstrap "
+fi
+log "redeploy $(git rev-parse --short "$LOCAL") to $(git rev-parse --short "$REMOTE") (${FORCE_TAG}${SIB_TAG}${BOOT_TAG})files=${FILES_COUNT}"
 
 ARGS=()
 if [[ "$BOOTSTRAP" -eq 1 ]]; then
-  # Fresh deploy worktree (no uvicorn in .venv). Force a full deploy
-  # so deps install and frontend builds at least once before the
-  # incremental-skip heuristics below kick in on subsequent ticks.
-  log "bootstrap: $DEPLOY_PATH/.venv has no uvicorn; full deploy (deps + build)"
+  # The stack is not responding or the venv is broken. Log the reason
+  # clearly before any heavy work so incidents are diagnosable from the
+  # log alone.  Only pass --force-bootstrap when uvicorn is actually
+  # broken inside the venv; a healthy venv with a crashed process only
+  # needs `deploy.sh` to restart the process, NOT a full wipe+reinstall.
+  log "bootstrap: triggering full deploy (deps + build) for $DEPLOY_PATH"
 elif [[ "$LOCAL" == "$REMOTE" ]]; then
   # PROTEA didn't move, only siblings did. Skip deps and frontend rebuild;
   # only the docs build matters and deploy.sh runs that unconditionally.
