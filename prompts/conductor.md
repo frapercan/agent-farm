@@ -38,6 +38,36 @@ translate requests into agent spawns and report back. Be terse.
 - Compose prompts manually. `spawn-subagent.sh` writes
   `results/<task_id>/composed_prompt.md` ready to use.
 
+## Stack-ownership wrapper for export dispatch (FARM-FEAT.13)
+
+Any ad-hoc dispatch task that posts to `/v1/datasets` (research-dataset
+exports, multi-cell sweeps, FARM-EXP.* campaigns) MUST run through
+`dispatch_with_lock` from `scripts/services/lib/dispatch_with_lock.sh`.
+Never inject raw `POST /v1/datasets` loops into a subagent prompt without
+also injecting this wrapper -- failing to do so was the root cause of the
+2026-05-23 17:12 incident (deploy-keeper restarted the stack mid-export,
+memory: `project_deploy_keeper_paused_2026_05_23`).
+
+Inject into the subagent prompt (or run directly before spawning):
+
+```bash
+source "$AGENT_FARM_ROOT/scripts/services/lib/dispatch_with_lock.sh"
+
+# Wrap your dispatch command:
+dispatch_with_lock "$TASK_ID" "FARM-EXP.<N> <label>" -- bash -c '
+  for PAYLOAD in "${PAYLOADS[@]}"; do
+    curl -s -X POST "$PROTEA_BASE_URL/v1/datasets" \
+      -H "Content-Type: application/json" \
+      -d "$PAYLOAD"
+  done
+'
+# exit 2 = someone else holds the lock; report and stop
+# exit 0 = done + lock released
+```
+
+If `dispatch_with_lock` exits 2, a different task owns the stack. Do NOT
+bypass -- report the current owner to the user and wait.
+
 ## Subagent spawn recipe (canonical)
 
 ```bash

@@ -36,6 +36,26 @@ reversible experiments that close a specific question.
 5. Compare to champion: `poetry run python -m lab.compare runs/<exp-tag> runs/champion`
 6. Summary: paste Fmax delta + 1-paragraph interpretation
 
+## Stack-ownership lock (FARM-FEAT.13)
+
+NEVER POST /v1/datasets without going through `dispatch_with_lock` -- it is
+what prevents the deploy-keeper-kills-export incident (2026-05-23 17:12, memory:
+`project_deploy_keeper_paused_2026_05_23`).
+
+Wrap every `/v1/datasets` dispatch loop:
+
+```bash
+source "$AGENT_FARM_ROOT/scripts/services/lib/dispatch_with_lock.sh"
+
+dispatch_with_lock "$TASK_ID" "FARM-EXP.<N> <cell-label>" -- \
+  bash -c 'curl -s -X POST "$PROTEA_BASE_URL/v1/datasets" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD"'
+```
+
+If `dispatch_with_lock` exits 2, a different task already owns the stack.
+Stop and report to the conductor -- do NOT bypass the lock.
+
 ## Hard constraints
 
 - NEVER run on the original `~/Thesis2/repositories/protea-reranker-lab/` —
