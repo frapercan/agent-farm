@@ -2632,3 +2632,239 @@ requires_human: false
 **Acceptance**: `pytest tests/test_auth_smtp.py` passes with SMTP mocked; deploying without SMTP env vars leaves all existing functionality intact.
 
 **Notes**: Magic-link token stored in a dedicated one-time-token table (not session_revocation), deleted on use or expiry. Suggested agent: executor.
+
+## F-INFRA — Infrastructure-as-code on the gaps that compound
+
+Three concrete gaps in the current single-machine setup map directly to
+memory-tracked incidents that recur and compound: GitHub repo policy
+lives in the UI and drifts (two direct-to-main push incidents, 416 zombie
+branches), fresh-machine bootstrap is prose-only (not executable), and
+the postgres recovery procedure survived as a runbook note rather than a
+runnable script. The five slices below address those gaps plus two
+adjacent artefacts (a full-stack compose file and a thesis-grade
+reproducibility ceremony) that share the same fix surface.
+
+Rejected alternatives (documented here so future agents do not re-open
+them): Ansible for single-machine ops is overkill; bash scripts are
+simpler and carry no inventory/role/handler tax. Terraform for runtime
+infra (postgres/rabbit/minio) is premature; everything is local
+containers and no cloud resource is in scope. Ansible becomes worth
+revisiting only when there is more than one host or recurring GPU box
+provisioning. FARM-INFRA.5 is explicitly deferred until the user
+greenlights cloud spend before the thesis defence.
+
+### FARM-INFRA.1 — Terraform module for GitHub repo policy (9 repos)
+
+```yaml
+id: FARM-INFRA.1
+phase: F-INFRA
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  infra/terraform/github/main.tf encodes branch protection + required checks + auto-delete-head-branches + signed-commit requirement for all 9 repos (PROTEA, protea-contracts, protea-method, protea-sources, protea-runners, protea-backends, protea-reranker-lab, cafaeval-protea, agent-farm)
+  infra/terraform/github/variables.tf declares repo list and PAT scope; infra/terraform/github/outputs.tf emits the applied rule summary
+  infra/terraform/github/README.md documents apply instructions, state location, and required GH PAT scope
+  terraform plan is a no-op against the current production state (IaC matches hand-maintained reality)
+  terraform apply would re-apply if anyone drifted the UI settings
+  make terraform-plan wrapper added to agent-farm Makefile
+estimated_hours: 6
+priority: P1
+tags: [infra, terraform, gh-policy, stability]
+requires_human: false
+```
+
+**Goal**: encode the GitHub repo policy that currently lives in the UI
+as HCL in a new `infra/terraform/github/` directory. Any policy drift
+(a protection rule toggled off, auto-delete disabled) becomes a
+detectable diff rather than a silent incident.
+
+**Touches**: `infra/terraform/github/main.tf` (new),
+`infra/terraform/github/variables.tf` (new),
+`infra/terraform/github/outputs.tf` (new),
+`infra/terraform/github/README.md` (new),
+`Makefile` (`terraform-plan` target).
+
+**Depends on**: none.
+
+**Acceptance**: `terraform plan` shows no changes against production;
+`make terraform-plan` is the canonical invocation.
+
+**Notes**: Root-causes the three policy-drift incidents:
+`project_plugin_push_direct_main_incident` (2026-05-13, sources/runners/backends),
+`feedback_janitor_direct_push_agentfarm` (agent-farm/main unprotected),
+`project_cruft_audit_2026_05_22` (auto-delete-head-branches OFF, 416 zombie
+remote branches). Highest ROI single change in the analysis. Suggested
+agent: executor.
+
+### FARM-INFRA.2 — `scripts/bootstrap-fresh-machine.sh`
+
+```yaml
+id: FARM-INFRA.2
+phase: F-INFRA
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  agent-farm/scripts/bootstrap-fresh-machine.sh is idempotent: running it twice on an already-bootstrapped box is a no-op
+  Script covers docker install, poetry install, python 3.12 install, 8 repo clones under ~/Thesis2/repositories/, ~/.secrets/protea.env template creation, pg_restore from ~/Thesis2/backups/protea-*.dump (picking the newest dump), alembic upgrade head, manage.sh start
+  agent-farm/docs/runbooks/bootstrap.md documents the curl-pipe-bash invocation and any pre-conditions
+  End-to-end check: curl localhost:8000/jobs returns HTTP 200 after the script completes
+  Second invocation (idempotency): no repo re-cloned, no volume wiped, no alembic migration re-run, exit 0
+estimated_hours: 8
+priority: P1
+tags: [infra, bootstrap, bash, runbook]
+requires_human: false
+```
+
+**Goal**: collapse the multi-step manual setup documented in prose
+memories (`project_stack_env_not_sourced_outage`,
+`project_db_volume_landmine`) into a single idempotent command. Any
+new collaborator or fresh VM can reach a working PROTEA dev env with one
+script invocation.
+
+**Touches**: `agent-farm/scripts/bootstrap-fresh-machine.sh` (new),
+`agent-farm/docs/runbooks/bootstrap.md` (new), reference pointer added
+to `PROTEA/docs/source/runbooks/deployment-process-stack.rst`.
+
+**Depends on**: none (but the restore step cleanly delegates to
+FARM-INFRA.3 when that slice is done).
+
+**Acceptance**: on a fresh Ubuntu 24.04 VM, `bash bootstrap-fresh-machine.sh`
+brings the stack up; second invocation is a no-op; final health-check
+passes.
+
+**Notes**: Cites memory `project_stack_env_not_sourced_outage`
+(AUTHN_REQUIRED=true aborts without JWT_SECRET; the script sources
+.env before manage.sh start) and `project_db_volume_landmine`
+(2026-05-11 wipe; the restore step is the canonical recovery path).
+Suggested agent: executor.
+
+### FARM-INFRA.3 — `scripts/restore-from-backup.sh`
+
+```yaml
+id: FARM-INFRA.3
+phase: F-INFRA
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  agent-farm/scripts/restore-from-backup.sh --dry-run lists the dump it would pick and the alembic head SHA, then exits 0 without touching the database
+  agent-farm/scripts/restore-from-backup.sh --apply (with a confirmation prompt) or --apply --yes (non-interactive) runs pg_restore, alembic upgrade head, and a smoke query (SELECT count(*) FROM proteins)
+  Newest dump under ~/Thesis2/backups/protea-*.dump is selected automatically; --dump <path> overrides
+  Runbook agent-farm/docs/runbooks/restore.md documents the dry-run and apply paths
+  Makefile target restore-latest delegates to the script with --apply
+estimated_hours: 4
+priority: P1
+tags: [infra, backup, bash, runbook]
+requires_human: false
+```
+
+**Goal**: convert the postgres-recovery prose from memory
+`project_db_volume_landmine` into a single executable. The 2026-05-11
+wipe took ~28 min to recover manually; a scripted path with --dry-run
+and --yes flags reduces that to under 5 min and eliminates
+copy-paste error.
+
+**Touches**: `agent-farm/scripts/restore-from-backup.sh` (new),
+`agent-farm/docs/runbooks/restore.md` (new),
+`agent-farm/Makefile` (`restore-latest` target).
+
+**Depends on**: none.
+
+**Acceptance**: `--dry-run` is always safe; `--apply --yes` is the
+non-interactive recovery path used in automation.
+
+**Notes**: Cites memory `project_db_volume_landmine`
+(2026-05-11 01:19 wipe, root cause unattributed, recovery ~28 min)
+and `FARM-1.7` restore-drill acceptance (the weekly drill already calls
+`scripts/restore-drill.sh`; this slice makes the production recovery
+path the same script with `--apply`). Suggested agent: executor.
+
+### FARM-INFRA.4 — `docker-compose.full-stack.yml`
+
+```yaml
+id: FARM-INFRA.4
+phase: F-INFRA
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  PROTEA/docker-compose.full-stack.yml brings up infra (postgres, rabbit, minio, grafana, loki, prometheus, promtail) and the PROTEA app surface (api, workers, frontend, ngrok) on a single shared network in one docker compose up -d command
+  All containers reach healthy state within 90 s on a machine that already has the images pulled
+  docker compose -f docker-compose.full-stack.yml down -v cleans without orphan containers
+  PROTEA/scripts/manage.sh gains a compose subcommand that delegates to docker compose -f docker-compose.full-stack.yml up -d
+  A short section in docs/source/runbooks/deployment-process-stack.rst documents the compose path alongside the existing manage.sh start path
+estimated_hours: 6
+priority: P2
+tags: [infra, docker, compose, deployment]
+requires_human: false
+```
+
+**Goal**: replace the five separate compose files that exist today
+(docker-compose.infra.yml for postgres/rabbit/minio, separate monitoring
+stack, etc.) with a single umbrella file so a fresh deployment ceremony
+is one `up -d` command. Directly supports the FARM-INFRA.5
+reproducibility ceremony.
+
+**Touches**: `PROTEA/docker-compose.full-stack.yml` (new),
+`PROTEA/scripts/manage.sh` (`compose` subcommand),
+`PROTEA/docs/source/runbooks/deployment-process-stack.rst` (new section).
+
+**Depends on**: none.
+
+**Acceptance**: on a fresh box after FARM-INFRA.2 ran to install docker,
+`docker compose -f docker-compose.full-stack.yml up -d` ends with all
+containers healthy; `down -v` leaves no orphans.
+
+**Notes**: Today there are 5 compose files but no umbrella one; every
+deployment ceremony requires knowing which files to pass in which order.
+Eliminates a recurring source of "stack not fully up" operator error.
+Suggested agent: executor.
+
+### FARM-INFRA.5 — Thesis-grade reproducibility ceremony (deferred)
+
+```yaml
+id: FARM-INFRA.5
+phase: F-INFRA
+loop: farm-platform
+status: deferred
+priority: low
+deps: [FARM-INFRA.1, FARM-INFRA.2, FARM-INFRA.3, FARM-INFRA.4]
+acceptance: |-
+  agent-farm/infra/terraform/gpu-box/ provisions a GPU instance on a chosen provider (Lambda Labs, RunPod, or vast.ai) via the provider's Terraform plugin
+  agent-farm/infra/ansible/protea-reproduce.yml drives FARM-INFRA.2 bootstrap + FARM-INFRA.3 restore + dispatches a known canonical export job + diff-asserts the produced parquet against a fixture sha (schema_sha + manifest_sha match)
+  PROTEA/docs/source/chapters/06-evaluation/reproducibility.rst cites both the Terraform module and the Ansible playbook as the citable reproducibility artefact
+  Ceremony documented step-by-step; tested on at least one cloud provider; checksum match on the produced parquet
+estimated_hours: 20
+priority: low
+tags: [infra, terraform, ansible, reproducibility, thesis, deferred]
+requires_human: true
+```
+
+**Goal**: produce a tribunal-grade citable artefact that converts
+"reproducible if you ask me" to "reproducible if you run these two
+commands". A Terraform module + Ansible playbook pair that provisions
+a GPU box, installs PROTEA, restores a demo backup, dispatches a
+canonical export job, and verifies the parquet checksum is citable
+from Chapter 6 at the thesis defence.
+
+**Touches**: `agent-farm/infra/terraform/gpu-box/` (new),
+`agent-farm/infra/ansible/protea-reproduce.yml` (new),
+`PROTEA/docs/source/chapters/06-evaluation/reproducibility.rst` (new,
+citation point in Ch6).
+
+**Depends on**: FARM-INFRA.1, FARM-INFRA.2, FARM-INFRA.3, FARM-INFRA.4
+all done.
+
+**Acceptance**: ceremony documented step-by-step; tested on at least
+one cloud provider; checksum match on the produced parquet confirms
+`schema_sha + manifest_sha` parity.
+
+**Notes**: Marked `status: deferred` and `requires_human: true` until
+the user explicitly greenlights cloud spend before the tribunal date.
+Ansible is justified here (not in FARM-INFRA.2) because this slice
+drives a remote host over SSH, which is the canonical Ansible use case.
+Suggested agent: executor (IaC authoring) with human approval gate
+before `terraform apply` or `ansible-playbook` touches live cloud
+resources.
