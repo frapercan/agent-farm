@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **65**.
+Total first-class capabilities: **66**.
 
 ## 1-agents
 
@@ -132,6 +132,7 @@ Total first-class capabilities: **65**.
 | [pull-request-ci](pull-request-ci.md) | working | `.github/workflows/pull_request.yml` | `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/pull_request.yml'))"` | `docs/features/README.md` | agent-farm conductor loop |
 | [redcheck-systemic](redcheck-systemic.md) | working | `scripts/lib/redcheck-systemic.py`, `scripts/janitor-systemic-check.sh`, `tests/test_redcheck_systemic.py` | `python3 -m pytest tests/test_redcheck_systemic.py -q` | `docs/features/janitor.md` | agent-farm conductor loop |
 | [reranker-token-lint](reranker-token-lint.md) | working | `.github/workflows/reranker-token-lint.yml`, `scripts/lint-reranker-tokens.py`, `tests/test_lint_reranker_tokens.py` | `python3 -m pytest tests/test_lint_reranker_tokens.py -q` | `docs/features/README.md` | agent-farm conductor loop |
+| [stash-audit](stash-audit.md) | working | `.github/workflows/stash-audit.yml` | `yamllint .github/workflows/stash-audit.yml \|\| python3 -c "import yaml; yaml.safe_load(open('.github/workflows/stash-audit.yml'))"` | `scripts/lib/README-hooks.md` | agent-farm conductor loop |
 | [tests-suite](tests-suite.md) | working | `tests/`, `pyproject.toml` | `python3 -m pytest tests -q` | `docs/features/README.md` | agent-farm conductor loop |
 
 ## 13-apps
