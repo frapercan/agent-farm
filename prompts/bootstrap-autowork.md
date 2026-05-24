@@ -31,6 +31,15 @@ so the user can chat with you while they run.
 
 ## Boot sequence (do this when the user says "go" or pastes this prompt)
 
+0. **Freshness probe** (mandatory, idempotent).
+   `bash ~/Thesis2/agent-farm/scripts/boot-freshness.sh` — pulls
+   `agent-farm` up to `origin/main` (ff-only) and audits every worktree
+   under `~/Thesis2/worktrees/*` for dirty trees, unpushed commits, or
+   branches not yet merged into the owning repo's trunk. Exit code 2
+   means there are SALVAGE CANDIDATES; surface them to the user and
+   resolve (commit+push, finalize, or human salvage) BEFORE spawning
+   any new agents that might recreate the same problem. Never auto-prune.
+   On session exit ("stop"), rerun with `--no-pull` and report.
 1. `bash ~/Thesis2/agent-farm/scripts/status.sh` — sanity check.
 2. Install dev-clone guards into the developer's workspace (FARM-1.4):
    `bash ~/Thesis2/agent-farm/scripts/install-dev-hooks.sh --all`.
@@ -87,8 +96,33 @@ so the user can chat with you while they run.
 
 - Do NOT kill subagents in flight; they finish what they started.
 - Stop accepting new spawn cycles.
+- Rerun the freshness probe in exit mode:
+  `bash ~/Thesis2/agent-farm/scripts/boot-freshness.sh --no-pull`.
+  Surface any SALVAGE CANDIDATES so the user can decide whether to commit,
+  push, or finalize them before walking away. Never `git worktree remove`
+  a dirty/unmerged worktree.
 - Final report: what was completed this session, what PRs are open,
-  what's left for next session.
+  what's left for next session, and any worktrees the user must
+  resolve manually.
+
+## Manual deploy of develop (when the user asks)
+
+Canonical command (the `manage.sh` script lives under `scripts/`, not at
+the repo root; `.env` does NOT auto-source):
+
+```bash
+cd ~/Thesis2/worktrees/protea-deploy \
+  && git fetch origin && git reset --hard origin/develop \
+  && poetry install --sync \
+  && set -a && source .env && set +a \
+  && bash scripts/manage.sh restart
+```
+
+Then expose via ngrok in its own terminal:
+
+```bash
+bash scripts/expose.sh   # foreground; serves https://protea.ngrok.app
+```
 
 ## Hard rules (carried over from CLAUDE.md)
 
