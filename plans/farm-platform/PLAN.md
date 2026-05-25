@@ -2310,7 +2310,7 @@ Hard constraints inherited from CLAUDE.md apply to every slice. Additionally:
 id: FARM-AUTH.1
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   Alembic migration creates `user` table: id (UUID PK), email (unique not null), username (unique not null), display_name, password_hash (argon2id text), role (enum: guest/researcher/operator/admin), status (enum: pending/active/deactivated), intended_use (text), created_at, last_login_at, deactivated_at
@@ -2340,7 +2340,7 @@ requires_human: false
 id: FARM-AUTH.2
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.1]
 acceptance: |-
   On startup, if PROTEA_BOOTSTRAP_ADMIN_EMAIL is set and no User row with role=admin exists, PROTEA creates the admin; password read from PROTEA_BOOTSTRAP_ADMIN_PASSWORD if set, otherwise generated and printed to stderr once
@@ -2369,7 +2369,7 @@ requires_human: false
 id: FARM-AUTH.3
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.1]
 acceptance: |-
   POST /auth/signup accepts {email, display_name, intended_use}; creates User row with status=pending, role=researcher; returns 201 with {id, email, status}; rejects duplicate email with 409
@@ -2400,7 +2400,7 @@ requires_human: false
 id: FARM-AUTH.4
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.3]
 acceptance: |-
   _require_admin_token function deleted from codebase; PROTEA_ADMIN_TOKEN env var removed from settings.py and system.yaml template
@@ -2430,7 +2430,7 @@ requires_human: false
 id: FARM-AUTH.5
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.4]
 acceptance: |-
   Every POST, PATCH, and DELETE endpoint in the PROTEA FastAPI surface has an explicit require_role dependency; default minimum is researcher
@@ -2459,7 +2459,7 @@ requires_human: false
 id: FARM-AUTH.6
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.5]
 acceptance: |-
   POST /annotate?save_history=false accepts unauthenticated requests up to 10 sequences per day per daily-rotated-salt IP hash
@@ -2517,7 +2517,7 @@ requires_human: false
 id: FARM-AUTH.8
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.3]
 acceptance: |-
   Alembic migration creates `session_revocation` table: jti (text PK), user_id (FK User), revoked_at (timestamp), reason (text)
@@ -2548,7 +2548,7 @@ requires_human: false
 id: FARM-AUTH.9
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.4, FARM-AUTH.8]
 acceptance: |-
   Alembic migration creates `audit_log` table: id (UUID PK), actor_user_id (FK User nullable), action (text not null), target (text), payload (JSONB), occurred_at (timestamp default utcnow); append-only (no UPDATE/DELETE)
@@ -2578,7 +2578,7 @@ requires_human: false
 id: FARM-AUTH.10
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.5, FARM-AUTH.9]
 acceptance: |-
   /signup: email + display_name + intended_use form; POST /auth/signup; shows confirmation on 201; shows conflict error on 409
@@ -2885,7 +2885,7 @@ Depends on FARM-EXP.13 reaching SUCCEEDED for all 24 (PLM x K) cells.
 id: F-DATA-PACK.1
 phase: F-DATA-PACK
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.13]
 acceptance: |-
   protea-reranker-lab/scripts/validate_manifest.py --manifest <path> passes
