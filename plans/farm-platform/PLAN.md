@@ -2914,7 +2914,7 @@ Closes the gap noted in memory `[[farm-exp-2-placeholder-digests]]`.
 ```yaml
 id: F-DATA-PACK.2
 phase: F-DATA-PACK
-loop: doc-writer
+loop: farm-platform
 status: pending
 deps: [F-DATA-PACK.1]
 acceptance: |-
@@ -2936,66 +2936,6 @@ parquet can understand its provenance without querying PROTEA's DB.
 
 **Touches**: `protea-reranker-lab/scripts/generate_dataset_readme.py` (new),
 `protea-reranker-lab/datasets/bench-v1-*/README.md` (generated).
-
-**Suggested agent**: doc-writer.
-
-### F-DATA-PACK.3 — Dataset card per PLM (8 cards)
-
-```yaml
-id: F-DATA-PACK.3
-phase: F-DATA-PACK
-loop: doc-writer
-status: pending
-deps: [F-DATA-PACK.2]
-acceptance: |-
-  One dataset_card.md per PLM (8 total) aggregating the K={3,5,10} variants:
-  PLM identity (model id, layer, pooling), embedding dimensionality, PCA config,
-  per-K row counts, Fmax delta vs KNN baseline (from FARM-EXP.14/15), known limits
-  Hugging Face dataset card schema (YAML front-matter) compatible
-  Card references the Zenodo DOI (placeholder until F-DATA-PACK.5) using a
-  zenodo_doi: TBD field that F-DATA-PACK.5 backfills
-estimated_hours: 8
-priority: P1
-tags: [dataset, card, huggingface, plm, documentation]
-requires_human: false
-```
-
-**Goal**: provide the per-PLM narrative suitable for a Hugging Face
-datasets repository card or a chapter 6 appendix table.
-
-**Touches**: `protea-reranker-lab/dataset_cards/{plm}_card.md` (8 files, generated).
-
-**Suggested agent**: doc-writer.
-
-### F-DATA-PACK.4 — FAIR/coverage provenance doc
-
-```yaml
-id: F-DATA-PACK.4
-phase: F-DATA-PACK
-loop: doc-writer
-status: pending
-deps: [F-DATA-PACK.3, FARM-EXP.15]
-acceptance: |-
-  protea-reranker-lab/docs/dataset_provenance.md covers: data sources
-  (UniProt v226, v230, GO release), pipeline version (PROTEA commit SHA +
-  schema_sha), split methodology (train v220-v226, eval v226-v230), PCA fit
-  policy (transductive, full pool per PLM), leakage-free note (anc2vec
-  artefact fix PROTEA 223299c), KNN baseline numbers per cell
-  Document follows FAIR principles checklist: Findable (DOI placeholder),
-  Accessible (download URL), Interoperable (parquet + JSON manifest),
-  Reusable (license, provenance, schema)
-  Chapter 6 / appendix A cites this document
-estimated_hours: 6
-priority: P1
-tags: [dataset, fair, provenance, documentation, chapter-6]
-requires_human: false
-```
-
-**Goal**: produce the citable provenance document that turns the dataset
-family from "files we made" into a reusable research contribution.
-
-**Touches**: `protea-reranker-lab/docs/dataset_provenance.md` (new),
-reference pointer in `thesis/chapters/06-evaluation/` (chapter 6 appendix A).
 
 **Suggested agent**: doc-writer.
 
