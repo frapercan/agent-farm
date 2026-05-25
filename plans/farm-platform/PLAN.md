@@ -2488,7 +2488,7 @@ requires_human: false
 id: FARM-AUTH.7
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.6]
 acceptance: |-
   Alembic migration creates `quota` table: key (composite text of user_id+resource+period_start), resource (enum: annotate/job), period_start (date), count (integer), limit (integer)
@@ -2609,7 +2609,7 @@ requires_human: false
 id: FARM-AUTH.11
 phase: F-AUTH
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-AUTH.10]
 acceptance: |-
   PROTEA_SMTP_HOST, PROTEA_SMTP_PORT, PROTEA_SMTP_USER, PROTEA_SMTP_PASSWORD, PROTEA_SMTP_FROM env vars; all optional; SMTP features disabled if PROTEA_SMTP_HOST is unset
