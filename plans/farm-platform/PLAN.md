@@ -2660,7 +2660,7 @@ greenlights cloud spend before the thesis defence.
 id: FARM-INFRA.1
 phase: F-INFRA
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   infra/terraform/github/main.tf encodes branch protection + required checks + auto-delete-head-branches + signed-commit requirement for all 9 repos (PROTEA, protea-contracts, protea-method, protea-sources, protea-runners, protea-backends, protea-reranker-lab, cafaeval-protea, agent-farm)
@@ -2704,7 +2704,7 @@ agent: executor.
 id: FARM-INFRA.2
 phase: F-INFRA
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   agent-farm/scripts/bootstrap-fresh-machine.sh is idempotent: running it twice on an already-bootstrapped box is a no-op
@@ -2788,7 +2788,7 @@ path the same script with `--apply`). Suggested agent: executor.
 id: FARM-INFRA.4
 phase: F-INFRA
 loop: farm-platform
-status: pending
+status: done
 deps: []
 acceptance: |-
   PROTEA/docker-compose.full-stack.yml brings up infra (postgres, rabbit, minio, grafana, loki, prometheus, promtail) and the PROTEA app surface (api, workers, frontend, ngrok) on a single shared network in one docker compose up -d command
