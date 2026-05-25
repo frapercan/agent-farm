@@ -260,7 +260,7 @@ tags: [architecture, diagrams]
 id: F-DATA-PACK.3
 phase: F-DATA-PACK
 loop: doc-writer
-status: pending
+status: done
 deps: [F-DATA-PACK.2]
 acceptance: |-
   One dataset_card.md per PLM (8 total) aggregating the K={3,5,10} variants:
@@ -288,7 +288,7 @@ datasets repository card or a chapter 6 appendix table.
 id: F-DATA-PACK.4
 phase: F-DATA-PACK
 loop: doc-writer
-status: pending
+status: done
 deps: [F-DATA-PACK.3, FARM-EXP.15]
 acceptance: |-
   protea-reranker-lab/docs/dataset_provenance.md covers: data sources
