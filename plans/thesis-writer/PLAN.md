@@ -175,13 +175,15 @@ status: done
 deps: [TC.1, TC.6]
 acceptance: |-
   Conclusion mirrors thesis statement of chapter 1
-  Future work covers: PROTEA-DL piloto (R-GCN + GO-DAG), GeOKG generalisation
-  if not landed, ensemble multi-K, granular plugin split (F9)
+  Future work covers: dataset packaging (bench-v1-K{3,5,10}-v226-lineage-{plm}
+  FAIR release), ensemble multi-K, granular plugin split (F9)
+  (PROTEA-DL piloto / R-GCN deferred per [[dl-postponed-2026-05-25]];
+  GeOKG deferred per [[geokg-nogo-2026-05-17]])
   No new content not foreshadowed in earlier chapters
 estimated_hours: 4
 priority: P2
 tags: [chapter-7, conclusion]
-note: "2026-05-16 janitor reconcile: shipped via thesis PR #35 (2026-05-15)"
+note: "2026-05-16 janitor reconcile: shipped via thesis PR #35 (2026-05-15). 2026-05-25 future-work text updated: DL piloto deferred [[dl-postponed-2026-05-25]]; deliverable reframed as FAIR dataset packaging."
 ```
 
 Shipped via thesis PR #35 2026-05-15.

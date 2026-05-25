@@ -21,6 +21,7 @@ hook / schema / CI-gate / UI layer, not just a prompt sentence.
 | F-UI | Web dashboard (Option B) | `/en/farm/` routes inside the existing PROTEA Next.js app. Reuses StatusBadge, EventTimeline, FloatingJobsWidget, SystemStatusPill, CommandPalette, cytoscape-dagre. Mobile + tablet via existing playwright config. |
 | F-FEAT | Feature consolidation | One slice per `partial` / `aspirational` / orphan feature in `context/feature-inventory.md §12`. |
 | F-EXP-RESET | Transversal benchmark | Replace the prior `vN` reranker shorthand with the seven-axis tuple from `context/experiment-axis-map.md`. Re-run grid with paired CIs and a single results table per aspect. |
+| F-DATA-PACK | Dataset deliverable | FAIR packaging, provenance docs, manifest schema validation, README+dataset-card per PLM, Zenodo/HF upload for bench-v1-K{3,5,10}-v226-lineage-{plm} family. Pivot deliverable per [[dl-postponed-2026-05-25]]. |
 
 Hard constraints (apply to every slice, inherited from
 `~/Thesis2/CLAUDE.md` §4 in the brief):
@@ -2868,3 +2869,105 @@ drives a remote host over SSH, which is the canonical Ansible use case.
 Suggested agent: executor (IaC authoring) with human approval gate
 before `terraform apply` or `ansible-playbook` touches live cloud
 resources.
+
+## F-DATA-PACK — Dataset deliverable (FAIR packaging)
+
+Pivot deliverable per [[dl-postponed-2026-05-25]]: the thesis research
+contribution is the curated, exploitable multi-PLM x K dataset family
+produced by PROTEA, not a DL champion model. This phase ships the datasets
+so they are citable, reproducible, and reusable by the community.
+
+Depends on FARM-EXP.13 reaching SUCCEEDED for all 24 (PLM x K) cells.
+
+### F-DATA-PACK.1 — Manifest schema validator
+
+```yaml
+id: F-DATA-PACK.1
+phase: F-DATA-PACK
+loop: farm-platform
+status: pending
+deps: [FARM-EXP.13]
+acceptance: |-
+  protea-reranker-lab/scripts/validate_manifest.py --manifest <path> passes
+  on every existing bench-v1-K{3,5,10}-v226-lineage-{plm} Dataset manifest
+  Schema version pinned in manifest header; validator rejects unknown keys
+  CI job in protea-reranker-lab runs validate_manifest.py on every PR that
+  touches a manifest JSON
+  schema_sha + manifest_sha fields non-placeholder on all 24 cells
+estimated_hours: 4
+priority: P0
+tags: [dataset, manifest, validator, ci]
+requires_human: false
+```
+
+**Goal**: ensure every manifest produced by FARM-EXP.13 has correct,
+non-placeholder schema_sha + manifest_sha before any public release.
+Closes the gap noted in memory `[[farm-exp-2-placeholder-digests]]`.
+
+**Touches**: `protea-reranker-lab/scripts/validate_manifest.py` (new),
+`.github/workflows/validate-manifests.yml` in protea-reranker-lab.
+
+**Suggested agent**: executor.
+
+### F-DATA-PACK.2 — README per dataset (24 cells)
+
+```yaml
+id: F-DATA-PACK.2
+phase: F-DATA-PACK
+loop: farm-platform
+status: pending
+deps: [F-DATA-PACK.1]
+acceptance: |-
+  Each of the 24 bench-v1-K{k}-v226-lineage-{plm} datasets has a README.md
+  committed alongside its manifest: provenance (PROTEA version, export job id,
+  export date), column schema (feature families, dtypes), train/eval split
+  description, known caveats (PCA transductive fit, anc2vec artefact)
+  README generated from a template by a script (not hand-written per cell)
+  Template cites [[dl-postponed-2026-05-25]] as context for why the
+  dataset deliverable is the primary contribution
+estimated_hours: 6
+priority: P1
+tags: [dataset, readme, documentation, provenance]
+requires_human: false
+```
+
+**Goal**: make each dataset self-describing so a reader downloading a
+parquet can understand its provenance without querying PROTEA's DB.
+
+**Touches**: `protea-reranker-lab/scripts/generate_dataset_readme.py` (new),
+`protea-reranker-lab/datasets/bench-v1-*/README.md` (generated).
+
+**Suggested agent**: doc-writer.
+
+### F-DATA-PACK.5 — Zenodo / Hugging Face upload
+
+```yaml
+id: F-DATA-PACK.5
+phase: F-DATA-PACK
+loop: farm-platform
+status: pending
+deps: [F-DATA-PACK.4, FARM-EXP.14]
+acceptance: |-
+  All 24 bench-v1-K{3,5,10}-v226-lineage-{plm} parquet files + manifests +
+  per-cell READMEs uploaded to Zenodo (preferred) or HF datasets repo
+  under CC-BY-4.0 license with Francisco Miguel Perez Canales as creator
+  Zenodo DOI obtained and recorded in agent-farm memory
+  protea-reranker-lab/scripts/upload_to_zenodo.py (or HF equivalent)
+  is idempotent: re-running does not create duplicate depositions
+  F-DATA-PACK.3 dataset cards backfilled with real DOI (replacing TBD)
+  Thesis chapter 6 / chapter 7 cites the DOI
+estimated_hours: 8
+priority: P1
+tags: [dataset, zenodo, huggingface, publish, open-data]
+requires_human: true
+```
+
+**Goal**: make the dataset family publicly citable and discoverable.
+`requires_human: true` because Zenodo upload needs user's account token
+(kept in `~/.secrets/`).
+
+**Touches**: `protea-reranker-lab/scripts/upload_to_zenodo.py` (new),
+memory update with DOI, thesis citation backfill.
+
+**Suggested agent**: executor (script authoring) + human (account token
+and final upload confirmation).
