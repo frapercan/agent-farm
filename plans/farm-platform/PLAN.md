@@ -2915,7 +2915,7 @@ Closes the gap noted in memory `[[farm-exp-2-placeholder-digests]]`.
 id: F-DATA-PACK.2
 phase: F-DATA-PACK
 loop: farm-platform
-status: pending
+status: done
 deps: [F-DATA-PACK.1]
 acceptance: |-
   Each of the 24 bench-v1-K{k}-v226-lineage-{plm} datasets has a README.md
