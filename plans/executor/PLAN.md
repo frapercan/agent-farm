@@ -1333,3 +1333,1602 @@ note: "2026-05-16 janitor reconcile: shipped via PR #361 (2026-05-13)"
 
 Shipped via PR #361 2026-05-13.
 
+
+
+### FIX-MINIO-DEP — minio python pkg missing from venv breaks export pipeline
+
+```yaml
+id: FIX-MINIO-DEP
+phase: F3
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  `python -c "import minio"` succeeds inside a fresh `poetry install --sync`
+  environment of PROTEA.
+  Reason for slice: 2026-05-25 boot of stack found 9 of 13 EXP.13 cells
+  FAILED at 13:51 UTC with `ModuleNotFoundError: No module named 'minio'`
+  raised from MinioArtifactStore. Root cause: minio is not declared in any
+  pyproject.toml dependency group, so `poetry install --sync` removes it;
+  the export worker can no longer reach the MinIO artefact store.
+  Fix is a single-line dependency add + lockfile regeneration + PR.
+  After merge + redeploy, re-dispatch the 9 FAILED EXP.13 cells (NOT in
+  scope of this slice; conductor will handle re-dispatch).
+estimated_hours: 1
+priority: P0
+tags: [infra, deps, urgent]
+```
+
+
+### LAB-FORMATTER-WIP-RECOVER — close out wip/lab-train-formatter-drift (1847 LOC parked)
+
+```yaml
+id: LAB-FORMATTER-WIP-RECOVER
+phase: F3
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Branch protea-reranker-lab/wip/lab-train-formatter-drift (2 commits, ~20 files,
+  ~1847 LOC) is either:
+   (a) audited, formatter-aligned, CI-green, PRed to develop and merged, OR
+   (b) explicitly judged superseded/abandonable and the branch deleted with a
+       2-line rationale captured in this slice's PR description.
+  Rationale: the WIP was parked at end-of-session 2026-05-25 (see memory
+  project_session_end_2026_05_25). Leaving it on a dead WIP branch risks bit-rot.
+  Operate inside a SECONDARY worktree off protea-reranker-lab (NOT the default
+  PROTEA worktree the spawn machinery gives you). Cleanup the secondary worktree
+  with `git worktree remove --force` before returning (memory
+  feedback_secondary_worktree_orphan_leak).
+estimated_hours: 2
+priority: P2
+tags: [lab, cleanup, recovery]
+```
+
+
+### PAPER-TMLR.9 — Release tags v1.0 on 8 PROTEA repos (executor side of paper plan)
+
+```yaml
+id: PAPER-TMLR.9
+phase: PAPER-TMLR
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Tag v1.0.0 (or v1.0-paper-tmlr) on each of the 8 PROTEA stack repos
+  at the commit corresponding to the paper's reported state.
+  See full acceptance criteria in plans/thesis-writer/PLAN.md under
+  the same slice id (this entry exists in executor plan so the
+  executor loop can pick it up; thesis-writer plan is the source of
+  truth for the phase narrative).
+estimated_hours: 2
+priority: P1
+tags: [paper, release, tagging]
+```
+
+
+
+### HARNESS-E2E-FIXTURES.1 — Seed showcase data for Playwright critical-flows
+
+```yaml
+id: HARNESS-E2E-FIXTURES.1
+phase: F3
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  apps/web/e2e/flows/landing.spec.ts test "landing page title and best
+  result block" is re-enabled (test.skip removed) and passes in CI.
+  Reason: 2026-05-25 PR #531 had to skip this test after 3 cycles of
+  janitor patches because the CI environment renders the homepage with
+  empty getShowcase() data (HomeShowcase Suspense fallback never
+  resolves to the best-result section).
+  Fix options to evaluate:
+   (a) Add Playwright global-setup fixture that seeds a deterministic
+       showcase response via Next.js route-handler mock or MSW
+   (b) Inject a CI-only test data fixture into the showcase API
+   (c) Make HomeShowcase render a 'no data yet' empty state with a
+       stable testid so the test can assert that path instead
+  Each option is ~2-4h. Pick (a) or (c) for stability; (b) leaks test
+  data into prod-shaped code.
+  Other Playwright tests in the same file may be affected; verify the
+  full critical-flows job before declaring done.
+estimated_hours: 4
+priority: P1
+tags: [test, e2e, infra]
+```
+
+
+### HOTFIX-RSC-SERVER-FETCH — baseUrl() server-side absolute URL fallback
+
+```yaml
+id: HOTFIX-RSC-SERVER-FETCH
+phase: F3
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  apps/web/lib/api.ts baseUrl() detects server context (typeof window
+  === 'undefined') and uses an absolute URL when NEXT_PUBLIC_API_URL
+  is a relative path (starts with '/'). Reads optional PROTEA_INTERNAL_API_URL
+  env var (defaults to http://127.0.0.1:8000).
+  Reason: 2026-05-25 19:58 CEST PR #531 (RSC migration) broke production
+  homepage at https://protea.ngrok.app/es/ with error
+  'Failed to parse URL from /api-proxy/showcase/'. RSC server-side
+  fetch can't resolve relative URLs. CI Playwright tests caught it but
+  were skipped (HARNESS-E2E-FIXTURES.1). Hotfix already applied locally
+  on protea-deploy worktree apps/web/lib/api.ts:29-37 + frontend rebuilt
+  + restarted; this slice ships the fix through normal PR flow so the
+  next git reset --hard origin/develop doesn't wipe it.
+  Optionally also update protea-deploy/.env.local to set
+  PROTEA_INTERNAL_API_URL explicitly (otherwise default 127.0.0.1:8000 works).
+estimated_hours: 1
+priority: P0
+tags: [hotfix, rsc, urgent]
+```
+
+
+### LOGIN-PERSIST-DEBUG — Investigate + fix non-persistent login
+
+```yaml
+id: LOGIN-PERSIST-DEBUG
+phase: F3
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Root cause of "login no es persistente" complaint identified and
+  documented (with reproducer). Memory project_auth_role_snapshot_bug_2026_05_25
+  (PR #504, MERGED 2026-05-24) is NOT the cause since the fix is
+  deployed.
+  Likely candidates to investigate:
+   - JWT TTL too short (check apps/web/.env defaults vs backend issue
+     vs cookie expiry)
+   - Cookie attributes wrong (Secure / SameSite / HttpOnly mix that
+     ngrok-proxied flow doesn't preserve)
+   - localStorage not being written / read across navigation
+   - Auth middleware not propagating session through Next.js RSC
+     hop (similar pattern to the just-fixed RSC server-fetch bug)
+   - Login mutation succeeds but the immediate redirect drops the
+     cookie before the new page reads it
+  Investigate with browser devtools-via-Playwright; reproduce; fix.
+  Open PR vs develop. Verify locally that login survives a refresh
+  + a navigation across locales (the locale-prefix sweep PR #530 may
+  have introduced a side effect on the auth cookie path).
+estimated_hours: 4
+priority: P0
+tags: [auth, session, hotfix]
+```
+
+
+## F-OPS-JOBS — Job lifecycle management (no más manipulación manual de colas)
+
+### F-OPS-JOBS.1 — Job synchronisation hardening (dedup + lease + SIGTERM)
+
+```yaml
+id: F-OPS-JOBS.1
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  PROTEA jobs become race-safe and reap-safe end-to-end:
+   - New column `job.dedup_key VARCHAR(64) NULL` with partial unique
+     index on active statuses; api computes deterministic dedup_key
+     from canonical(operation, payload); duplicate POSTs return 409
+     with the existing job_id.
+   - BaseWorker transitions to RUNNING via conditional UPDATE
+     (WHERE id=:j AND status IN ('PLANNED','QUEUED')); rowcount=0
+     → silent ACK + skip.
+   - New column `job.leased_until TIMESTAMPTZ NULL`; worker
+     heartbeats every `PROTEA_JOB_HEARTBEAT_INTERVAL_SECONDS=30`
+     extending it; stale_job_reaper uses leased_until not started_at;
+     reaped jobs either re-enqueue (default, while attempts < max)
+     or fail with `lease_expired`.
+   - SIGTERM/SIGINT handler in BaseWorker: on signal, NACK-requeue
+     in-flight delivery + UPDATE job back to PLANNED with worker_id=NULL.
+   - One-off recovery script `scripts/recover/reap_ghost_e0fbdf5f.sql`
+     committed (NOT auto-run) to clean the legacy ghost.
+   - 4 commits on one branch `feat/sync-job-hardening`; one PR.
+   - Alembic migration reversible.
+   - Integration tests: concurrent dispatch dedup, SIGTERM-during-job,
+     lease-expiry-reap. All green.
+estimated_hours: 8
+priority: P0
+tags: [jobs, queue, reliability, hotfix]
+note: |-
+  Closes orphan-jobs incident root cause set
+  ([[orphan-jobs-2026-05-18]], [[deploy-keeper-paused-2026-05-23]],
+  [[exp13-paused-gpu-pivot-2026-05-26]]). Pre-req for re-dispatching
+  the 9 EXP.13 cells on GPU without ghost-row risk.
+```
+
+### F-OPS-JOBS.2 — Pause / resume / cancel job management API
+
+```yaml
+id: F-OPS-JOBS.2
+phase: F5
+loop: executor
+status: pending
+deps: [F-OPS-JOBS.1]
+acceptance: |-
+  User-directive 2026-05-26: "los jobs deberian poder ser reanudados,
+  sincronizados, o cualquier funcionalidad que ayude con la gestion.
+  No queremos estar manipulando las colas."
+   - New endpoints on api/routers/jobs.py:
+     * POST /v1/jobs/:id/pause   → if RUNNING + supports_checkpoint:
+       sets `pause_requested=true` (new bool col); worker checks at
+       next checkpoint barrier and persists state + flips to PAUSED;
+       NACK-requeue with paused-bit so it doesn't get re-dispatched
+     * POST /v1/jobs/:id/resume  → PAUSED → PLANNED; re-publish to RMQ
+     * POST /v1/jobs/:id/cancel  → any active state → CANCELLED;
+       NACK-no-requeue; worker observes pause_requested-like flag
+     * GET  /v1/jobs/:id/checkpoint → returns last checkpoint blob
+       (debug)
+   - At-least one long-running operation (export_research_dataset
+     first, then predict_go_terms) implements the checkpoint protocol:
+     emit checkpoint event between aspect loops; persist
+     {stage, completed_aspects, last_offset} to a new
+     `job_checkpoint` table; on resume, skip already-completed work.
+   - UI: per-job action menu (pause/resume/cancel) in `/es/operacion/trabajos/`
+     and the running-jobs widget.
+   - Tests: pause-then-resume produces identical final result to a
+     non-paused run for the export operation.
+estimated_hours: 16
+priority: P1
+tags: [jobs, api, ux, reliability]
+```
+
+### F-OPS-JOBS.3 — DLQ audit + management UI
+
+```yaml
+id: F-OPS-JOBS.3
+phase: F5
+loop: executor
+status: pending
+deps: [F-OPS-JOBS.1]
+acceptance: |-
+  protea.dead-letter currently holds 7228 messages (2026-05-26 boot).
+  Goal: surface + drain by category, not by raw rabbitmqctl purge.
+   - Endpoint GET /v1/admin/dlq/summary → grouped count by
+     {operation, exception_class, root_dataset (if extractable)}
+   - Endpoint POST /v1/admin/dlq/replay → re-enqueue subset by
+     filter; UI button
+   - Endpoint POST /v1/admin/dlq/purge → purge subset by filter;
+     UI button with confirmation
+   - UI page `/es/operacion/mantenimiento/dlq/` with the summary
+     table + replay/purge controls; ADMIN role only.
+   - Audit-only script `scripts/admin/dlq_audit.py` for the current
+     7228-msg baseline, output committed under `docs/incidents/`.
+estimated_hours: 8
+priority: P1
+tags: [dlq, admin, ux]
+note: "depends on dedup_key landing so replay doesn't 409 against still-live duplicates"
+```
+
+## F-FEAT-WEB — Frontend feature gaps
+
+### F-FEAT-WEB.DATASET-DETAIL — Dataset detail page UX (downloads + stats + nav + charts)
+
+```yaml
+id: F-FEAT-WEB.DATASET-DETAIL
+phase: F2
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Dataset detail page at /es/datasets/<id>/ gains four UX features
+  the user flagged 2026-05-26:
+   1. Download buttons next to the Artifact-store URIs (train.parquet,
+      eval.parquet, manifest.json). Use presigned S3/MinIO URLs minted
+      by a new GET /v1/datasets/:id/download?artifact=<train|eval|manifest>
+      endpoint that 302-redirects to the presigned URL (15-min TTL).
+      ADMIN-only OR the dataset owner. Frontend button does a normal
+      `<a download href=...>` to the endpoint.
+   2. "Estadísticas por aspecto" card showing for BPO / MFO / CCO:
+      protein count, distinct GO term count, total annotation count.
+      Sourced from a new GET /v1/datasets/:id/stats endpoint that
+      reads from `dataset.aggregated_stats JSONB` (populated on
+      dataset creation; one-shot backfill script for existing
+      datasets). Cache 1h.
+   3. Snapshot ontológico ("releases/2026-01-23") becomes a clickable
+      link to `/es/datos-de-referencia/anotaciones-go/?snapshot=<id>`
+      (or wherever the existing ontology page lives — survey first).
+      Same treatment for any other clickable reference (eval-set,
+      annotation-set).
+   4. Two charts on the page:
+      a. Aspect distribution donut (uses the new stats endpoint)
+      b. Training-window coverage timeline (uses the existing
+         `train_versions` array; render as a simple horizontal
+         segment chart spanning the version ticks the page already
+         renders as pills).
+   Frontend uses existing recharts/visx dependency if present;
+   otherwise minimal SVG. No new heavyweight chart libs.
+   Single PR with all four sub-features. Em-dash hook clean. No
+   Claude/AI mention.
+estimated_hours: 12
+priority: P1
+tags: [web, dataset, ux, charts, downloads]
+note: |-
+  User feedback verbatim: "Descarga... estadisticas de las ontologias
+  fijadas en 1 puunto, y navegacion hacia estas... Siguen faltando
+  graficos interesantes por lo que veo." (2026-05-26)
+```
+
+### F-AUTH-E2E — Auth regression e2e (login persist + role enforcement)
+
+```yaml
+id: F-AUTH-E2E
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Playwright e2e suite covering the auth flow regression set:
+   - login flow (api-key + bearer) survives page refresh + cross-locale
+     navigation (the LOGIN-PERSIST-DEBUG bug class)
+   - role enforcement: viewer/editor/admin cannot exceed their grants
+     (regression for [[auth-role-snapshot-bug-2026-05-25]] PR #504)
+   - api-key-to-jwt exchange via /auth/api-key-login
+   - logout invalidates the session
+  Runs under `playwright test --project=chromium`. New tests live
+  in `apps/web/tests/e2e/auth/*.spec.ts`. Mark @critical so CI must
+  pass them before merging anything else to develop.
+  Hooked into the existing CI as a new job (do NOT block on infra
+  flakiness — use generous retries + soft-fail on first run).
+estimated_hours: 6
+priority: P1
+tags: [auth, e2e, playwright, regression]
+```
+
+### F-WEB-FORM-POLISH — Functional annotation form aesthetic + UX
+
+```yaml
+id: F-WEB-FORM-POLISH
+phase: F2
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  User 2026-05-26: "q feo se ve el form" (referencing /es/functional-annotation
+  page). Improve the "Requisitos previos" card + the launch form:
+   - Visible field labels (currently the 3 grey rectangles are bare)
+   - Inline validation states (green check / red error per field)
+   - "Embeddings", "Reference annotations", "Query set" each become
+     pickers with autocomplete + a "Open page" affordance to their
+     respective detail pages (consistent with the dataset-detail
+     navigation work in F-FEAT-WEB.DATASET-DETAIL)
+   - Submit button: disabled until all 3 fields valid; loading
+     state during enqueue
+   - Form layout: switch to 3 columns on >= md, stacked on mobile
+   - Skeleton state during initial load is meaningful (real shape
+     of the form, not gray boxes)
+  Frontend only; reuses existing components where possible.
+estimated_hours: 6
+priority: P1
+tags: [web, form, ux, polish]
+```
+
+### F-PERF-PROFILING — Sophisticated performance profiling of hot paths
+
+```yaml
+id: F-PERF-PROFILING
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  User 2026-05-26: "Analisis de rendimiento sofisticados". Instrument
+  the three repeatedly-flagged hot paths and ship flamegraphs +
+  written report under `docs/perf/`:
+   1. export_research_dataset (the FARM-EXP.13 long-runner;
+      pair-features + align-cache are env-gated per
+      [[export-perf-optimization]])
+   2. predict_go_terms_batch (the 16-min hang today on
+      load_references — investigate the COUNT(*) freshness check
+      under DB pressure)
+   3. /v1/benchmark/matrix (the slow aggregation behind the
+      Benchmark page; baseline 638ms warm — what's the constant?)
+  Tools: `scalene` for CPU+memory, `py-spy` for flamegraphs on a
+  live worker process, `pgbadger` or `pg_stat_statements` for the
+  DB side. Output one flamegraph + a written diagnosis per path
+  in `docs/perf/2026-05-26-baseline.md`, with proposed code-level
+  fixes ranked by ROI. Do NOT ship the fixes in this slice — that's
+  follow-up work.
+estimated_hours: 8
+priority: P1
+tags: [perf, profiling, observability]
+```
+
+### F-UX-REVIEW-SWEEP — Broad UX friction sweep
+
+```yaml
+id: F-UX-REVIEW-SWEEP
+phase: F2
+loop: executor
+status: pending
+deps: [HOTFIX-V1-ROUTING]
+acceptance: |-
+  Run ux-reviewer against the main user journeys (annotate, datasets,
+  benchmark, jobs, mantenimiento, stack). Output a single ranked
+  backlog `docs/ux/2026-05-26-friction-backlog.md` with one row per
+  finding: page + screenshot ref + severity + 1-line fix proposal.
+  Do NOT ship fixes; that's separate slices per finding.
+  Depends on routing fix landing first so the pages actually load.
+estimated_hours: 4
+priority: P2
+tags: [ux, review, backlog]
+```
+
+### F-GPU-RESUME-EXP13 — Re-dispatch the 9 paused EXP.13 cells on torch GPU KNN
+
+```yaml
+id: F-GPU-RESUME-EXP13
+phase: F4
+loop: executor
+status: pending
+deps: [F-OPS-JOBS.1]
+acceptance: |-
+  Once FEAT-KNN-GPU-TORCH PRs merge (protea-method #31 + PROTEA #539)
+  AND F-OPS-JOBS.1 (dedup + lease + SIGTERM) lands:
+   1. Bump `protea-method` pin in PROTEA `pyproject.toml` to the
+      new release tag; poetry lock + commit.
+   2. Verify torch + CUDA work on the host:
+      ```python
+      python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+      ```
+      If False: log "needs torch+cu128 wheel install
+      (user said 'mañana actualizo si hace falta')", STOP, ask
+      human.
+   3. Run a parity smoke: dispatch the SMALLEST of the 9 cells
+      (suggest bench-v1-K3-v226-lineage-ankh_base, job
+      2fac4975-...) and wait for SUCCEEDED. Compare its produced
+      Fmax vs the corresponding SUCCEEDED cell from yesterday
+      (look up via `payload->>'output_name'` match); accept if
+      delta < 0.005 absolute Fmax (within reranker noise).
+   4. If parity passes → fan-out the remaining 8 via
+      `dispatch_with_lock` (memory FARM-FEAT.13). The job rows
+      already exist (snapshot in
+      [[exp13-paused-gpu-pivot-2026-05-26]]); use
+      `POST /v1/jobs/:id/resume` (added in F-OPS-JOBS.2) OR
+      direct re-publish if F-OPS-JOBS.2 not yet shipped, marking
+      the OLD CANCELLED ones with `payload.retry_of`.
+   5. Monitor + report when all 9 reach SUCCEEDED. Update
+      [[farm-exp-13-dispatched-2026-05-25]] memory.
+  Worst case (cu128 wheel missing): produce a one-page write-up
+  on `docs/incidents/2026-05-26-gpu-resume-blocked.md` with the
+  exact pip command to run and the exact next-step procedure.
+estimated_hours: 6
+priority: P0
+tags: [exp13, gpu, dispatch, jobs]
+```
+
+### F-WEB-RUNNING-JOBS-WIDGET — Running-jobs widget freshness + interactivity
+
+```yaml
+id: F-WEB-RUNNING-JOBS-WIDGET
+phase: F2
+loop: executor
+status: pending
+deps: [F-OPS-JOBS.2]
+acceptance: |-
+  User 2026-05-26 saw widget reporting "1 en ejecución" while psql
+  showed a different RUNNING count, and "predict_go_terms parece
+  pillado". Fix:
+   1. Poll interval ≤ 10s while page visible; pause on visibility-
+      change; refresh on focus.
+   2. Surface each running job's elapsed time + last-progress-event
+      (from structured log emit-store, or a new column
+      `job.last_event_at TIMESTAMPTZ`).
+   3. Inline "Pause / Cancel" action buttons (depends on
+      F-OPS-JOBS.2 endpoints).
+   4. If any RUNNING job has `NOW() - last_event_at > 5 min`,
+      flag as ⚠ "stuck (no progress 5+min)" in the widget.
+   5. Click-through: opens job detail page with the structured
+      event timeline.
+estimated_hours: 6
+priority: P2
+tags: [web, ux, jobs, observability]
+```
+
+### F-PRED-FASTPATH — predict_go_terms < 10s on small test queries
+
+```yaml
+id: F-PRED-FASTPATH
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  User requirement 2026-05-26: "Un requisito es que tarde segundos
+  para el ejemplo de prueba". Concrete target: a predict_go_terms
+  call with query_set of ≤5 proteins, on already-warm caches, must
+  return SUCCEEDED in < 10 seconds wall-clock (p95 across 5 runs).
+  Reference job: c5a8863d-8131-4f46-bedf-1d49e466a2e9 took 3:49 on
+  this small set — unacceptable baseline.
+
+  Probable bottlenecks (verify via py-spy on a live run, NOT
+  assumption):
+   1. Reference pool freshness COUNT(*) blocking on every call
+      even with disk cache hit. Skip the count when the disk-cache
+      mtime is fresh (< N min) — proteins/embeddings table doesn't
+      change minute-to-minute.
+   2. `compute_taxonomy=true` triggers NCBI taxonomy db warmup that
+      could be pre-warmed lazily once per worker lifetime (already
+      runs on worker boot per the log line; maybe it re-warms per
+      job — confirm).
+   3. `compute_alignments=true` runs Needleman-Wunsch pairwise on
+      every (query × neighbour) pair. Use the persistent sqlite
+      align-cache (memory `project_export_perf_optimization`); if
+      cache key hit > 90% on test-set queries → near-zero
+      alignment time.
+   4. `search_backend=numpy` on full reference pool ~500k vectors
+      x 1024d takes seconds per query. After FEAT-KNN-GPU-TORCH
+      merges (PRs #31/#539), expose this path: bench the test
+      query on torch GPU vs numpy and pick the faster default.
+   5. `aspect_separated_knn=true` triggers 3 KNN searches in series;
+      run them in parallel via thread pool or merge into a single
+      batched call (most KNN backends support batched query).
+
+  Deliverable:
+   - One PR with the top-3 ROI fixes (from py-spy profile).
+   - A new pytest `tests/perf/test_predict_fastpath.py` that
+     enqueues + waits for a fixed 5-protein test query and
+     asserts wall-clock < 10s on warm caches.
+   - CI gate: mark @perf, run on every PR touching
+     protea/core/operations/predict_go_terms/* (or the cache
+     modules).
+   - Brief write-up in `docs/perf/2026-05-26-pred-fastpath.md`
+     of what changed and the before/after numbers.
+
+  Do NOT regress any existing predict_go_terms test. The fast-path
+  must be backward-compatible (all current payload flags still
+  honored, just faster).
+estimated_hours: 8
+priority: P0
+tags: [perf, predict, latency, hotfix]
+```
+
+### F-EXPORT-PIPELINE-DECOUPLE — Producer-consumer KNN/features pipelining in export
+
+```yaml
+id: F-EXPORT-PIPELINE-DECOUPLE
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Refactor ExportResearchDatasetOperation so the GPU-bound KNN
+  computation and the CPU-bound feature build (alignment, anc2vec
+  propagation, lineage features) run as two concurrent flows
+  connected by a bounded queue. Today they run synchronously per
+  (train, test) snapshot pair, leaving the GPU idle while CPU
+  computes features and vice versa.
+
+  Architecture:
+   - Producer thread/process: drives the KNN loop over all snapshot
+     pairs back-to-back, pushes (pair_id, query_indices,
+     top_k_neighbours, top_k_distances) tuples into a bounded
+     `queue.Queue(maxsize=PROTEA_EXPORT_PIPELINE_BUFFER)`.
+   - Consumer worker(s): pull from the queue, compute pair features
+     using the existing parallelised pair-features path (memory
+     `project_export_perf_optimization`, PR #421), aggregate, and
+     emit parquet shards.
+   - Backpressure: producer blocks when the queue is full. Default
+     `PROTEA_EXPORT_PIPELINE_BUFFER=4` (4 pair-results worth of
+     top-k indices in memory at any one time, ~few hundred MB max).
+   - Failure semantics: a failure in either flow surfaces as a job
+     FAILED with both stage and pair_id in error_message; partial
+     parquet shards from completed pairs are discarded (no
+     half-written dataset on artifact-store).
+
+  Toggle:
+   - Env var `PROTEA_EXPORT_PIPELINED=1` (default `0`, opt-in).
+     Synchronous path stays intact so the in-flight EXP.13 run is
+     not disturbed. Once the speedup is measured on a fresh cell,
+     a follow-up slice flips the default to `1`.
+   - When pipelined=0, behaviour is identical to today.
+
+  Measurement:
+   - The PR must ship a `scripts/perf/bench_export_pipeline.py`
+     script that runs one small cell (suggest
+     `bench-v1-K3-v226-lineage-ankh_base`, the smallest of the 9
+     EXP.13 cells) twice: once pipelined=0, once pipelined=1.
+     Reports wall-clock, GPU utilisation peak (`nvidia-smi
+     --query-gpu=utilization.gpu` polled at 1Hz), and per-stage
+     timing from the existing structured-log emit events.
+   - Acceptance speedup: pipelined run must be at least 1.4x
+     faster than synchronous on the same cell on the same hardware
+     (RTX 3060 + driver 570 + CUDA 12.8). Fail the slice if not.
+
+  Code locations (verify before editing):
+   - `protea/core/operations/export_research_dataset.py` (or the
+     equivalent under `core/operations/export/`) is the dispatcher
+     loop that currently iterates over snapshot pairs.
+   - `protea/core/operations/_pair_feature_compute.py` (per
+     memory `project_export_perf_optimization`) already has the
+     CPU pool wired; reuse it.
+   - `protea-method`'s `knn_search.search_knn(...)` is the KNN
+     entry; the producer wraps a loop around it.
+
+  Tests:
+   - Unit test that asserts queue backpressure: a slow consumer
+     stub causes the producer to block at maxsize.
+   - Integration test that runs the pipelined path against a
+     synthetic 2-pair workload + verifies parquet equivalence vs
+     synchronous (byte-identical schema, row count, content hash
+     for a fixed seed).
+   - Tests must pass with both `PROTEA_EXPORT_PIPELINED=0` and
+     `=1`.
+
+  Thesis hook:
+   - Memory `project_complexity_scope_pivot_2026_05_26` covers the
+     thesis Big-O section in chapter 5. After this slice ships,
+     thesis-writer can add a paragraph quantifying the speedup as a
+     reduction in pipeline wall-clock from `T_knn + T_features` to
+     `max(T_knn, T_features) + overhead`.
+
+  Do NOT:
+   - Refactor the inner KNN call itself (already done by
+     FEAT-KNN-GPU-TORCH protea-method #31).
+   - Change the on-disk parquet schema.
+   - Touch the worker process model (single worker-training
+     process is fine; the two flows are threads inside it).
+   - Disturb the active EXP.13 run (the default pipelined=0
+     guarantees this).
+estimated_hours: 6
+priority: P1
+tags: [perf, export, pipelining, concurrency, gpu]
+note: |-
+  Originated from a user architectural question 2026-05-26 (post
+  KNN-GPU port): GPU is idle ~70% of wall-clock today because the
+  per-pair loop is synchronous. Decoupling lets both flows
+  saturate hardware. Theoretical speedup factor =
+  (T_knn + T_features) / max(T_knn, T_features); empirically
+  expected ~1.4-2x on the 9 EXP.13 cells.
+```
+
+## F-EXPORT-MINIJOB — Decompose export into coordinator + batch minijobs (compute_embeddings pattern)
+
+User directive 2026-05-26: refactor `export_research_dataset` to mirror the
+`compute_embeddings` pipeline (coordinator → batch workers → write). The
+goal is to release the GPU as soon as each per-pair KNN minijob finishes,
+instead of holding it for the full cell wall-clock while CPU features +
+parquet write happen synchronously. All sub-slices are env-gated behind
+`PROTEA_EXPORT_MINIJOBS=1` (default `0` = today's monolithic path stays
+intact). Theoretical speedup ~2x intra-cell + ~1.5x cross-cell.
+
+### F-EXPORT-MINIJOB.1 — Scaffolding: new Operations + queues + env gate
+
+```yaml
+id: F-EXPORT-MINIJOB.1
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Catalog four new Operations as stubs (no logic yet, registered in
+  OperationRegistry, smoke-tested):
+   - `export_coordinator` (queue: `protea.training`): receives the cell
+     spec, no-ops in this slice, returns SUCCEEDED.
+   - `export_knn_batch` (queue: `protea.training.knn-batch`):
+     OperationConsumer (no DB Job row, like compute_embeddings_batch).
+     Stub accepts a per-pair payload, emits a `noop` event, returns.
+   - `export_features_batch` (queue: `protea.training.features`):
+     OperationConsumer. Stub.
+   - `export_write` (queue: `protea.training.write`): OperationConsumer.
+     Stub.
+  Wire the three new queues into:
+   - `scripts/manage.sh` (start the corresponding worker processes
+     when N>0; default count = 1 each, mirror embeddings).
+   - `docker-compose.yml` if a worker service is added (mirror the
+     embeddings batch worker stanza).
+  New env: `PROTEA_EXPORT_MINIJOBS` (default `0`).
+  Tests: smoke that the four operations register without import errors
+  and that each handler is invoked when a message lands on its queue.
+  No behaviour change to today's `export_research_dataset` flow.
+estimated_hours: 3
+priority: P1
+tags: [export, minijob, scaffolding, perf]
+note: |-
+  Mirror the compute_embeddings pattern. See CLAUDE.md queue routing
+  table for the operating shape PROTEA already uses for that
+  pipeline.
+```
+
+### F-EXPORT-MINIJOB.2 — export_coordinator: partition cell into per-pair minijobs
+
+```yaml
+id: F-EXPORT-MINIJOB.2
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.1]
+acceptance: |-
+  Implement `export_coordinator.execute()`: parse the cell payload
+  (output_name, k, train_versions, test_versions, search_backend,
+  embedding_config_id, annotation_set_id, ontology_snapshot_id, all
+  compute_* flags). Partition into:
+   - One `export_knn_batch` payload per (train_snapshot_pair) +
+     one per (eval_snapshot_pair) = `len(train_versions) + 1`
+     minijobs.
+   - Each minijob payload carries a `coordinator_job_id` + `pair_id`
+     + the relevant snapshot ids + the embedding_config_id +
+     annotation_set_id + k + search_backend (so each minijob is
+     self-contained).
+  Publish each to `protea.training.knn-batch`. The coordinator
+  remains RUNNING until all per-pair minijobs have published a
+  completion event to a NEW `coordinator_progress` JobEvent stream
+  (one per minijob): when all `pair_knn_done` + `pair_features_done`
+  events for the expected pair set have landed, plus the
+  `export_write_done` event, the coordinator transitions to
+  SUCCEEDED.
+  Failure semantics: if any per-pair minijob FAILS, the coordinator
+  emits a CANCEL signal (publishes a kill message to the remaining
+  queue) and goes FAILED with the failing pair_id + reason.
+  Toggle: when `PROTEA_EXPORT_MINIJOBS=0`, `export_coordinator`
+  delegates to the legacy `export_research_dataset` monolithic
+  handler in-process (default).
+  Tests: integration test that submits a tiny 2-pair cell payload
+  with the toggle on, verifies that 2 + 1 KNN minijob messages
+  are published, and that the coordinator awaits the
+  `pair_knn_done` events before progressing.
+estimated_hours: 4
+priority: P1
+tags: [export, minijob, coordinator]
+```
+
+### F-EXPORT-MINIJOB.3 — export_knn_batch + export_features_batch implementation
+
+```yaml
+id: F-EXPORT-MINIJOB.3
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.2]
+acceptance: |-
+  Implement the two batch operations by extracting the per-pair
+  phases out of `_KnnTransferRunner.run()`
+  (protea/core/_knn_transfer_runner.py):
+
+  `export_knn_batch.execute(payload)`:
+   - Load reference pool for (embedding_config_id, annotation_set_id)
+     using the existing disk-cache (mtime-fresh check, F-PRED-FASTPATH).
+   - Run KNN for this pair_id using `protea-method.knn_search`
+     with backend=payload.search_backend (torch on GPU when env
+     supports, numpy/faiss as fallback).
+   - Write the (pair_id, top_k_indices, top_k_distances) result to
+     a temp artifact-store prefix:
+     `temp/coordinator/<coordinator_job_id>/knn/<pair_id>.npz`
+     (LocalArtifactStore for dev, MinioArtifactStore for prod).
+   - Emit `pair_knn_done` event with the temp URI.
+   - Publish a follow-on message to `protea.training.features` with
+     coordinator_job_id + pair_id + temp URI.
+
+  `export_features_batch.execute(payload)`:
+   - Read the temp KNN result from the artifact store.
+   - Run the existing CPU feature path (alignment, anc2vec, lineage,
+     reranker features) using the parallelised pair-features pool
+     (PR #421, env-gated).
+   - Write the per-pair feature shard to temp prefix:
+     `temp/coordinator/<coordinator_job_id>/features/<pair_id>.parquet`.
+   - Emit `pair_features_done` event with the temp URI.
+   - Publish a follow-on message to `protea.training.write` with
+     coordinator_job_id + pair_id + temp URI + total_expected_pairs.
+
+  GPU is released as soon as `export_knn_batch` returns (worker
+  picks up the next KNN minijob immediately, possibly from a
+  different coordinator job).
+
+  Tests: integration test that runs both batches end-to-end against
+  a synthetic 2-pair workload, verifies temp artifacts exist with
+  expected shape, and that the per-pair feature parquet matches
+  what the monolithic path produces for the same inputs (byte-
+  equivalent schema + row count + content hash for a fixed seed).
+estimated_hours: 4
+priority: P1
+tags: [export, minijob, knn, features, gpu]
+```
+
+### F-EXPORT-MINIJOB.4 — export_write: assemble shards + upload final dataset
+
+```yaml
+id: F-EXPORT-MINIJOB.4
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.3]
+acceptance: |-
+  Implement `export_write.execute(payload)`:
+   - Accept per-pair completion messages. Maintain an in-process
+     counter (or check the coordinator's emit stream) for how many
+     pairs have completed.
+   - When `total_expected_pairs` are all in: read every per-pair
+     feature parquet shard from the temp prefix, concatenate
+     (preserving the canonical column order from the existing
+     dump), write final `train.parquet` and `eval.parquet` under
+     the cell's normal artifact-store prefix (e.g.
+     `datasets/bench-v1-K3-v226-lineage-ankh_base/`).
+   - Compose `manifest.json` from the coordinator payload + the
+     concatenated row count and schema_sha (must match the
+     monolithic path's manifest_sha for the same input).
+   - Insert the `Dataset` row in PG once upload completes (this
+     is the existing final step in `export_research_dataset`).
+   - Clean up the temp prefix.
+   - Emit `export_write_done` event so the coordinator can
+     transition to SUCCEEDED.
+  Tests: end-to-end integration that runs all four operations
+  with PROTEA_EXPORT_MINIJOBS=1, asserts the resulting Dataset
+  row + parquet artifacts are byte-equivalent (manifest_sha,
+  schema_sha, row counts) to what the monolithic path produces
+  for the same input.
+estimated_hours: 3
+priority: P1
+tags: [export, minijob, write, dataset]
+```
+
+### F-EXPORT-MINIJOB.5 — Bench + speedup verification + default flip decision
+
+```yaml
+id: F-EXPORT-MINIJOB.5
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.4]
+requires_human: true
+acceptance: |-
+  Ship `scripts/perf/bench_export_minijob.py` that runs one
+  small cell (suggest `bench-v1-K3-v226-lineage-ankh_base`)
+  twice: once monolithic, once minijob. Reports wall-clock,
+  GPU utilisation peak (nvidia-smi --query-gpu polled @1Hz),
+  per-stage timing from emit events.
+
+  Acceptance speedup: ≥1.5x on RTX 3060 + driver 570 + CUDA 12.8.
+  If not met, file a write-up in `docs/perf/<date>-minijob-bench.md`
+  with the gap analysis and propose either a follow-up or a
+  revert of the toggle default.
+
+  Default flip: if speedup ≥1.5x AND parquet equivalence holds
+  on at least three cells, open a follow-up PR that switches
+  `PROTEA_EXPORT_MINIJOBS` default from `0` to `1`. This is a
+  separate PR; the toggle introduction PR (this slice) does NOT
+  flip the default.
+
+  Requires human: a live GPU + uninterrupted stack for ~1h.
+estimated_hours: 2
+priority: P1
+tags: [export, minijob, bench, requires_human]
+```
+
+### HOTFIX-GOGRAPH-CLASSIFY — Protein-detail GO graph paints known nodes as predicted
+
+```yaml
+id: HOTFIX-GOGRAPH-CLASSIFY
+phase: F2
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  User reported 2026-05-26 viewing
+  /es/proteinas/A0A011QK89/?tab=anotaciones: every query node painted
+  "Predicted only" (blue) even though the page renders curated KNOWN
+  annotations from protein_go_annotation. Root cause was
+  `apps/web/components/GoGraph.tsx:22`:
+  `const isPredicted = predictedGoIds?.has(goId) ?? true;`
+  When the caller did not provide `predictedGoIds` (which is the
+  case for the protein-detail page that only passes `subgraph`),
+  the default of `true` made every query node classify as predicted.
+  Fix: when neither set is provided, query nodes default to
+  `known_only`. When either set is provided, classification respects
+  explicit membership and falls back to `ancestor` rather than the
+  spurious `predicted_only`. Frontend-only change; backend untouched.
+estimated_hours: 0.5
+priority: P1
+tags: [web, hotfix, ux, go-graph]
+note: |-
+  Shipped 2026-05-26 as PROTEA #555
+  (https://github.com/frapercan/PROTEA/pull/555). Auto-merge enabled;
+  awaiting GitHub Actions outage recovery to land.
+```
+
+### HOTFIX-SPHINX-SERVING — /sphinx static mount path mismatch + ngrok 307 loop
+
+```yaml
+id: HOTFIX-SPHINX-SERVING
+phase: F2
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  User reported 2026-05-26 that /sphinx/quality/ returns empty
+  on localhost:8000, 404 on localhost:3000, and a 307 redirect
+  to https://localhost:8000/api-proxy/sphinx/quality/ on ngrok.
+  Root cause(s):
+
+  1. `protea/api/app.py:325` mounts `docs/build/html/` but Sphinx's
+     default `sphinx-build -b html docs/source docs/build` writes
+     to `docs/build/`. Mount points at empty directory, all
+     /sphinx/* requests return empty. Two fixes possible:
+     a. Change mount path: `app.mount("/sphinx",
+        StaticFiles(directory=project_root / "docs" / "build",
+        html=True))`.
+     b. Update docs build invocations (Makefile + manage.sh +
+        protea-deploy startup hooks) to output to `docs/build/html/`.
+     Option (a) is minimal-diff and aligned with what every other
+     Sphinx-in-PROTEA reference assumes.
+
+  2. The ngrok 307 redirect to
+     `https://localhost:8000/api-proxy/sphinx/quality/` is a
+     separate ProxyHeadersMiddleware + visitor_counter middleware
+     interaction. Verify whether visitor_counter at
+     `protea/api/middleware/visitor_counter.py:53` produces the
+     redirect, and whether the X-Forwarded-Host header from ngrok
+     is being parsed as `localhost`. If yes, either disable visitor
+     counter for /sphinx static paths or add proper ngrok host
+     trust to ProxyHeadersMiddleware.
+
+  Build verification:
+   - `curl -s http://localhost:8000/sphinx/quality/index.html` must
+     return HTML containing the post-#550 H1 sections (Coverage gates,
+     Type checking with mypy, Schema migration testing, Branch
+     protection and auto-merge policy, Observability and SLO,
+     Definition of done and PR checklist).
+   - `curl -sL https://protea.ngrok.app/sphinx/quality/` must
+     terminate at HTTP 200 with the same content.
+   - `curl -s http://localhost:3000/sphinx/quality/` must also work
+     (frontend next.config.ts rewrite already in place from PR #540).
+
+  Documentation: update CLAUDE.md or the Sphinx-build instructions
+  to canonicalise the output directory.
+estimated_hours: 1
+priority: P1
+tags: [docs, sphinx, web, hotfix]
+note: |-
+  Surfaced after PR #550 (QE expand) landed: user couldn't see the
+  new H1 sections in protea.ngrok.app/sphinx/quality/ because the
+  static mount was looking at the wrong directory all along. Fixes
+  visibility of every Sphinx page in the repo.
+```
+
+### HOTFIX-QE-SIDEBAR-NAV — QE sections show as siblings of the page title
+
+```yaml
+id: HOTFIX-QE-SIDEBAR-NAV
+phase: F2
+loop: executor
+status: done
+deps: []
+acceptance: |-
+  After #550 expanded `docs/source/quality/index.rst` from 14 to 20
+  sections, the Sphinx sidebar rendered every section as a sibling
+  of the `Quality Engineering` page entry instead of nesting them
+  underneath it. Root cause: every section used `=====` underline
+  (H1), which Sphinx promotes to top-level sidebar items.
+
+  Fix: demote every section underline from `=====` to `-----` so
+  the title `Quality Engineering` remains H1 and the sections
+  render as H2 anchors within the page. Sidebar now shows
+  `Quality Engineering` once with the right-rail "On this page"
+  listing the section anchors, matching how `architecture/`,
+  `appendix/`, and `runbooks/` already nest in the toctree.
+estimated_hours: 0.5
+priority: P1
+tags: [docs, sphinx, navigation, hotfix]
+note: |-
+  Surfaced 2026-05-26 after redeploy of PR #550 made the H1
+  proliferation visible in the sidebar. Trivial mechanical fix; no
+  prose touched.
+```
+
+### F-EXPORT-MINIJOB.6 — Content-addressed minijob caching + resume + cross-cell reuse
+
+```yaml
+id: F-EXPORT-MINIJOB.6
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.3, F-EXPORT-MINIJOB.4]
+acceptance: |-
+  Today minijob temp artifacts live under
+  `temp/coordinator/<coord_id>/{knn,features}/<pair_id>` (the
+  coordinator job UUID). When a cell is re-dispatched (after a
+  crash or worker restart) the new coordinator allocates a
+  different UUID and re-runs every minijob from scratch, even
+  though every KNN/feature output for the same (cell_signature,
+  pair_id) is deterministic.
+
+  Three layers of compute reuse, each ships as one PR:
+
+  **1. Per-pair KNN cache (cross-coordinator, cross-cell)**
+
+  Cache key = sha256_hex({
+    "embedding_config_id": ...,
+    "annotation_set_id": ...,
+    "ontology_snapshot_id": ...,
+    "k": ...,
+    "search_backend": ...,
+    "train_snapshot": ...,  (or eval pair)
+    "use_embedding_pca": ...,
+  })[:24]
+  Cache path:
+  `${PROTEA_ARTIFACT_STORE}/cache/knn/<cache_key>.npz`
+
+  Before running KNN inside `export_knn_batch`, check the
+  cache prefix; on hit, emit `pair_knn_done` with the cached
+  URI and skip the GPU work. On miss, run KNN normally and
+  write to BOTH the per-coordinator temp prefix (for
+  features_batch to read) AND the cache prefix.
+
+  Concrete reuse: re-dispatching the same cell repeats zero
+  KNN. Different cells that share the same (embedding,
+  annotation, k) but differ only in `compute_alignments` or
+  `compute_taxonomy` flags ALSO share KNN cache (those flags
+  affect features, not KNN).
+
+  **2. Per-pair features cache**
+
+  Cache key = sha256_hex({
+    "knn_cache_key": ...,            # from layer 1
+    "compute_alignments": ...,
+    "compute_taxonomy": ...,
+    "compute_reranker_features": ...,
+    "expand_votes_to_ancestors": ...,
+  })[:24]
+  Cache path:
+  `${PROTEA_ARTIFACT_STORE}/cache/features/<cache_key>.parquet`
+
+  Same hit/miss logic. Lets a cell that retried because
+  `export_write` crashed (after every KNN + features
+  succeeded) skip directly to the final assembly stage.
+
+  **3. Resume protocol in coordinator**
+
+  When `export_coordinator` starts and finds that some of
+  its pair minijob completion events are already recorded
+  for the SAME `cell_signature` (a) on prior coordinator
+  runs OR (b) by another coordinator's cache writes, the
+  coordinator emits the corresponding `pair_knn_done` /
+  `pair_features_done` events immediately and counts them as
+  done. It still publishes ONLY the missing minijobs to
+  protea.training.knn-batch.
+
+  Acceptance tests:
+   - Submit a coordinator, let it complete fully, re-submit
+     the same payload: second run completes in seconds
+     (write-only).
+   - Submit, kill worker-export-knn-batch mid-flight, re-dispatch:
+     completed minijobs are skipped, only missing ones run.
+   - Submit two cells differing only in `compute_alignments`:
+     KNN minijobs of the second cell hit cache.
+
+  Code locations:
+   - `protea/core/operations/export_minijobs/_export_knn_batch.py`
+     for cache check/write on KNN.
+   - `protea/core/operations/export_minijobs/_export_features_batch.py`
+     for features cache.
+   - `protea/core/operations/export_minijobs/_export_coordinator.py`
+     for the resume protocol.
+   - `protea/infrastructure/storage/artifact_store.py` for any
+     new helper (exists?, get_uri()).
+
+  Tests under `tests/test_export_minijob_cache.py`.
+
+  Env var: `PROTEA_EXPORT_MINIJOB_CACHE=1` (default `1` once
+  validated; can be flipped off for benchmarking).
+
+estimated_hours: 6
+priority: P0
+tags: [export, minijob, cache, resume, reuse]
+note: |-
+  User directive 2026-05-26: "que se reutilicen los computos al
+  maximo". Pre-requisite to the FARM-EXP.14 follow-up sweep
+  (multi-seed full-grid) which would otherwise re-run every cell
+  from scratch every seed iteration.
+```
+
+### F-EXPORT-MINIJOB.7 — Per-queue worker counts via env vars (dynamic parallelism)
+
+```yaml
+id: F-EXPORT-MINIJOB.7
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.1]
+acceptance: |-
+  User directive 2026-05-26: "podemos hacer cada operacion GPU/CPU en
+  paralelo. Por ejemplo 2 workers haciendo el KNN, y ninguno haciendo
+  features." Today `manage.sh start` spawns exactly 1 worker per minijob
+  queue when `PROTEA_EXPORT_MINIJOBS=1`. Scaling beyond that requires
+  manual `manage.sh scale protea.training.knn-batch N` invocations.
+
+  Make worker counts configurable at startup via three env vars:
+   - `PROTEA_EXPORT_KNN_WORKERS` (default 1)
+   - `PROTEA_EXPORT_FEATURES_WORKERS` (default 1)
+   - `PROTEA_EXPORT_WRITE_WORKERS` (default 1)
+
+  When `manage.sh start` runs with `PROTEA_EXPORT_MINIJOBS=1` and
+  `PROTEA_EXPORT_KNN_WORKERS=2`, it spawns 2 worker-export-knn-batch
+  processes. Same for features and write.
+
+  Sensible defaults documented in CLAUDE.md:
+   - GPU host with 12 GB VRAM: KNN_WORKERS=2 is the safe ceiling
+     (each preloads ~3-5 GB ref pool; 2 saturates the card).
+   - CPU-bound features: FEATURES_WORKERS can be (cores / 2) since
+     each features minijob already parallelises pair-features
+     internally (PR #421).
+   - WRITE_WORKERS=1 is enough (assembly is I/O bound + the cell
+     needs all per-pair shards before final write anyway).
+
+  Tests: integration test that sets KNN_WORKERS=2 + verifies
+  rabbitmqctl list_queues shows `consumers=2` on the .knn-batch queue
+  + that two minijobs from different coordinator_job_ids can be in
+  flight concurrently.
+
+  Documentation: add a "Dynamic worker pool" subsection in
+  `docs/source/quality/index.rst` under "Architectural patterns"
+  describing how to size per-stage pools for a given hardware
+  profile.
+estimated_hours: 2
+priority: P1
+tags: [export, minijob, parallelism, ops]
+```
+
+### F-MULTISTAGE-COHERENCE — Unify multi-stage pipeline patterns (embeddings + export_minijobs + predictions)
+
+```yaml
+id: F-MULTISTAGE-COHERENCE
+phase: F5
+loop: executor
+status: pending
+deps: [F-EXPORT-MINIJOB.4]
+acceptance: |-
+  PROTEA now has THREE coordinator+batch+write pipelines that share
+  90% of the mechanism but diverge on 3 specifics:
+   1. Inter-stage data transfer: compute_embeddings carries payload
+      inline; export_minijobs writes temp npz/parquet and passes
+      URIs. predict_go_terms is a hybrid.
+   2. Module layout: compute_embeddings flat (.py files), export
+      nested in a package, predictions package.
+   3. Naming: ``ComputeEmbeddingsOperation`` vs
+      ``ExportCoordinatorOperation`` (literal-stage suffix).
+
+  Extract a shared multi-stage pipeline contract under
+  ``protea/core/contracts/multistage.py``:
+
+  - ``PipelineStage`` abstract Operation subclass with declared
+    next-stage queue + payload-size-aware `publish_next()` helper.
+  - ``StageArtifactStore``: thin facade over `ArtifactStore` that
+    holds the conventions `temp/<pipeline>/<parent_job>/<stage>/<key>`
+    so every pipeline writes intermediate state the same way.
+  - ``Coordinator`` base class with partition + emit + reaper-safe
+    completion accounting (the ``update_parent_progress`` pattern
+    is already shared; this just makes it explicit).
+
+  Then refactor each of the three existing pipelines to use the
+  shared base, deleting the per-pipeline boilerplate.
+
+  Acceptance:
+   - One PR per pipeline (3 PRs in series): introduce the base,
+     migrate compute_embeddings, migrate export_minijobs, migrate
+     predict_go_terms.
+   - Each migration is behaviour-preserving (same RMQ messages on
+     the wire, same parquet/embedding outputs, same Fmax).
+   - Tests: integration runs for each pipeline must produce
+     byte-identical outputs vs pre-refactor baseline (capture a
+     SHA-256 of one canonical output before the refactor, assert
+     after).
+   - Documentation: add a "Multi-stage pipeline contract" page
+     under `docs/source/architecture/` that diagrams the shared
+     dataflow and links the three concrete pipelines as instances.
+
+  Non-goal: don't change the wire-level message shapes or queue
+  names. The unification is internal-only.
+estimated_hours: 8
+priority: P2
+tags: [refactor, architecture, coherence]
+note: |-
+  Surfaced 2026-05-26 by user audit. The pipelines work today;
+  this is technical debt cleanup that pays back on the FOURTH
+  pipeline (if/when one is added). Defer until the export_minijob
+  series stabilises post-#554/#558 merge.
+```
+
+### F-MULTISTAGE-COHERENCE.1 — Extract `multistage` contract (base classes, no migration)
+
+```yaml
+id: F-MULTISTAGE-COHERENCE.1
+phase: F5
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Introduce `protea/core/contracts/multistage.py` containing:
+
+  - `MultiStagePayload(ProteaPayload, frozen=True)` base with the
+    fields every batch payload carries (`coordinator_job_id`,
+    `pair_id` / `chunk_id` / equivalent).
+  - `StageArtifactStore` thin facade over `ArtifactStore` that
+    encodes the convention `temp/<pipeline>/<coordinator_job_id>/<stage>/<key>`
+    and exposes `read_intermediate(uri)`, `write_intermediate(stage,
+    key, bytes_or_file) -> uri`, `exists_intermediate(stage, key)`.
+  - `publish_next_stage(emit, payload_or_uri, size_threshold_kb=64)`
+    helper that auto-chooses inline payload vs artifact-store URI
+    based on serialized size. Returns the message that should be
+    handed to `publish_operations=`.
+  - `PipelineStage(Operation)` abstract subclass providing
+    `_artifact_store(settings) -> StageArtifactStore` and a thin
+    template for `execute` that emits `<stage>.start` / `<stage>.done`
+    consistently.
+  - `Coordinator(Operation)` abstract subclass with
+    `partition(payload) -> list[Operation messages]` +
+    `dispatch_partition_with_progress(emit, parts) -> deferred=True
+    with progress_total=len(parts)`.
+
+  Tests under `tests/test_multistage_contract.py` exercising the
+  abstractions with stub operations. NO migration of existing
+  pipelines in this slice — the three real pipelines keep their
+  current per-pipeline boilerplate and continue to pass their
+  tests untouched.
+
+  Documentation: new
+  `docs/source/architecture/multistage-pipeline.rst` page
+  diagramming the contract + linking the three pipelines as
+  prospective consumers (with status "pending migration").
+
+  Smoke: full `pytest -q` passes; ruff + mypy clean.
+estimated_hours: 4
+priority: P1
+tags: [refactor, architecture, contract, multistage]
+```
+
+### F-MULTISTAGE-COHERENCE.2 — Migrate compute_embeddings to multistage contract
+
+```yaml
+id: F-MULTISTAGE-COHERENCE.2
+phase: F5
+loop: executor
+status: pending
+deps: [F-MULTISTAGE-COHERENCE.1]
+acceptance: |-
+  Refactor `compute_embeddings.py` so `ComputeEmbeddingsOperation`,
+  `ComputeEmbeddingsBatchOperation`, and `StoreEmbeddingsOperation`
+  inherit from `Coordinator` and `PipelineStage` per .1's contract.
+
+  Behaviour-preserving:
+   - SAME RMQ message shapes on the wire (inline embedding bytes
+     still inline because they remain under the 64 KB threshold
+     per batch typically; if they exceed, automatic switch to
+     artifact-store URI — instrument with a metric so we can see
+     when this kicks in).
+   - SAME output (sequence_embeddings DB rows byte-equivalent).
+   - SAME observable events.
+
+  Tests: existing compute_embeddings tests pass unchanged. Add a
+  byte-equivalence assertion (SHA-256 of the parquet/embeddings
+  produced by a representative test cell) before/after the refactor.
+estimated_hours: 4
+priority: P1
+tags: [refactor, embeddings, multistage]
+```
+
+### F-MULTISTAGE-COHERENCE.3 — Migrate predict_go_terms to multistage contract
+
+```yaml
+id: F-MULTISTAGE-COHERENCE.3
+phase: F5
+loop: executor
+status: pending
+deps: [F-MULTISTAGE-COHERENCE.1]
+acceptance: |-
+  Refactor `predict_go_terms` coordinator/batch/write to use
+  `Coordinator` / `PipelineStage` from .1. Same behaviour-preserving
+  contract as .2. Hybrid in-message + artifact-store transfer
+  becomes uniform via `publish_next_stage` helper.
+estimated_hours: 4
+priority: P1
+tags: [refactor, predictions, multistage]
+```
+
+### F-MULTISTAGE-COHERENCE.4 — Migrate export_minijobs to multistage contract
+
+```yaml
+id: F-MULTISTAGE-COHERENCE.4
+phase: F5
+loop: executor
+status: pending
+deps: [F-MULTISTAGE-COHERENCE.1, F-EXPORT-MINIJOB.4]
+acceptance: |-
+  Refactor `export_minijobs/` package to inherit from the
+  multistage contract. The temp-prefix convention
+  (`temp/coordinator/<id>/{knn,features}/...`) collapses into the
+  `StageArtifactStore` default. The
+  `publish_operations=[(_FEATURES_QUEUE, _build_features_msg(...))]`
+  call sites become single-line `publish_next_stage(emit, payload)`.
+
+  Behaviour-preserving as in .2/.3. Compatibility with the
+  content-addressed cache from F-EXPORT-MINIJOB.6 must be
+  preserved (cache key derivation lives below the contract).
+estimated_hours: 4
+priority: P1
+tags: [refactor, export, multistage]
+note: |-
+  Deferred relative to .2 and .3 because export_minijobs is the
+  newest pipeline and its core implementation (#554 / #558) needs
+  to settle on develop before refactoring. Run after #554 + #558
+  merge and at least one end-to-end EXP.13 cell completes on the
+  minijob path.
+```
+
+## F-USER-OWNERSHIP — Multi-tenant data ownership
+
+User directive 2026-05-26: "que cada usuario pueda acceder a su
+historial completo de datos, operaciones, embeddings, o o que
+quiera." Today PROTEA is single-tenant: every authenticated user
+sees every Job, Dataset, EmbeddingConfig, PredictionSet,
+EvaluationResult, RerankerModel. Add per-user ownership + a public
+subscription model.
+
+### F-USER-OWNERSHIP.1 — ADR + DB schema: owner_user_id columns + backfill
+
+```yaml
+id: F-USER-OWNERSHIP.1
+phase: F4
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Open `docs/source/adr/D39-multi-tenant-ownership.rst` with
+  Context / Decision / Consequences explaining the multi-tenancy
+  pivot (per-user history + public subscription).
+
+  Alembic migration adding `owner_user_id UUID NULL REFERENCES
+  user(id) ON DELETE SET NULL` + indexed on:
+   - `job`
+   - `dataset`
+   - `embedding_config`
+   - `prediction_set`
+   - `evaluation_set`
+   - `evaluation_result`
+   - `reranker_model`
+   - `annotation_set`
+
+  Migration backfills existing rows by attributing them to the
+  bootstrap admin user (single tenant before this PR).
+
+  No API change in this slice; the columns are read-only until
+  .2 wires the filtering.
+estimated_hours: 3
+priority: P1
+tags: [auth, multitenancy, schema, adr]
+```
+
+### F-USER-OWNERSHIP.2 — API filter: scope every list/read endpoint to current user
+
+```yaml
+id: F-USER-OWNERSHIP.2
+phase: F4
+loop: executor
+status: pending
+deps: [F-USER-OWNERSHIP.1]
+acceptance: |-
+  Add a `?scope=mine|public|all` query parameter (default `mine`)
+  on every list endpoint that returns user-owned records. `all`
+  is ADMIN-only.
+
+  Endpoints touched: GET /jobs, /datasets, /embeddings,
+  /annotations, /evaluation-sets, /evaluation-results,
+  /prediction-sets, /reranker-models. POST endpoints stamp
+  `owner_user_id` from the authenticated user.
+
+  Tests: a non-admin user sees only their own rows by default;
+  cannot mutate another user's rows; admin scope=all sees
+  everything. Backward-compat: existing scripts that pass no
+  scope still work, the default narrows correctly.
+estimated_hours: 4
+priority: P1
+tags: [auth, multitenancy, api]
+```
+
+### F-USER-OWNERSHIP.3 — UI: per-user history page
+
+```yaml
+id: F-USER-OWNERSHIP.3
+phase: F2
+loop: executor
+status: pending
+deps: [F-USER-OWNERSHIP.2]
+acceptance: |-
+  New `/es/mi-historial/` page that aggregates the current user's:
+   - Jobs (last 50, filterable by operation)
+   - Datasets (the ones they originated)
+   - Embedding configs they registered
+   - Prediction sets + evaluation results they ran
+   - Reranker models they imported
+
+  Each item links to its detail page. Quick-filter chips at the
+  top (today / this week / all).
+estimated_hours: 4
+priority: P1
+tags: [web, history, ux]
+```
+
+## F-USER-PUBLISH — Public subscription mechanism
+
+### F-USER-PUBLISH.1 — Workspace + visibility schema
+
+```yaml
+id: F-USER-PUBLISH.1
+phase: F4
+loop: executor
+status: pending
+deps: [F-USER-OWNERSHIP.1]
+acceptance: |-
+  Alembic migration adds:
+   - `workspace` table: id, owner_user_id, slug (unique), name,
+     description, visibility ENUM('private','public'),
+     created_at, updated_at.
+   - `workspace_resource` table: workspace_id + resource_type
+     ENUM('job','dataset','embedding_config','prediction_set',
+     'evaluation_result','reranker_model') + resource_id + added_at.
+     Composite unique index on (workspace_id, resource_type,
+     resource_id).
+
+  An owner can attach any owned resource to their workspace and
+  flip visibility=public. Public workspaces become discoverable
+  via a new GET /workspaces?visibility=public list endpoint.
+estimated_hours: 3
+priority: P2
+tags: [auth, schema, publish]
+```
+
+### F-USER-PUBLISH.2 — Workspace API + read-through for public visibility
+
+```yaml
+id: F-USER-PUBLISH.2
+phase: F4
+loop: executor
+status: pending
+deps: [F-USER-PUBLISH.1, F-USER-OWNERSHIP.2]
+acceptance: |-
+  Endpoints:
+   - POST /workspaces — create a workspace
+   - PUT /workspaces/:id — edit name/description/visibility
+   - POST /workspaces/:id/resources — attach a resource
+   - DELETE /workspaces/:id/resources/:type/:id — detach
+   - GET /workspaces?visibility=public&q=... — discover public
+   - GET /workspaces/:slug — view (public OR owner OR subscriber)
+
+  When a resource is in a public workspace, any authenticated user
+  can READ it through `/<resource>/:id?via_workspace=:slug` even
+  though it isn't theirs. Direct list endpoints still respect
+  scope=mine; the via-workspace hop is the explicit public path.
+estimated_hours: 4
+priority: P2
+tags: [auth, api, publish]
+```
+
+### F-USER-SUBSCRIBE.1 — Subscriptions + notifications
+
+```yaml
+id: F-USER-SUBSCRIBE.1
+phase: F4
+loop: executor
+status: pending
+deps: [F-USER-PUBLISH.2]
+acceptance: |-
+  - `workspace_subscription` table: subscriber_user_id +
+    workspace_id + created_at + last_seen_at. PK (subscriber,
+    workspace).
+  - POST /workspaces/:id/subscribe / DELETE /workspaces/:id/subscribe
+  - When a workspace gains a new resource, a `workspace.updated`
+    event is emitted; the in-app notification surface (a new
+    notification table or a re-use of JobEvent fields) shows the
+    subscriber a chip "X new in <workspace>" until they open it.
+
+  Notifications surface as a bell badge on the topbar with the
+  count; clicking shows the list of new items + which workspace
+  they came from.
+estimated_hours: 4
+priority: P2
+tags: [auth, subscription, notification]
+```
+
+### F-USER-SUBSCRIBE.2 — Discover + follow UI
+
+```yaml
+id: F-USER-SUBSCRIBE.2
+phase: F2
+loop: executor
+status: pending
+deps: [F-USER-SUBSCRIBE.1]
+acceptance: |-
+  New `/es/explora/` page with:
+   - A grid of public workspaces (slug, owner, resource counts,
+     last-updated, follow button).
+   - Each card opens to a workspace detail page with the
+     resource list grouped by type.
+   - The current user's "Following" tab on the same page shows
+     their subscribed workspaces + recent updates.
+
+  Subscription discovery surfaces also on the homepage: a
+  "Public workspaces" card next to the existing pipeline cards.
+estimated_hours: 4
+priority: P2
+tags: [web, discover, social, ux]
+```
+
+### F-API-OPENAPI-POLISH — Production-grade OpenAPI specification
+
+```yaml
+id: F-API-OPENAPI-POLISH
+phase: F4
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  User directive 2026-05-26: "la parte de OPENAPI nos la podríamos
+  currar más". Audit + harden the generated `docs/openapi.json`:
+
+  1. **Per-endpoint descriptions**: every route under
+     `protea/api/routers/*.py` has a multi-line docstring with:
+      - One-sentence summary (the `summary=` argument is enforced).
+      - A "When to use this" paragraph for non-obvious endpoints.
+      - A "Returns" section describing the response shape semantically
+        (not just the schema).
+      - A "Raises" section listing the 4xx/5xx the caller can expect,
+        with the meaning of each.
+
+  2. **Realistic examples**: every request body model gets a
+     `model_config.json_schema_extra.example` block with a payload
+     that actually works (not a placeholder zeros UUID). Pull
+     examples from the integration tests where possible.
+
+  3. **Response schemas**: every endpoint returns a typed pydantic
+     model (not `dict[str, Any]`). Error responses standardised on
+     a single `ProblemDetail` schema (RFC 7807-shaped) with
+     `type`, `title`, `status`, `detail`, `instance` fields. The
+     existing handlers already emit that shape; expose it in OpenAPI.
+
+  4. **Tags + grouping**: every router uses a canonical tag matching
+     its concern. Add `tags_metadata` in `protea/api/app.py` with
+     a one-line description per tag so Swagger UI groups + describes
+     them properly.
+
+  5. **Security schemes**: declare `bearerAuth` + `apiKeyAuth`
+     security schemes in the OpenAPI top-level. Mark each endpoint
+     with the required scheme (currently implicit via dependency
+     injection of `require_role`).
+
+  6. **Interactive docs**: re-enable Swagger UI at `/docs` and
+     ReDoc at `/redoc` (currently disabled in `create_app`?).
+     Both should serve the polished spec.
+
+  7. **Schema versioning**: add `info.version` derived from
+     `protea.__version__`; bumping the package version bumps the
+     spec version. A new CI gate fails the openapi-drift check if
+     a breaking spec change ships without bumping version.
+
+  8. **Coverage check**: ship `scripts/check_openapi_completeness.py`
+     that fails when any route lacks a summary / docstring / example.
+     Wire into the existing `lint.yml` workflow.
+
+  Quality bar (per [[feedback_completion_quality_bar]]):
+   - Doc: new Sphinx page `docs/source/architecture/openapi.rst`
+     describing the spec conventions + how to consume it.
+   - UI: link to /docs and /redoc from the existing
+     "OpenAPI / Swagger" sidebar item.
+   - E2E: playwright spec opens /docs, asserts the title + that
+     at least the `/jobs` and `/datasets` operations are listed
+     under their tags.
+   - Local CI 10/10 green.
+
+  No breaking wire change: existing clients keep working.
+estimated_hours: 6
+priority: P1
+tags: [api, openapi, docs, ux, quality]
+note: |-
+  Surfaced 2026-05-26 by user request. Pre-requisite to public
+  subscription mechanism (F-USER-PUBLISH.2) because external users
+  on a public workspace need a discoverable, professional API spec
+  to consume the data.
+```
