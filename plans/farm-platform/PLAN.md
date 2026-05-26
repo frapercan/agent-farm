@@ -2971,3 +2971,33 @@ memory update with DOI, thesis citation backfill.
 
 **Suggested agent**: executor (script authoring) + human (account token
 and final upload confirmation).
+
+
+### UX-ADMIN-AUDIT — Audit admin + auth surface (anonymous audit only covered public)
+
+```yaml
+id: UX-ADMIN-AUDIT
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  ux-reviewer scope: /es/admin/* + /es/login + /es/signup + /es/profile +
+  /es/auth/pending-approval + /es/farm.
+  Earlier audit (2026-05-25 evening, ux-reviewer-1779719334-3a3e) was
+  scope anonymous-user-flow only and explicitly excluded admin surface
+  per user mandate.
+  User complaint 2026-05-25 22:48: "/es/admin/experiment-runs es bastante
+  inutil" — admin UI is bare-bones, not polished like public pages.
+  Deliverable: explore.md-style report with P0/P1/P2 findings per admin
+  page covering: information hierarchy, scanability, navigation,
+  cognitive load, mobile, performance, a11y. Special focus on:
+  experiment-runs CRUD UX, api-keys management, profile page (post
+  FD-6 i18n), pending-approval flow, farm dashboard. Output goes
+  to RESULTS_DIR/explore-admin.md. Frontend-designer wave 2 will
+  pick up the prioritized list.
+estimated_hours: 4
+priority: P1
+tags: [ux, admin, audit]
+```
+
