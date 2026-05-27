@@ -2999,7 +2999,7 @@ tags: [exp13, torch, gpu, prep]
 id: F-OPS-CHILD-FAILED-EMIT
 phase: F-OPS
 loop: executor
-status: shipped
+status: done
 deps: []
 acceptance: |-
   When `OperationConsumer._on_message` catches an exception from
