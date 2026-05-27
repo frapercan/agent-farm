@@ -2932,3 +2932,62 @@ note: |-
   on a public workspace need a discoverable, professional API spec
   to consume the data.
 ```
+
+
+### FEAT-KNN-GPU-TORCH-RESUME — Resume EXP.13 with torch GPU backend (6 missing cells)
+
+```yaml
+id: FEAT-KNN-GPU-TORCH-RESUME
+phase: F-EXP-RESET
+loop: executor
+status: pending
+deps: [FEAT-KNN-GPU-TORCH-PREP]
+acceptance: |-
+  Six EXP.13 cells reach status SUCCEEDED in `dataset` table with
+  `search_backend=torch`:
+   K=3: ankh_large, esm2_650m, esmc_600m, prostt5
+   K=5: ankh_base, esmc_600m
+  Pre-conditions (verified upfront, abort if any fails):
+   - protea-method >= the commit shipping torch GPU KNN (PRs #31 + #32)
+   - both venvs have `torch.cuda.is_available() == True`
+   - host driver supports CUDA 12.8 (driver 570+ ok, no upgrade required)
+   - smoke parity on one small cell (K=3 ankh_large) matches the numpy
+     baseline Fmax within tolerance (per-aspect delta < 1e-3)
+   - deploy-keeper paused or stack-owner lock acquired with
+     reason=FEAT-KNN-GPU-TORCH-RESUME so no mid-export redeploys
+  Each cell uses the same payload template as the v226-lineage grid
+  (k, output_name, train_versions, test_versions=[230], use_embedding_pca,
+   compute_taxonomy, compute_alignments, expand_votes_to_ancestors,
+   annotation_set_id, annotation_source, embedding_config_id,
+   ontology_snapshot_id) with `search_backend` flipped to `torch`.
+  Post-completion: re-launch deploy-keeper, write a 3-line memory note
+  with the final 24-cell grid status.
+estimated_hours: 12
+priority: P0
+tags: [exp13, torch, gpu, resume]
+```
+
+
+### FEAT-KNN-GPU-TORCH-PREP — Pre-flight before EXP.13 torch resume
+
+```yaml
+id: FEAT-KNN-GPU-TORCH-PREP
+phase: F-EXP-RESET
+loop: executor
+status: in_progress
+deps: []
+acceptance: |-
+  PROTEA PR opened and merged that:
+   1. Bumps poetry.lock so protea-method resolves to main with the torch
+      GPU KNN backend (PRs #31 + #32 merged 2026-05-26 02:22Z upstream);
+      previously locked at protea-method 0.3.0 (pre-torch).
+   2. Flips default CUDA_VARIANT in scripts/install_gpu_torch.sh from
+      cu121 to cu128 so future redeploys default to the wheel set that
+      matches the driver 570+ runtime (cu130/cu132 require driver 580+).
+  Post-merge manual step (out of slice scope, conductor handles):
+   - run `CUDA_VARIANT=cu128 bash scripts/install_gpu_torch.sh` in both
+     venvs (~/Thesis2/repositories/PROTEA and protea-deploy worktree).
+estimated_hours: 1
+priority: P0
+tags: [exp13, torch, gpu, prep]
+```
