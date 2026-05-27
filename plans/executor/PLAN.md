@@ -2991,3 +2991,25 @@ estimated_hours: 1
 priority: P0
 tags: [exp13, torch, gpu, prep]
 ```
+
+
+### F-OPS-CHILD-FAILED-EMIT — Surface child.failed event when OperationConsumer catches an exception
+
+```yaml
+id: F-OPS-CHILD-FAILED-EMIT
+phase: F-OPS
+loop: executor
+status: shipped
+deps: []
+acceptance: |-
+  When `OperationConsumer._on_message` catches an exception from
+  `op.execute(...)`, the consumer emits a structured `child.failed`
+  event on the COORDINATOR's job_event row with pair_id (if present),
+  operation, error_class, truncated error_message. Already happens for
+  Job-bound operations via BaseWorker fail path; this slice is the
+  queue-driven equivalent. Shipped 2026-05-27 via PROTEA PR #571.
+estimated_hours: 2
+priority: P0
+tags: [ops, observability, exp13, coord-fail-propagate]
+note: "shipped via PROTEA PR #571 2026-05-27"
+```
