@@ -1453,7 +1453,8 @@ tags: [test, e2e, infra]
 id: HOTFIX-RSC-SERVER-FETCH
 phase: F3
 loop: executor
-status: pending
+status: done
+shipped_via: PROTEA#533 (merged 2026-05-27T23:17:06Z)
 deps: []
 acceptance: |-
   apps/web/lib/api.ts baseUrl() detects server context (typeof window
@@ -2982,7 +2983,8 @@ tags: [exp13, torch, gpu, resume]
 id: FEAT-KNN-GPU-TORCH-PREP
 phase: F-EXP-RESET
 loop: executor
-status: in_progress
+status: done
+shipped_via: PROTEA#564+#573 (merged 2026-05-27T22:44:10Z + 2026-05-28T00:13:33Z)
 deps: []
 acceptance: |-
   PROTEA PR opened and merged that:

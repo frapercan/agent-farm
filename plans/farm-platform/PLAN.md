@@ -2039,7 +2039,8 @@ Suggested agent: executor (PROTEA + lab cross-repo).
 id: FARM-EXP.13
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
+completed: 2026-05-28T12:34:00Z via executor-1779665491-0153
 deps: [FARM-EXP.12]
 acceptance: |-
   24 datasets emitted via `POST /jobs` operation `export_research_dataset`: one per (plm × K) combination where plm ∈ {esm2_150m, esm2_650m, esm2_3b, prot_t5, prostt5, ankh_base, ankh_large, esmc_600m} and K ∈ {3, 5, 10}
