@@ -1341,7 +1341,8 @@ Shipped via PR #361 2026-05-13.
 id: FIX-MINIO-DEP
 phase: F3
 loop: executor
-status: pending
+status: done
+shipped_via: PROTEA#508 (merged 2026-05-25T14:08:34Z)
 deps: []
 acceptance: |-
   `python -c "import minio"` succeeds inside a fresh `poetry install --sync`
@@ -1354,6 +1355,13 @@ acceptance: |-
   Fix is a single-line dependency add + lockfile regeneration + PR.
   After merge + redeploy, re-dispatch the 9 FAILED EXP.13 cells (NOT in
   scope of this slice; conductor will handle re-dispatch).
+  RESOLUTION (2026-05-29): PR #508 promoted `minio (>=7.2,<8.0)` from a
+  PEP-621 optional `storage` extra to a main project dependency,
+  regenerated `poetry.lock` (`optional = false`, `groups = ["main"]`),
+  and added `tests/test_minio_import.py` as a CI regression guard so any
+  future demotion fails before reaching prod. Plan-progress still showed
+  this slice as unblocked because no agent-farm task was ever recorded
+  against the slice id; this edit closes the bookkeeping gap.
 estimated_hours: 1
 priority: P0
 tags: [infra, deps, urgent]
@@ -1445,7 +1453,8 @@ tags: [test, e2e, infra]
 id: HOTFIX-RSC-SERVER-FETCH
 phase: F3
 loop: executor
-status: pending
+status: done
+shipped_via: PROTEA#533 (merged 2026-05-27T23:17:06Z)
 deps: []
 acceptance: |-
   apps/web/lib/api.ts baseUrl() detects server context (typeof window
@@ -2974,7 +2983,8 @@ tags: [exp13, torch, gpu, resume]
 id: FEAT-KNN-GPU-TORCH-PREP
 phase: F-EXP-RESET
 loop: executor
-status: in_progress
+status: done
+shipped_via: PROTEA#564+#573 (merged 2026-05-27T22:44:10Z + 2026-05-28T00:13:33Z)
 deps: []
 acceptance: |-
   PROTEA PR opened and merged that:
