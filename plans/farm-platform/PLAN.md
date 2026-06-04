@@ -3002,3 +3002,48 @@ priority: P1
 tags: [ux, admin, audit]
 ```
 
+
+### FIX-METRIC-IA — IA-weighted f_micro_w comparable to CAFA/LAFA (end-to-end)
+
+```yaml
+id: FIX-METRIC-IA
+phase: F-METRIC
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  IA-gen util computes information accretion from OntologySnapshot + t0 annotation corpus; reproduces lafa_t0_Sep_2025/IA.tsv on overlapping terms (max abs diff < 1e-3) -- own IA that MUST match LAFA
+  run_cafa_evaluation resolves a REAL ia file (snapshot.ia_url or payload.ia_file), never the IC=1 fallback, for benchmark eval-sets
+  EvaluationResult.results stores f_micro_w + weighted precision/recall per aspect (today only fmax); migration of the JSONB blob shape
+  FARM-EXP.13 grid re-evaluated with IA -> real f_micro_w persisted
+  /v1/benchmark/matrix primary metric = f_micro_w (not unweighted fmax); web home + benchmark + scoring pages show f_micro_w aggregate + per-task CI, best-cell only labelled as such (no winner's-curse headline)
+  FINAL GATE: re-evaluating the existing protea-knn-v1 predictions with the re-wired PROTEA eval + own IA on a t0=Sep_2025 eval-set reproduces the LAFA numbers already on record (NK BP 0.263 / CC 0.407 / MF 0.579, etc.) within tolerance
+  docs/ADR + thesis ch6 report the IA-weighted aggregate
+estimated_hours: 16
+priority: P0
+tags: [metrics, evaluation, ia, cafaeval, comparability, web, thesis]
+requires_human: false
+note: "2026-06-04 session finding: run_cafa_evaluation falls back to uniform IC=1 (generate_evaluation_set never produces IA; snapshot.ia_url unset), so the internal 'f_micro_w' is NOT real IA-weighting and is incomparable to LAFA. The dashboard also headlines best-per-cell (winner's-curse, measured ~+0.02-0.03 within-task, dwarfed by aspect-difficulty spread). LAFA-vs-bench reconciliation: MFO matches/exceeds (method transfers), CC/BP/PK drop is the IA-weighting penalty on generic terms. Validated against /v1/benchmark/matrix (2223 cells) + LAFA score injection this session."
+```
+
+**Goal**: make every PROTEA-reported quality number IA-weighted `f_micro_w`
+under the exact CAFA protocol (`-ia <real> -prop fill -norm cafa -no_orphans
+-toi`), so internal benchmark numbers are directly comparable to CAFA/LAFA,
+and stop the dashboard from headlining cherry-picked best-cell maxima.
+
+**Repos touched**: PROTEA (core eval pipeline + IA-gen + ORM/migration + API
+benchmark router + apps/web), thesis (ch6 numbers), agent-farm (this slice).
+
+**Out of scope**:
+1. Re-running the full multi-PLM grid is gated on FARM-EXP.13 completion; this
+   slice ships the pipeline + re-evals what exists, and backfills the rest as
+   EXP.13 cells land.
+2. Changing the scoring recipes themselves (composite/reranker only add
+   ~+0.01-0.015 over embedding-only; not this slice's concern).
+
+**Notes**: IA source decision (user, 2026-06-04) = compute our OWN IA in-pipeline
+but it MUST reproduce LAFA's IA on the shared Sep_2025 t0 (validation gate). The
+final acceptance gate reuses the protea-knn-v1 predictions already scored on the
+locally-deployed LAFA (protea-lafa.ngrok.app) as ground truth for comparability.
+Suggested agents: executor (IA-gen + pipeline wiring + migration + API), then a
+web follow-on (dashboard metric + de-bias), then doc/thesis.
