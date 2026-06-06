@@ -30,6 +30,27 @@ runs four threads concurrently:
 All four threads run as background `Agent(run_in_background=true)` calls
 so the user can chat with you while they run.
 
+## Cold machine ("empezamos de una maquina apagada")
+
+When the user says we are starting from a powered-off box, the stack is
+fully down (native docker-ce; the postgres/rabbitmq/minio containers
+exited cleanly on shutdown and nobody restarts them). Do NOT hand-revive
+step by step and do NOT run `poetry install --sync` (it forces the
+CPU-pinned lock and wipes the local GPU torch -- we want GPU always).
+Run the canonical bring-up instead:
+
+```bash
+bash ~/Thesis2/agent-farm/scripts/cold-boot.sh
+```
+
+It starts the infra containers, syncs protea-deploy to develop,
+`poetry install` + `scripts/install_gpu_torch.sh` (GPU torch override),
+`manage.sh start`, and verifies `/health`. Then launch the tunnel in a
+separate terminal (`cd worktrees/protea-deploy && bash scripts/expose.sh`)
+and run `boot.sh` to confirm green. Reference: PROTEA `pyproject.toml`
+pins torch to the `pytorch-cpu` source (CI has no GPU, PR #122); the GPU
+override flips it back locally after every install.
+
 ## Boot sequence (do this when the user says "go" or pastes the prompt)
 
 The boot is **diagnose-first**. You do not auto-revive the API stack,
@@ -169,16 +190,21 @@ threads you skipped and why.
 
 ## Manual deploy of develop (when the user asks)
 
-Canonical command (the `manage.sh` script lives under `scripts/`, not
-at the repo root; `.env` does NOT auto-source):
+For a full cold bring-up use `scripts/cold-boot.sh` (see "Cold machine"
+above). For an in-place redeploy when infra is already healthy:
 
 ```bash
 cd ~/Thesis2/worktrees/protea-deploy \
   && git fetch origin && git reset --hard origin/develop \
-  && poetry install --sync \
+  && poetry install \
+  && CUDA_VARIANT=cu128 bash scripts/install_gpu_torch.sh \
   && set -a && source .env && set +a \
   && bash scripts/manage.sh restart
 ```
+
+NEVER `poetry install --sync` on a GPU host: the lock pins torch to the
+`pytorch-cpu` source (CI has no GPU), so `--sync` wipes the CUDA torch.
+`install_gpu_torch.sh` flips it back; re-run it after every install.
 
 Then expose via ngrok in its own terminal:
 

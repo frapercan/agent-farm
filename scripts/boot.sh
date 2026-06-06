@@ -68,8 +68,8 @@ for c in protea-postgres-1 protea-rabbitmq-1 protea-minio-1; do
   case "$state" in
     healthy)  ok "$c: healthy" ;;
     starting) warn "$c: starting (wait or check 'docker logs $c')" ;;
-    missing)  fail "$c: container missing. From repositories/PROTEA: docker compose up -d postgres rabbitmq minio" ;;
-    *)        fail "$c: $state. Inspect: docker logs $c" ;;
+    missing)  fail "$c: container missing. From worktrees/protea-deploy: docker compose --profile storage up -d postgres rabbitmq minio" ;;
+    *)        fail "$c: $state (often just a clean-exit after shutdown). Cold-boot revive: bash $THESIS_ROOT/agent-farm/scripts/cold-boot.sh" ;;
   esac
 done
 
@@ -83,7 +83,7 @@ if ss -lnt 2>/dev/null | grep -q ':8000 '; then
     warn "API :8000: listening but /health failed"
   fi
 else
-  fail "API :8000: not listening. Revive (manual): cd $THESIS_ROOT/worktrees/protea-deploy && git fetch origin && git reset --hard origin/develop && poetry install --sync && set -a && source .env && set +a && bash scripts/manage.sh start"
+  fail "API :8000: not listening. Cold-boot revive: bash $THESIS_ROOT/agent-farm/scripts/cold-boot.sh (starts infra + GPU torch + manage.sh start; NEVER poetry install --sync, it wipes GPU torch)"
 fi
 
 # ---------------------------------------------------------------------------
