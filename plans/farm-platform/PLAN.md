@@ -3258,15 +3258,17 @@ status: pending
 deps: [F-EVAL-PROTOCOL.b, F-BAND-REGISTRY]
 acceptance: |-
   ONE universal reranker trained on the POOLED candidate pairs across PLM and K, with (PLM-id, K-context, neighborhood stats: rank/distance/local-density/vote-count) as FEATURES, aspect-conditioned (aspect feature or per-aspect head); replaces the up-to-216 per-cell phase3a models with a single artifact (decouples evaluation-grid coverage from model granularity)
+  Objective aligned to the metric: LightGBM LambdaMART (objective=lambdarank) grouped per (protein, aspect) with IA-weighted gains, so training optimizes the IA-weighted f_micro_w directly (not a pointwise binary proxy); per-aspect score calibration fit on VALID; post-hoc true-path / hierarchical-consistency correction on the GO DAG
+  Candidate recall is treated as the ceiling: retrieve-wide + true-path propagation, candidate recall measured and reported per cell (the reranker can only rank what retrieval surfaces)
   K-augmentation: training candidates drawn from a SEEDED, bounded K distribution (retrieve-wide + rerank), so the model is K-agnostic; inference uses a deterministic K policy (fixed or adaptive), never an unseeded random stream (cell must stay hashable/reproducible per F-EVAL-PROTOCOL)
   Balanced positive:negative sampling (1:1 or tuned) for reranker training; the negative-construction MUST pass the F-EVAL-PROTOCOL.b feature-leakage audit (anc2vec replication is the cautionary template, since that leak came from how negatives were replicated)
-  Selective-deploy (NK+LK reranker / PK KNN) chosen per (category, aspect) on the VALID window, frozen, then evaluated ONCE on TEST on IA-weighted f_micro_w
-  Matches or beats the per-cell phase3a champion on wFmax (NK + LK) with far fewer models, on the v226 (and v227) band; one container ships to LAFA
-estimated_hours: 24
+  Selective-deploy is decided EMPIRICALLY per (category, aspect) on the VALID window, NOT assumed: report the reranker-vs-KNN-baseline wFmax delta with a paired-bootstrap 95% CI on EVERY category (NK/LK/PK x MFO/BPO/CCO). Do NOT presume PK is KNN-only; that conclusion was measured on the UNWEIGHTED metric and is stale under IA-alignment, where the reranker may win in categories it previously did not. The deploy choice per category falls out of the VALID result, then is frozen and evaluated ONCE on TEST
+  Justification artifacts (this slice IS the thesis core): the claim is supported by the complete IA-weighted benchmark (FARM-EXP.GRID-v226), selection on the 226->227 VALID window, evaluation on the held-out TEST window(s out to 230), per-category CIs, and an external LAFA verification (the deployed LAFA reproduces our numbers within tolerance); thesis ch6 + ADRs + dataset cards are kept current as results land (doc al dia)
+estimated_hours: 28
 priority: P0
-tags: [reranker, universal, pooling, sampling, lafa, performance]
+tags: [reranker, universal, lambdarank, ia, lafa, thesis, performance]
 requires_human: false
-note: "2026-06-06 design with user. The biggest performance lever for LAFA #1: a single pooled, aspect-conditioned reranker with PLM/K as features and K-randomization as augmentation, instead of 216 per-cell models. The 'infinite random K stream' idea is adopted as a SEEDED bounded training distribution (retrieve-wide + neighborhood-context features), not as the inference policy. Supersedes the earlier per-cell phase3a sweep approach."
+note: "2026-06-06 design with user. THE FINAL THESIS OBJECTIVE: a single pooled, aspect-conditioned, IA-aligned reranker, justified by a complete benchmark + VALID/TEST split + per-category CIs + LAFA check + living docs. Biggest score lever is NOT model capacity but (a) candidate recall and (b) objective alignment (LambdaMART with IA-weighted gains), per the complexity/score tradeoff discussion; neural rerankers were explored and did not surpass GBDT. The 'infinite random K stream' idea is adopted as a SEEDED bounded training distribution, not the inference policy. CRITICAL framing correction (user): do NOT assume per-category outcomes; once IA-aligned the reranker may improve any category, including PK and CC/BP, so every category is measured with CIs and the selective-deploy is an OUTPUT, not an input. Supersedes the per-cell phase3a sweep."
 ```
 
 **Goal**: replace the per-cell reranker grid with a single universal, aspect-conditioned, pooled reranker (PLM/K as features, K-augmented, balanced-sampled, leakage-audited) that is both simpler to ship and stronger, as the main lever toward LAFA #1.
