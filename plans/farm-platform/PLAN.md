@@ -3047,3 +3047,74 @@ final acceptance gate reuses the protea-knn-v1 predictions already scored on the
 locally-deployed LAFA (protea-lafa.ngrok.app) as ground truth for comparability.
 Suggested agents: executor (IA-gen + pipeline wiring + migration + API), then a
 web follow-on (dashboard metric + de-bias), then doc/thesis.
+
+**Status update (2026-06-06):** the PROTEA core + algorithm-level correctness
+gate shipped as FIX-METRIC-IA.a (PR #599): own IA reproduces LAFA `calc_ia`
+within 1e-3, `f_micro_w` + weighted P/R persisted, `/v1/benchmark/matrix` ranks
+by `f_micro_w` (with `primary_metric` flag + `per_task` mean/CI). The remainder
+is tracked as FIX-METRIC-IA.b below.
+
+### FIX-METRIC-IA.b — IA-weighted metric: web de-bias + DB grid re-eval + thesis
+
+```yaml
+id: FIX-METRIC-IA.b
+phase: F-METRIC
+loop: farm-platform
+status: pending
+deps: [FIX-METRIC-IA]
+acceptance: |-
+  apps/web de-bias: home + benchmark + scoring pages headline the f_micro_w aggregate + per-task 95% CI (consuming the router's primary_metric + per_task), and label any best-cell ONLY as such (no winner's-curse maximum as headline)
+  DB-level IA reproduction: the in-pipeline IA, run over the deployed Sep_2025 snapshot, reproduces lafa_t0_Sep_2025/IA.tsv on overlapping terms within max abs diff < 1e-3 (the .a gate was algorithm-level on synthetic DAGs; this is the real-corpus gate)
+  FARM-EXP.13 grid re-evaluated with real IA -> real f_micro_w persisted for every existing prediction_set (backfill as v227 cells land; do NOT re-run grid compute)
+  docs/ADR updated; thesis ch6 reports the IA-weighted aggregate as the headline number
+estimated_hours: 10
+priority: P1
+tags: [metrics, web, thesis, ia, evaluation]
+requires_human: false
+note: "Part 1 (web de-bias) is unblocked NOW (router already exposes primary_metric + per_task). Parts 2-3 (real-corpus IA reproduction + grid re-eval) are GATED on the Sep_2025 OBO + SwissProt-exp corpus being ingested, which is the intentionally-paused v227 work (phase2-lafa-v227 chain). Thesis ch6 lives in the thesis repo (base main)."
+```
+
+**Goal**: finish the user-facing and on-record half of the IA-weighted metric
+so the deployed app and the thesis report the honest, LAFA-comparable
+`f_micro_w`, not the legacy unweighted Fmax.
+
+**Out of scope**: re-running grid compute (only re-score existing predictions);
+changing scoring recipes.
+
+**Suggested split**: a web executor for Part 1 (ship now), then a PROTEA
+executor for Part 2 once the v227 corpus lands, then doc/thesis for Part 3.
+
+### F-EVAL-PROTOCOL — leakage-free temporal split (CAFA-ready train/valid/test)
+
+```yaml
+id: F-EVAL-PROTOCOL
+phase: F-EVAL
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  Three temporal (rolling-origin) windows formalized and documented: TRAIN (<= t-1, builds KNN corpus + reranker labels + IA), VALID (t-1 -> t0, selection + tuning + threshold), TEST (t0 -> t1, touched once, the reported LAFA number); random/shuffled CV explicitly forbidden in an ADR
+  An explicit VALID window concept exists in dataset/eval metadata (alongside train_versions/test_versions), so a cell can be scored on VALID without touching TEST
+  Selection protocol implemented: PLM/K/recipe + LightGBM hyperparams + selective-deploy decision (NK+LK reranker vs PK KNN, per category/aspect) are chosen on VALID and frozen before TEST; the reported number is either the VALID-selected model on TEST or the full grid (no in-TEST selection)
+  Operating threshold tau is fixed on VALID and reported alongside the Fmax-over-tau benchmark number
+  Cutoff CI guard: a check fails if any produced artifact (corpus, features, labels, IA) references a release > the declared cutoff (structural no-future-data enforcement, mirroring the ALL_FEATURES producer-consumer guard)
+  Feature leakage audit: every feature family (not just anc2vec) passes the golden rule -- computable identically for a never-seen protein with zero known labels; offenders documented + fixed or dropped
+  A documented "fresh t0" inference path: the whole pipeline runs from a single cutoff knob, producing a CAFA submission with no data > t0
+estimated_hours: 20
+priority: P1
+tags: [evaluation, methodology, leakage, cafa, reranker, reproducibility]
+requires_human: false
+note: "2026-06-06 design session. Closes the METHODOLOGY half of CAFA-readiness; FIX-METRIC-IA closes the metric half and the v227 rebuild closes the band half. Current lab gap: phase3a_*_sweep.py selects champions on the SAME v226->v230 window used for reporting (winner's-curse) and there is no distinct VALID window. The anc2vec replication artifact (project_anc2vec_leakage_mechanism) is the template for the feature audit. Likely splits into F-EVAL-PROTOCOL.a (VALID window + selection protocol + threshold) + .b (cutoff CI guard + feature audit) + .c (fresh-t0 submission path)."
+```
+
+**Goal**: make the whole reranker + model-selection + inference + validation
+flow reusable for a NEW CAFA with no temporal leakage of any kind, via an
+explicit rolling-origin TRAIN/VALID/TEST protocol bound per pipeline stage (not
+a row-split).
+
+**Repos touched**: protea-reranker-lab (selection + VALID window + sweeps),
+PROTEA (cutoff knob + eval metadata + CI guard + feature audit), agent-farm
+(this slice), thesis (ch6 protocol section), docs/ADR.
+
+**Out of scope**: the metric itself (FIX-METRIC-IA) and the v227 band rebuild
+(phase2-lafa-v227); this slice is orthogonal and composes with both.

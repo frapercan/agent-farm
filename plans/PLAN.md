@@ -192,7 +192,9 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 | [UX-ADMIN-AUDIT](farm-platform/PLAN.md#ux-admin-audit--audit-admin--auth-surface-anonymous-audit-only-covered-public) | F-EXP-RESET | ⬜ pending | P1 | UX-ADMIN-AUDIT — Audit admin + auth surface (anonymous audit only covered public) |
 | [FARM-FEAT.6](farm-platform/PLAN.md#farm-feat6--generic-persistent-service-factory) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.6 — Generic persistent-service factory |
 | [FARM-FEAT.7](farm-platform/PLAN.md#farm-feat7--adopt-libworktreesh-helpers) | F-FEAT | ⬜ pending | P3 | FARM-FEAT.7 — Adopt lib/worktree.sh helpers |
-| [FIX-METRIC-IA](farm-platform/PLAN.md#fix-metric-ia--ia-weighted-f_micro_w-comparable-to-cafalafa-end-to-end) | F-METRIC | ⬜ pending | P0 | FIX-METRIC-IA — IA-weighted f_micro_w comparable to CAFA/LAFA (end-to-end) |
+| [FIX-METRIC-IA](farm-platform/PLAN.md#fix-metric-ia--ia-weighted-f_micro_w-comparable-to-cafalafa-end-to-end) | F-METRIC | 🟦 .a shipped (PR #599) | P0 | FIX-METRIC-IA — IA-weighted f_micro_w comparable to CAFA/LAFA (end-to-end) |
+| [FIX-METRIC-IA.b](farm-platform/PLAN.md#fix-metric-iab--ia-weighted-metric-web-de-bias--db-grid-re-eval--thesis) | F-METRIC | ⬜ pending | P1 | FIX-METRIC-IA.b — web de-bias + DB grid re-eval + thesis |
+| [F-EVAL-PROTOCOL](farm-platform/PLAN.md#f-eval-protocol--leakage-free-temporal-split-cafa-ready-trainvalidtest) | F-EVAL | ⬜ pending | P1 | F-EVAL-PROTOCOL — leakage-free temporal split (CAFA-ready train/valid/test) |
 | [FARM-UI.9](farm-platform/PLAN.md#farm-ui9--ux-reviewer-audit-of-farm-dashboard) | F-UI | ⬜ pending | P3 | FARM-UI.9 — ux-reviewer audit of farm dashboard |
 | [FARM-AUTH.1](farm-platform/PLAN.md#farm-auth1--user-table--password-helpers-wave-3) | F-AUTH | ✅ done | P0 | FARM-AUTH.1 — User table + password helpers (Wave 3) |
 | [FARM-AUTH.10](farm-platform/PLAN.md#farm-auth10--frontend-signup-login-profile-adminusers-pages-wave-5) | F-AUTH | ✅ done | P1 | FARM-AUTH.10 — Frontend: signup, login, profile, admin/users pages (Wave 5) |
