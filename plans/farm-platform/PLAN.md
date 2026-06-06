@@ -3203,3 +3203,70 @@ note: "2026-06-06. The richer method An Phan welcomed. Gated on the v227 grid (p
 ```
 
 **Goal**: submit the competitive, IA-weighted-validated reranker as PROTEA's richer LAFA entry alongside the KNN baseline.
+
+### F-BAND-REGISTRY — canonical (ontology snapshot, IA) per band, derived + guarded
+
+```yaml
+id: F-BAND-REGISTRY
+phase: F-EVAL
+loop: farm-platform
+status: pending
+deps: [FIX-METRIC-IA]
+acceptance: |-
+  One registry maps each band/cutoff to its canonical OntologySnapshot + IA artifact as DERIVED (not free) values; the ontology snapshot governs propagation (true-path), term universe, orphans, and TOI, and the IA is computed from that snapshot + the t0 corpus
+  Resolution is deterministic (snapshot ia_url or explicit payload ia_file) and NEVER falls back to uniform IC=1 (extends the #599 resolver to also bind propagation/TOI/term-universe to the band ontology, not just the IA)
+  A cell is rejected at runtime AND in CI if its IA / ontology snapshot come from a band other than its declared cutoff (phantom-gap guard)
+  Documented: which (snapshot, IA) is authoritative per band (v226, v227), and why a snapshot mismatch between train and eval inflates a fake PROTEA-vs-LAFA gap
+estimated_hours: 10
+priority: P0
+tags: [evaluation, ia, ontology, leakage, comparability]
+requires_human: false
+note: "2026-06-06. Answers the user's 'manage IA and ontology correctly' requirement structurally: snapshot + IA are derived from (band, cutoff), pinned in one registry, never free-floated. Foundational to both FARM-EXP.GRID-v226 and F-RERANK-UNIVERSAL. Builds on #599 (ia_file/ia_url resolver + IC=1 hard-fail) and #602 (IA provenance doc)."
+```
+
+**Goal**: make the per-band ontology snapshot and IA a single, derived, deterministically-resolved, CI-guarded pair, so no cell ever mixes bands and no phantom gap appears from snapshot drift.
+
+### FARM-EXP.GRID-v226 — complete v226 benchmark as a declared closed set + coverage query
+
+```yaml
+id: FARM-EXP.GRID-v226
+phase: F-EXP-RESET
+loop: farm-platform
+status: pending
+deps: [F-BAND-REGISTRY]
+acceptance: |-
+  The full v226 benchmark space is declared as DATA (8 PLM x K{3,5,10} x the NK/LK/PK x MFO/BPO/CCO cells x 7 scoring_configs x {KNN baseline, champion reranker}), bound to the v226-canonical snapshot + IA from F-BAND-REGISTRY
+  Completeness is a set-difference QUERY ("these M cells are missing"), surfaced on /v1/benchmark/matrix; no manual checklist
+  Idempotent gap-fill reuses the FARM-EXP.13 artifacts (MinIO) + the align-cache (K10 superset K5 superset K3); every evaluation_result carries its full axis tuple + content hash
+  "Complete v226 benchmark" is reportable as 100% coverage with IA-weighted f_micro_w on every cell
+estimated_hours: 12
+priority: P1
+tags: [benchmark, grid, coverage, v226, evaluation]
+requires_human: false
+note: "2026-06-06. The user's long-term 'tener todo calculado sobre 226, benchmark completo' deliverable. Treats the grid as EVALUATION coverage (a closed declared set + a coverage query), NOT as a reason to train one model per cell (see F-RERANK-UNIVERSAL)."
+```
+
+**Goal**: have the entire v226 benchmark computed and reportable as a single declared, hash-addressed, query-checkable closed set.
+
+### F-RERANK-UNIVERSAL — one pooled, aspect-conditioned reranker (supersedes per-cell phase3a)
+
+```yaml
+id: F-RERANK-UNIVERSAL
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL.b, F-BAND-REGISTRY]
+acceptance: |-
+  ONE universal reranker trained on the POOLED candidate pairs across PLM and K, with (PLM-id, K-context, neighborhood stats: rank/distance/local-density/vote-count) as FEATURES, aspect-conditioned (aspect feature or per-aspect head); replaces the up-to-216 per-cell phase3a models with a single artifact (decouples evaluation-grid coverage from model granularity)
+  K-augmentation: training candidates drawn from a SEEDED, bounded K distribution (retrieve-wide + rerank), so the model is K-agnostic; inference uses a deterministic K policy (fixed or adaptive), never an unseeded random stream (cell must stay hashable/reproducible per F-EVAL-PROTOCOL)
+  Balanced positive:negative sampling (1:1 or tuned) for reranker training; the negative-construction MUST pass the F-EVAL-PROTOCOL.b feature-leakage audit (anc2vec replication is the cautionary template, since that leak came from how negatives were replicated)
+  Selective-deploy (NK+LK reranker / PK KNN) chosen per (category, aspect) on the VALID window, frozen, then evaluated ONCE on TEST on IA-weighted f_micro_w
+  Matches or beats the per-cell phase3a champion on wFmax (NK + LK) with far fewer models, on the v226 (and v227) band; one container ships to LAFA
+estimated_hours: 24
+priority: P0
+tags: [reranker, universal, pooling, sampling, lafa, performance]
+requires_human: false
+note: "2026-06-06 design with user. The biggest performance lever for LAFA #1: a single pooled, aspect-conditioned reranker with PLM/K as features and K-randomization as augmentation, instead of 216 per-cell models. The 'infinite random K stream' idea is adopted as a SEEDED bounded training distribution (retrieve-wide + neighborhood-context features), not as the inference policy. Supersedes the earlier per-cell phase3a sweep approach."
+```
+
+**Goal**: replace the per-cell reranker grid with a single universal, aspect-conditioned, pooled reranker (PLM/K as features, K-augmented, balanced-sampled, leakage-audited) that is both simpler to ship and stronger, as the main lever toward LAFA #1.
