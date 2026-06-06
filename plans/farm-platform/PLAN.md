@@ -3118,3 +3118,88 @@ PROTEA (cutoff knob + eval metadata + CI guard + feature audit), agent-farm
 
 **Out of scope**: the metric itself (FIX-METRIC-IA) and the v227 band rebuild
 (phase2-lafa-v227); this slice is orthogonal and composes with both.
+
+### F-EVAL-PROTOCOL.b — cutoff CI guard + feature leakage audit + select-on-VALID
+
+```yaml
+id: F-EVAL-PROTOCOL.b
+phase: F-EVAL
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL]
+acceptance: |-
+  Cutoff CI guard: a check fails if any produced artifact (corpus, candidate set, features, labels, IA) references a release > the declared training cutoff; mirrors the ALL_FEATURES producer-consumer guard; runs in PROTEA CI and the reranker-lab CI
+  Feature leakage audit: every feature family (alignment, taxonomy, vote/consensus, embedding, anc2vec, etc.) is checked against the golden rule (computable identically for a never-seen protein with zero known labels); offenders documented + fixed or dropped; anc2vec replication fix is the template
+  protea-reranker-lab phase3a_*_sweep.py refactored to SELECT champion (PLM/K/recipe/hyperparams) + selective-deploy decision (NK+LK reranker vs PK KNN, per category/aspect) + operating-threshold tau on the VALID window, then evaluate the frozen choice ONCE on TEST; no in-TEST selection
+estimated_hours: 16
+priority: P1
+tags: [evaluation, leakage, ci, reranker, methodology]
+requires_human: false
+note: "2026-06-06. Closes the enforcement half of F-EVAL-PROTOCOL (the .a slice shipped the ADR + VALID-window metadata in PROTEA #600). The current lab winner-curse (select + report on the same v226->v230 window) is fixed here by selecting on VALID. Uses the VALID window_role marker from .a."
+```
+
+**Goal**: make the leakage-free protocol ENFORCED (not just documented), and remove the winner's-curse from champion selection by selecting on VALID and reporting on TEST.
+
+### F-EVAL-PROTOCOL.c — fresh-cutoff single-knob inference path (LAFA submission generator)
+
+```yaml
+id: F-EVAL-PROTOCOL.c
+phase: F-EVAL
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL, F-EVAL-PROTOCOL.b]
+acceptance: |-
+  A single `cutoff` knob threads the whole pipeline (corpus, embeddings, candidate KNN, features, IA) so the entire method runs reading ONLY data <= cutoff, producing predictions for a target set with no future-data leakage
+  Running with cutoff = a LAFA timepoint (e.g. Jun_2026) reproduces a submission-shaped prediction file with the same format the LAFA container guide requires (offline, fixed input/output)
+  A retrain with a later cutoff (e.g. Aug_2026) produces a second, comparable submission with only the cutoff changed (the training-data-recency comparison An Phan described)
+  The cutoff CI guard from .b passes on every artifact this path produces
+estimated_hours: 14
+priority: P0
+tags: [evaluation, inference, lafa, cafa, submission, leakage]
+requires_human: false
+note: "2026-06-06. This IS the LAFA submission generator: An Phan (LAFA host) freezes a container at a timepoint and evaluates its predictions over multiple future windows, and welcomes a retrained version to measure data-recency effect. A single-cutoff path makes both the frozen Jun_2026 entry and a later retrained entry fall out cleanly. Feeds F-LAFA-SUBMIT.*."
+```
+
+**Goal**: produce a LAFA-submittable prediction set from a single training-cutoff parameter, with structural no-future-data enforcement, for both the frozen entry and recency-controlled resubmissions.
+
+### F-LAFA-SUBMIT.knn — package + submit PROTEA-KNN to the LAFA server
+
+```yaml
+id: F-LAFA-SUBMIT.knn
+phase: F-LAFA-SUBMIT
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL.c, FIX-METRIC-IA]
+acceptance: |-
+  PROTEA-KNN container (ghcr.io/frapercan/protea/knn-v1) conforms to the LAFA container guide: runs OFFLINE, fixed input/output format, deterministic; the ProtT5/Swiss-Prot reference embeddings live in a persistent data volume per LAFA's hosting requirement
+  A dry-run on a LAFA-shaped timepoint input produces a valid prediction file that scores under cafaeval with the IA-weighted f_micro_w matching our internal numbers
+  Submission completed via the LAFA intake form + host coordination; entry name + dataset (XaxiPiruli/protea-lafa-knn-v227) recorded
+estimated_hours: 10
+priority: P0
+tags: [lafa, submission, container, knn, packaging]
+requires_human: true
+note: "2026-06-06. The KNN container + dataset already exist (per the LAFA thread). This slice aligns packaging to the guide, validates the offline run against the IA-weighted protocol, and submits. requires_human: the intake form + host back-and-forth is a person-in-the-loop step. The KNN is the transparent baseline entry; the richer reranker is F-LAFA-SUBMIT.reranker."
+```
+
+**Goal**: get the clean PROTEA-KNN baseline live on the LAFA server as a reproducible, offline, leakage-free containerized method.
+
+### F-LAFA-SUBMIT.reranker — package + submit the reranker as a second LAFA entry
+
+```yaml
+id: F-LAFA-SUBMIT.reranker
+phase: F-LAFA-SUBMIT
+loop: farm-platform
+status: pending
+deps: [F-LAFA-SUBMIT.knn, FIX-METRIC-IA.b]
+acceptance: |-
+  The learned re-ranker (gradient-boosted over KNN candidates; alignment + taxonomy + IA-aware features; per-aspect selection; selective-deploy NK+LK reranker / PK KNN) packaged as a separate offline LAFA container, reference + booster artifacts in a persistent volume
+  Validated to beat the KNN baseline on IA-weighted f_micro_w (NK + LK) under the LAFA protocol on the v227 band, with PK held at the KNN baseline (honest selective deploy)
+  Submitted as a distinct LAFA entry once the v227 grid + reranker are stabilized
+estimated_hours: 12
+priority: P1
+tags: [lafa, submission, reranker, ensemble, container]
+requires_human: true
+note: "2026-06-06. The richer method An Phan welcomed. Gated on the v227 grid (phase2-lafa-v227 rebuild) + FIX-METRIC-IA.b Part 2 so the reported lift is real IA-weighted. Optional further variants (baseline concatenation, InterProScan features, adaptive K) are follow-on entries, not this slice."
+```
+
+**Goal**: submit the competitive, IA-weighted-validated reranker as PROTEA's richer LAFA entry alongside the KNN baseline.
