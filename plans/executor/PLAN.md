@@ -1483,7 +1483,7 @@ tags: [hotfix, rsc, urgent]
 id: LOGIN-PERSIST-DEBUG
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Root cause of "login no es persistente" complaint identified and
