@@ -3485,3 +3485,28 @@ requires_human: false
 ```
 
 **Goal**: test the user's "train on more/random temporal deltas" intuition in its principled form -- gap-matched sliding-window augmentation, not pure random -- to see if extra training-window supervision beats the fixed 5-release deltas. Gated on .5a showing supervision (not recall/capacity) is the bottleneck, since recall is already 94.9% and the underlying annotation events are finite (sliding windows resample, they do not add new ground truth).
+
+### F-RERANK-UNIVERSAL.5c — bounded VALID-set hyperparameter search (gated on .5a competitive)
+
+```yaml
+id: F-RERANK-UNIVERSAL.5c
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.5a]
+acceptance: |-
+  GATE: run ONLY if the F-RERANK-UNIVERSAL.5a pooled universal booster (default hparams) is COMPETITIVE on the 226->227 VALID band (beats or is near the 0.5863 KNN / 0.6589 per-cell-reranker baselines). If .5a is far off, the problem is not hparams -- fix that first. This is a SECONDARY, marginal-gain lever (recall is 94.9% and the objective is already lambdarank IA-weighted; the big levers are spent). Expect ~+0.01-0.03, not a jump.
+  The current universal hparams are INHERITED/default and untuned for the pooled setting (the same "shared hparams = poorly-tuned" problem that stopped EXP.14). Run a BOUNDED hyperparameter search (10-20 configs max; grid or Optuna/Bayesian, capped, log configs run + dropped, no silent truncation) over the most suspect knobs, in priority order:
+    1. neg_pos_ratio {1, 5, 10} -- MOST suspect: 1:1 is likely wrong for RANKING (inference candidate ratio is ~50:1+; the ranker must learn to push down many false candidates, which 1:1 under-trains).
+    2. num_leaves {31, 63, 127} + min_data_in_leaf {50, 100, 200} (model capacity vs the 80M-row pool).
+    3. learning_rate {0.05, 0.1} (with early stopping, data-driven tree count).
+    4. ia_scale / IA-feval mode strength (the .4 combined-mode knob) and the seeded K-aug bounds.
+  Protocol (leakage-free, no winner's-curse): ALL selection on the VALID window (226->227), metric = the .1 IA-weighted f_micro_w evaluator; emit a per-config VALID table; FREEZE the single best config; evaluate it EXACTLY ONCE on the held-out TEST window(s) (per .6). Do NOT tune on TEST.
+  Memory-bounded: reuse .5a's bounded pooled staging (each config = one full pooled fit; keep peak RSS under the budget, no swap). Report: per-config VALID f_micro_w, the selected config, the delta vs the .5a default, and honest framing.
+estimated_hours: 14
+priority: P2
+tags: [reranker, universal, hparams, tuning, valid, lambdarank]
+requires_human: false
+```
+
+**Goal**: do the VALID-set hyperparameter selection the leakage-free protocol already calls for (select on VALID, freeze, test once), which has NOT been done for the universal reranker -- its hparams are inherited/default. Bounded + gated on .5a being competitive, since this is a marginal-gain lever (recall + objective alignment are the big ones, already addressed). Top suspect: neg_pos_ratio=1:1 is likely wrong for a ranking objective.
