@@ -951,7 +951,8 @@ tags: [complexity, discussion, future-work]
 id: COMPLEXITY.9
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
+shipped_via: "complexity-paper tag v1.0 (abstract + membrane TikZ + scalability plots + complexity.pdf, 90pp)"
 deps: [COMPLEXITY.2, COMPLEXITY.5, COMPLEXITY.6, COMPLEXITY.7, COMPLEXITY.8]
 acceptance: |-
   Abstract (250 words, lead with the dual-lens contribution).
@@ -970,4 +971,39 @@ estimated_hours: 5
 priority: P1
 tags: [complexity, polish, deposit]
 ```
+
+### COMPLEXITY.10 — PMC boundary as a falsifiable design principle
+
+```yaml
+id: COMPLEXITY.10
+phase: COMPLEXITY
+loop: thesis-writer
+status: pending
+deps: [COMPLEXITY.9]
+acceptance: |-
+  Elevate the membrane lens from complementary tribute to a falsifiable
+  design principle: PROTEA is competitive because it is engineered to stay
+  inside PMC (tractable, confluent, no membrane division), declining the
+  NP-hard formulations rivals implicitly require (exact MSA, optimal
+  phylogenetic placement).
+  New closing section in ch4 (after the PROTEA-DECIDE in PMC theorem)
+  stating the design thesis + the explicit falsifiability criterion (what
+  observation would refute it: an NP-hard-core method beating PROTEA at
+  comparable wall-clock, or PROTEA needing membrane division to stay
+  competitive).
+  ch7 comparative section reframed around the PMC-vs-implicit-NP-hard axis:
+  each compared method (BLAST, HMMER, NetGO, exact-MSA pipelines) classified
+  by whether its core stays tractable; PROTEA placed as PMC-by-construction.
+  Claim stays defensible (PMC membership is a necessary part of the cost
+  story, consistent with ch6 empirics, NOT a sole cause). No invented refs.
+  PDF builds clean, complexity.pdf regenerated, tagged v1.1.
+estimated_hours: 2
+priority: P2
+tags: [complexity, membrane, design-principle, narrative]
+```
+
+**Goal**: make the membrane-computing chapter pull intellectual weight by
+turning the PMC/NPMC boundary into a design criterion that explains PROTEA's
+cost advantage and ties together ch3 (MSA NP-hardness), ch5 (Big-O), and ch7
+(comparative). Executed 2026-06-07 in a complexity-paper worktree.
 
