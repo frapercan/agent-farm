@@ -3023,3 +3023,311 @@ priority: P0
 tags: [ops, observability, exp13, coord-fail-propagate]
 note: "shipped via PROTEA PR #571 2026-05-27"
 ```
+priority: P0
+tags: [ops, observability, exp13, coord-fail-propagate]
+note: "shipped via PROTEA PR #571 2026-05-27"
+```
+
+## F-LAFA-IA — PROTEA eval aligned to LAFA protocol + IA-weighted
+
+Campaign spec: `~/Thesis2/IA-ALIGNED-RERANKER-BRIEF.md` (verified
+2026-06-02). One story: make the lab/PROTEA evaluation match the LAFA
+submission protocol AND report IA-weighted metrics (wFmax / S_min),
+with every metric documented for thesis chapter 6. Repo =
+`protea-reranker-lab`, base = `develop`. The honest publishable claim is
+the delta over KNN baseline on the IA-weighted metric, not the
+propagation-inflated unweighted Fmax (brief section 5).
+
+### F-LAFA-IA.0 — IA artefact + weighted baseline re-eval
+
+```yaml
+id: F-LAFA-IA.0
+phase: F-LAFA-IA
+loop: executor
+status: done
+shipped_via: "lab PR #57"
+deps: []
+acceptance: |-
+  ia.txt generated for GO release v226, consistent with
+  datasets/bench-v1-K5/go.obo and propagated annotation frequencies of
+  the training corpus; provenance documented (corpus, release, formula
+  IA(t) = -log2 P(t | parents(t)), Clark and Radivojac 2013). Reuse any
+  IA utility already in the cafaeval-protea fork before writing one.
+  cafaeval re-run with ia= over the EXISTING lk-{bpo,mfo,cco} seed42
+  runs for BOTH reranker and KNN baseline. The four numbers per cell
+  (internal Fmax / cafaeval Fmax / wFmax / S_min) recorded in runs/ +
+  a reproducible markdown summary. No training changes in this slice.
+  Local CI green; PR against lab develop.
+estimated_hours: 8
+priority: P0
+tags: [lafa, ia, metrics, baseline, chapter-6]
+note: "spec brief sections 3, 7.1, 7.2; foundation for all later slices"
+```
+
+### F-LAFA-IA.1 — Pin exact LAFA protocol at v227 + verify IA + minimal-op verdict
+
+```yaml
+id: F-LAFA-IA.1
+phase: F-LAFA-IA
+loop: executor
+status: done
+shipped_via: "lab PR #58"
+deps: [F-LAFA-IA.0]
+acceptance: |-
+  ANALYSIS slice (no heavy exports; root is at 95%/48G and Docker.raw
+  does not compact hot, so dispatching a re-export here is forbidden).
+  Deliver, written to runs/ + a reproducible markdown summary:
+  1. EXACT LAFA protocol pinned to the v227 band (corrected: LAFA is
+     227->230, deployed/checked at v227, see memory
+     lafa-v227-band-correction-2026-06-04). Document with exactness every
+     rule the LAFA deployed submission used: t0 cutoff, eval window,
+     prediction pool, IA file, propagation (prop), normalization (norm),
+     orphan handling, max_terms, threshold step, and how the gt file is
+     constructed. Cross-check against protea-lafa-knn (t0=Sep 2025, 7401
+     queries) AND the lab sweeps so there is ONE authoritative rule set.
+  2. IA verified OK: reconcile the two IA sources
+     (lab datasets/ia/IA-swissprot-exp-v227.txt vs
+     protea-lafa-knn/lafa_t0_Sep_2025/IA.tsv) -- same release, same
+     term count, same values? Pick the authoritative one, document why.
+  3. MINIMAL-OP VERDICT (gates the 24-cell decision): determine whether
+     aligning the bench-v1 grid to v227 requires a full re-export
+     (predictions regenerated at v227 train cutoff) or can be done by
+     RE-SCORING the existing v226-cut predictions against the 227->230
+     eval band (cheap, no new MinIO datasets). Quantify the disk cost of
+     each path. GOA v227 and v230 are already ingested (verified
+     2026-06-04), so re-scoring is plausible. Prove the verdict on ONE
+     probe cell (e.g. prostt5 K3) before generalizing.
+  4. Decide the fate of the hung phase2-lafa-v227 chain (0-preds,
+     predict_go_terms coord bug): unblock via the recovery recipe or
+     formally retire with rationale.
+  5. Note the metrics-doc collision: lab PR #56 (docs/source/metrics.rst,
+     comprehensive) vs PR #57 (docs/source/lafa_ia_metrics.rst) both add
+     a metrics page to the toctree. Recommend which is canonical and how
+     to deduplicate (do not merge here; just record the recommendation).
+estimated_hours: 6
+priority: P0
+tags: [lafa, protocol, v227, ia-verify, minimal-op, disk-gated]
+note: "ANALYSIS only; the 24-cell v227 grid (F-LAFA-IA.1b) is dispatched ONLY after this verdict + disk plan"
+```
+
+### F-LAFA-IA.2 — IA inside training (levers, gated)
+
+```yaml
+id: F-LAFA-IA.2
+phase: F-LAFA-IA
+loop: executor
+status: done
+shipped_via: "lab PR #60"
+deps: [F-LAFA-IA.0, F-LAFA-IA.1]
+acceptance: |-
+  Lever 1 (probe): binary objective + weight=IA wired into both
+  lgb.Dataset in reranker.py fit(), config flag ia_weighting
+  (none|positives|all), probed on lk-bpo seed42. GATE: report wFmax
+  reranker vs KNN (weighted and unweighted); if no wFmax lift over the
+  F-LAFA-IA.0 baseline, STOP and report before proceeding. If it lifts:
+  Lever 2 (lambdarank + IA-bucketed label_gain) and Lever 3 (custom
+  feval = propagated IA-weighted Fmax proxy for early-stop). Fanout to
+  the grid only after 3-5 cells validate. ADR in the lab recording the
+  "IA-aligned training" decision + section-5 expectation management.
+estimated_hours: 16
+priority: P1
+tags: [lafa, ia, lambdarank, training, gated, adr]
+note: "gate at Lever 1; do NOT put cafaeval in the gradient loop (brief section 4)"
+```
+
+### F-LAFA-IA.1b — v227 probe re-export (1 cell) + IA-weighted eval
+
+```yaml
+id: F-LAFA-IA.1b
+phase: F-LAFA-IA
+loop: executor
+status: done
+shipped_via: "lab PR #59"
+deps: [F-LAFA-IA.1]
+acceptance: |-
+  Validate the faithful v227 path on ONE probe cell before the 24-cell
+  fanout. Steps:
+  1. Construct the export_research_dataset payload for a v227-lineage
+     probe cell: prostt5, K=3, TRAIN CUTOFF v227 (not v226), eval band
+     227->230. Use the exact LAFA protocol pinned in F-LAFA-IA.1
+     (lab PR #58, experiments/lafa_ia_v227_protocol/) + adapt from an
+     existing v226-lineage prostt5 K3 dataset config (read its row via
+     the API /v1/datasets or DB). Name it bench-v1-K3-v227-lineage-prostt5.
+  2. Dispatch via dispatch_with_lock (FARM-FEAT.13, owner=export) to
+     POST /v1/datasets. Stack is on NATIVE docker engine now (413G free,
+     no Docker.raw); anc2vec + EXPORT_MINIJOBS=0 + perf env already set.
+  3. Monitor the export job to SUCCEEDED (use the predict_go_terms coord
+     recovery recipe from memory if it stalls at 0 preds: purge queue +
+     dedupe pred_sets + force-finalize). Report per-cell DISK COST (root
+     delta) for fanout planning.
+  4. IA-weighted eval: cafaeval with ia=datasets/ia/IA-swissprot-exp-v227.txt
+     on the v227 cell (reranker + KNN baseline), prop=fill norm=cafa
+     no_orphans, headline = IA-weighted micro Fmax (wFmax) + S_min.
+  5. Report the four numbers (internal Fmax / cafaeval Fmax / wFmax /
+     S_min) AND the gap vs the LAFA-deployed-at-v227 score. GATE: state
+     whether the v227 band closes the bench-vs-LAFA gap. If yes -> green
+     light F-LAFA-IA.1c (24-cell fanout); if no -> stop and report why.
+estimated_hours: 4
+priority: P0
+tags: [lafa, v227, probe, re-export, ia-weighted, dispatch-with-lock]
+note: "release the stack-owner lock (owner=free) on completion; native engine so disk is no longer the constraint"
+```
+
+### FIX-ANON-PREDICT — anonymous annotation flow completes end-to-end
+
+```yaml
+id: FIX-ANON-PREDICT
+phase: F-OPS
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  The public anonymous annotation flow (home/functional-annotation form)
+  must complete end-to-end without a 401. Root cause: `/embeddings/predict`
+  (POST, protea/api/routers/embeddings.py ~line 185) is gated with
+  `Depends(require_role(ROLE_OPERATOR))` + `Depends(require_user_quota("predict"))`,
+  but the anon form's Step 3 (frontend `launchPredictGoTerms` -> POST
+  /embeddings/predict) carries no token -> 401. Meanwhile `/annotate`
+  (annotate.py) is anon via `Depends(require_anon_quota)`, and the home
+  advertises anonymous annotation.
+  FIX: let `/embeddings/predict` accept ANONYMOUS quota the same way
+  `/annotate` does (mirror its auth: require_anon_quota, which also serves
+  authenticated users). Do NOT break logged-in users (they keep their
+  quota); just stop blocking anon. Apply the same to any other endpoint
+  in the anon annotation chain that the frontend hits (verify the full
+  AnnotateForm sequence: annotate -> poll embeddings -> predict ->
+  prediction-set results all reachable anon). Keep anon rate-limited via
+  anon_quota; do not disable auth globally.
+  Local CI green (ruff+mypy+pytest+smell). PR to develop. Add/adjust a
+  test asserting /embeddings/predict is reachable under anon quota.
+estimated_hours: 2
+priority: P0
+tags: [auth, anon, annotation, demo, presentation]
+note: "demo-critical for the presentation tomorrow; after merge, redeploy protea-deploy + re-verify E2E"
+```
+
+### FIX-PREDICT-COORD-RELIABLE — annotation finalizes reliably (production)
+
+```yaml
+id: FIX-PREDICT-COORD-RELIABLE
+phase: F-OPS
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  The public annotation flow (annotate -> embeddings -> predict_go_terms
+  -> results) must finalize RELIABLY for any user, with the stale-job
+  reaper RUNNING. Today it does not: a real anonymous insulin annotation
+  produced 73 correct GO predictions but the predict_go_terms COORD job
+  stuck at QUEUED/0%, and was requeued ~3 min in -> zombie + duplicate
+  prediction_sets (RMQ re-delivery). The live UI spinner then hangs
+  (AnnotateForm polls predict job for status==='succeeded').
+
+  ROOT CAUSE (verified): the coord (protea/core/operations/predict_go_terms/
+  _coordinator.py) seeds meta.expected_batches + batches_completed=0,
+  dispatches KNN batches, returns OperationResult(deferred=True). BaseWorker
+  keeps the job RUNNING but the lease (job.leased_until) is NOT renewed for
+  a deferred coord. The StaleJobReaper requeues it once leased_until < now
+  (lease_expired) BEFORE the slow batches (alignments + taxonomy + reranker
+  features for the quick-annotation) finish and finalize the parent via
+  _batch_op.py::_finalize_parent_if_last. #577 added the finalize but it
+  RACES the reaper.
+
+  FIX: make a deferred coordinator survive the reaper until its children
+  finalize it, WITHOUT disabling the reaper. Cleanest: on deferred=True,
+  set job.leased_until to a generous, configurable window (e.g. now +
+  PROTEA_DEFERRED_LEASE_SECONDS, default ~3600) so the reaper does not
+  reap a coord whose batches are still running; the batch-finalize flips
+  it to SUCCEEDED; if the batches genuinely hang, the generous lease still
+  lets the reaper clean it eventually. Make _finalize_parent_if_last
+  idempotent + correct for the single-batch / quick-annotation case
+  (expected_batches must be seeded correctly, including 1 batch). Prevent
+  duplicate prediction_sets on any re-delivery.
+
+  ACCEPTANCE: with the reaper RUNNING, a real anon insulin annotation
+  reaches predict SUCCEEDED within a couple minutes, 3 runs in a row, no
+  zombie QUEUED, no duplicate prediction_sets. Unit/integration tests for
+  the deferred-lease + finalize + idempotency. Local CI green; PR to develop.
+estimated_hours: 5
+priority: P0
+tags: [reliability, predict-coord, reaper, annotation, production, ops]
+note: "operability > demo; conductor will redeploy + verify 3 real annotations after merge, then re-enable the reaper"
+```
+
+### FIX-ANNOTATE-BANNER-ACCURACY — GPU-busy banner reflects real work only
+
+```yaml
+id: FIX-ANNOTATE-BANNER-ACCURACY
+phase: F-OPS
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  The "Anotacion temporalmente no disponible / GPU compartida" banner in
+  AnnotateForm (apps/web/components/AnnotateForm.tsx ~line 177-230) must
+  reflect GENUINELY active GPU work only. Today it shows whenever ANY
+  GPU-op job (compute_embeddings/predict_go_terms/export_research_dataset)
+  is QUEUED or RUNNING -- including stale/zombie jobs with no live worker
+  and no RMQ message, producing FALSE "GPU busy" walls that block the form
+  when nothing is actually running. Fix: gate the banner on real activity
+  (e.g. a job that is RUNNING with a fresh heartbeat / leased_until in the
+  future, or actual queue depth + consumer activity), not merely a DB row
+  in QUEUED/RUNNING. Consider a small backend availability endpoint that
+  returns a truthful busy/free signal (queue depth + recently-progressing
+  job), and have the frontend poll that. Stale jobs must NOT trip it.
+  Local CI green; PR to develop. Verify: with 0 live GPU work the form is
+  enabled; with a real running embedding it shows busy.
+estimated_hours: 3
+priority: P1
+tags: [reliability, frontend, annotation, banner, ops]
+```
+
+### FIX-ANNOTATE-CONFIG-SLOW — /annotate fast (no 40s embedding-config scan)
+
+```yaml
+id: FIX-ANNOTATE-CONFIG-SLOW
+phase: F-OPS
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  POST /v1/annotate takes ~40s wall-clock, dominated by
+  _best_embedding_config (protea/api/routers/annotate.py ~line 50): an
+  outerjoin + GROUP BY over sequence_embedding (5.8M rows) to pick the
+  smallest model that has embeddings. Make /annotate return in < ~2s.
+  Options: a fast EXISTS-per-config probe instead of a full GROUP BY
+  count, a cached/prewarmed "configs-with-embeddings" lookup (TTL cache
+  like the other prewarms), or a covering index. Must keep picking a
+  config that actually HAS embeddings for the chosen model (correctness).
+  Measure before/after. Local CI green; PR to develop.
+estimated_hours: 3
+priority: P1
+tags: [reliability, performance, annotation, ops]
+```
+
+### FIX-STACK-SELF-HEAL — stack boots robustly + stays up
+
+```yaml
+id: FIX-STACK-SELF-HEAL
+phase: F-OPS
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  "Operative always": the dev/deploy stack must boot correctly regardless
+  of caller and self-recover from process death. Root incident tonight:
+  `manage.sh start` run WITHOUT sourcing .env crashed the API
+  (RuntimeError PROTEA_JWT_SECRET not set, AUTHN on) and it stayed down.
+  Fixes: (1) make scripts/manage.sh SOURCE .env itself (set -a; source
+  .env; set +a) at the top of cmd_start so a naive `manage.sh start` never
+  crashes on missing env (memory project_stack_env_not_sourced_outage).
+  (2) Add lightweight self-healing: a health-watchdog (systemd user units
+  with Restart=on-failure + EnvironmentFile, OR a small supervised loop /
+  cron that checks API :8000/health + worker pidfiles every ~30s and
+  restarts any dead component WITH .env sourced). Keep it idempotent (no
+  duplicate workers) and documented. Do NOT restart the stack while a
+  long job (export/predict) is mid-flight without need. Local CI green;
+  PR to develop (manage.sh + any scripts live in PROTEA repo).
+estimated_hours: 5
+priority: P0
+tags: [reliability, ops, supervisor, stack, env-sourcing]

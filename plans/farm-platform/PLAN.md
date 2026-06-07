@@ -3009,7 +3009,8 @@ tags: [ux, admin, audit]
 id: FIX-METRIC-IA
 phase: F-METRIC
 loop: farm-platform
-status: pending
+status: done
+shipped_via: "PROTEA PR #599"
 deps: []
 acceptance: |-
   IA-gen util computes information accretion from OntologySnapshot + t0 annotation corpus; reproduces lafa_t0_Sep_2025/IA.tsv on overlapping terms (max abs diff < 1e-3) -- own IA that MUST match LAFA
@@ -3060,7 +3061,8 @@ is tracked as FIX-METRIC-IA.b below.
 id: FIX-METRIC-IA.b
 phase: F-METRIC
 loop: farm-platform
-status: pending
+status: done
+shipped_via: "PROTEA PR #601"
 deps: [FIX-METRIC-IA]
 acceptance: |-
   apps/web de-bias: home + benchmark + scoring pages headline the f_micro_w aggregate + per-task 95% CI (consuming the router's primary_metric + per_task), and label any best-cell ONLY as such (no winner's-curse maximum as headline)
@@ -3125,7 +3127,8 @@ PROTEA (cutoff knob + eval metadata + CI guard + feature audit), agent-farm
 id: F-EVAL-PROTOCOL.b
 phase: F-EVAL
 loop: farm-platform
-status: pending
+status: done
+shipped_via: "PROTEA PR #604"
 deps: [F-EVAL-PROTOCOL]
 acceptance: |-
   Cutoff CI guard: a check fails if any produced artifact (corpus, candidate set, features, labels, IA) references a release > the declared training cutoff; mirrors the ALL_FEATURES producer-consumer guard; runs in PROTEA CI and the reranker-lab CI
@@ -3210,7 +3213,8 @@ note: "2026-06-06. The richer method An Phan welcomed. Gated on the v227 grid (p
 id: F-BAND-REGISTRY
 phase: F-EVAL
 loop: farm-platform
-status: pending
+status: done
+shipped_via: "PROTEA PR #603"
 deps: [FIX-METRIC-IA]
 acceptance: |-
   One registry maps each band/cutoff to its canonical OntologySnapshot + IA artifact as DERIVED (not free) values; the ontology snapshot governs propagation (true-path), term universe, orphans, and TOI, and the IA is computed from that snapshot + the t0 corpus
