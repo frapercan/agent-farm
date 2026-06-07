@@ -50,9 +50,25 @@ API_FAIL_THRESHOLD="${PROTEA_API_FAIL_THRESHOLD:-3}"
 API_FAIL_WINDOW_SEC="${PROTEA_API_FAIL_WINDOW_SEC:-90}"
 API_FAIL_STATE="${PROTEA_API_FAIL_STATE:-$AGENT_FARM_ROOT/state/deploy_keeper_api_fail_count}"
 
+# Frontend health gate (FARM-DEPLOY.1).
+# After a redeploy the Next.js process can stay down while the API and
+# workers come back cleanly. This gate detects that case and restarts
+# the frontend without a full redeploy cycle.
+#
+# FRONTEND_MISS_THRESHOLD: consecutive ticks :3000 must be unreachable
+#   before we attempt a recovery start. Default 2 so a brief restart
+#   blip during a manual `manage.sh restart` does not cause a runaway
+#   loop. Override via env for tests.
+# FRONTEND_MISS_STATE: persistent counter file "count<TAB>first_fail_ts".
+# PROTEA_FRONTEND_URL: URL to probe. Default http://localhost:3000.
+FRONTEND_MISS_THRESHOLD="${PROTEA_FRONTEND_MISS_THRESHOLD:-2}"
+FRONTEND_MISS_STATE="${PROTEA_FRONTEND_MISS_STATE:-$AGENT_FARM_ROOT/state/deploy_keeper_frontend_miss_count}"
+PROTEA_FRONTEND_URL="${PROTEA_FRONTEND_URL:-http://localhost:3000}"
+
 mkdir -p "$(dirname "$LOG_FILE")"
 mkdir -p "$(dirname "$WORKER_MISS_STATE")"
 mkdir -p "$(dirname "$API_FAIL_STATE")"
+mkdir -p "$(dirname "$FRONTEND_MISS_STATE")"
 
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
@@ -269,6 +285,125 @@ api_healthcheck_reset_debounce() {
   mv -f "$tmp_state" "$API_FAIL_STATE"
 }
 
+# is_frontend_healthy (FARM-DEPLOY.1)
+#
+# Returns 0 if http://localhost:3000 responds with HTTP 2xx/3xx within
+# 5 seconds. Returns 1 otherwise. Pure probe, no side-effects.
+is_frontend_healthy() {
+  curl -sf -m 5 -o /dev/null "$PROTEA_FRONTEND_URL" 2>/dev/null
+}
+
+# frontend_healthcheck_failed_debounce (FARM-DEPLOY.1)
+#
+# Mirrors api_healthcheck_failed_debounce: records a frontend miss and
+# returns whether the FRONTEND_MISS_THRESHOLD has been breached.
+#
+# State file: "count<TAB>first_fail_epoch" (same layout as API state).
+# Sets global FRONTEND_HC_FAIL_COUNT for callers that want to log it.
+#
+# Returns 0 if threshold breached (caller should recover).
+# Returns 1 if still within grace window (single blip, do nothing).
+frontend_healthcheck_failed_debounce() {
+  FRONTEND_HC_FAIL_COUNT=0
+  local now
+  now=$(date +%s)
+
+  local prev_count=0 prev_first_ts=0
+  if [[ -f "$FRONTEND_MISS_STATE" ]]; then
+    IFS=$'\t' read -r prev_count prev_first_ts < "$FRONTEND_MISS_STATE" 2>/dev/null || true
+    [[ "$prev_count"    =~ ^[0-9]+$ ]] || prev_count=0
+    [[ "$prev_first_ts" =~ ^[0-9]+$ ]] || prev_first_ts=0
+  fi
+
+  local elapsed=$(( now - prev_first_ts ))
+  local first_ts
+  if [[ "$prev_count" -eq 0 || "$elapsed" -gt 90 ]]; then
+    prev_count=0
+    first_ts="$now"
+  else
+    first_ts="$prev_first_ts"
+  fi
+
+  local new_count=$(( prev_count + 1 ))
+  FRONTEND_HC_FAIL_COUNT="$new_count"
+
+  local tmp_state="${FRONTEND_MISS_STATE}.tmp"
+  printf '%s\t%s\n' "$new_count" "$first_ts" > "$tmp_state"
+  mv -f "$tmp_state" "$FRONTEND_MISS_STATE"
+
+  if (( new_count >= FRONTEND_MISS_THRESHOLD )); then
+    return 0   # threshold breached: caller should recover
+  fi
+  return 1     # still in grace window
+}
+
+# frontend_healthcheck_reset_debounce (FARM-DEPLOY.1)
+# Called when :3000 is healthy to clear the miss counter.
+frontend_healthcheck_reset_debounce() {
+  local tmp_state="${FRONTEND_MISS_STATE}.tmp"
+  printf '0\t0\n' > "$tmp_state"
+  mv -f "$tmp_state" "$FRONTEND_MISS_STATE"
+}
+
+# recover_frontend (FARM-DEPLOY.1)
+#
+# Starts the Next.js frontend process the same way manage.sh section [9]
+# does: prefer PORT=3000 HOSTNAME=0.0.0.0 node .next/standalone/server.js
+# when the standalone build exists, otherwise fall back to
+# `npm run start`. Runs detached (setsid) so the process survives the
+# parent shell. Writes the pid to $DEPLOY_PATH/logs/pids/frontend.pid,
+# which is the same path manage.sh uses.
+#
+# Calling this function when the frontend is already running is safe:
+# the function is guarded by is_frontend_healthy() at its call site.
+# Returns 0 on launch (does not wait for the port to be up).
+recover_frontend() {
+  local web_dir="$DEPLOY_PATH/apps/web"
+  local pid_dir="$DEPLOY_PATH/logs/pids"
+  local log_dir="$DEPLOY_PATH/logs"
+  mkdir -p "$pid_dir" "$log_dir"
+
+  local pid_file="$pid_dir/frontend.pid"
+  local log_file="$log_dir/frontend.log"
+  local standalone_server="$web_dir/.next/standalone/server.js"
+
+  if [[ -f "$standalone_server" ]]; then
+    log "[frontend-heal] starting standalone server: node $standalone_server"
+    setsid env PORT=3000 HOSTNAME=0.0.0.0 \
+      node "$standalone_server" >> "$log_file" 2>&1 &
+  else
+    log "[frontend-heal] standalone server.js not found; falling back to npm run start"
+    setsid bash -c "cd '$web_dir' && npm run start" >> "$log_file" 2>&1 &
+  fi
+  local new_pid=$!
+  printf '%s\n' "$new_pid" > "$pid_file"
+  log "[frontend-heal] frontend launched pid=$new_pid log=$log_file"
+  return 0
+}
+
+# ensure_frontend_up (FARM-DEPLOY.1)
+#
+# Probes :3000 and, if down, applies the debounce counter. Triggers
+# recover_frontend only once the miss threshold is breached. On
+# success (probe OK or recovery launched) resets the counter. Emits
+# a heartbeat via self_heal_heartbeat so the event appears in
+# agent-farm sqlite.
+ensure_frontend_up() {
+  if is_frontend_healthy; then
+    frontend_healthcheck_reset_debounce
+    return 0
+  fi
+  if frontend_healthcheck_failed_debounce; then
+    log "frontend ${PROTEA_FRONTEND_URL} down for ${FRONTEND_HC_FAIL_COUNT} consecutive ticks (>= threshold ${FRONTEND_MISS_THRESHOLD}); attempting recovery"
+    self_heal_heartbeat warn "[frontend-heal] :3000 down for ${FRONTEND_HC_FAIL_COUNT} ticks; recovering"
+    recover_frontend
+    self_heal_heartbeat info "[frontend-heal] recover_frontend launched; will confirm on next tick"
+  else
+    log "frontend ${PROTEA_FRONTEND_URL} down (tick ${FRONTEND_HC_FAIL_COUNT}/${FRONTEND_MISS_THRESHOLD}); within grace window, deferring recovery"
+  fi
+  return 0
+}
+
 # Self-seed .env.local with the JWT secret + supporting envs. manage.sh
 # starts uvicorn via _start_bg (setsid + &) which needs vars EXPORTED,
 # not just shell-local; PROTEA's scripts/deploy.sh does `set -a;
@@ -411,6 +546,9 @@ fi
 
 if [[ "$FORCE" -eq 0 && "$BOOTSTRAP" -eq 0 && "$LOCAL" == "$REMOTE" && "$siblings_advanced" -eq 0 ]]; then
   log "noop on $REMOTE"
+  # Frontend health gate (FARM-DEPLOY.1): even on a noop tick the
+  # frontend may be down from a prior redeploy or manual restart.
+  ensure_frontend_up
   exit 0
 fi
 
@@ -452,6 +590,13 @@ fi
 log "deploy.sh origin/develop ${ARGS[*]}"
 if PROTEA_DEPLOY_PATH="$DEPLOY_PATH" PROTEA_SIBLINGS_DIR="$SIBLINGS_DIR" bash scripts/deploy.sh origin/develop "${ARGS[@]}" >>"$LOG_FILE" 2>&1; then
   log "OK now on $(git rev-parse --short HEAD)"
+  # Frontend health gate (FARM-DEPLOY.1): deploy.sh starts the API and
+  # workers but the frontend process can fail to come up independently.
+  # Check :3000 after a brief wait and recover if needed. The debounce
+  # inside ensure_frontend_up prevents a one-tick blip from causing a
+  # runaway recovery loop.
+  sleep 4
+  ensure_frontend_up
   exit 10
 else
   rc=$?
