@@ -3423,3 +3423,21 @@ requires_human: false
 ```
 
 **Goal**: stop deploy-keeper from leaving the public demo frontend dark after a redeploy; the redeploy currently brings up API+workers but not the frontend, breaking protea.ngrok.app for anyone testing the demo.
+
+### FARM-DEPLOY.2 — publish the complexity-paper PDF to the deploy stack (separate from the thesis)
+
+```yaml
+id: FARM-DEPLOY.2
+phase: F-FEAT
+loop: farm-platform
+status: pending
+deps: [FARM-DEPLOY.1]
+acceptance: |-
+  Mirror the FARM-1.8 thesis publisher (scripts/services/lib/protea_thesis_pdf_publish.sh) for the complexity-paper, kept as a SEPARATE document: a new scripts/services/lib/protea_complexity_pdf_publish.sh that builds complexity.pdf from the LOCAL complexity-paper repo (~/Thesis2/complexity-paper, which has NO git remote) pinned to its LATEST annotated tag (deposit semantics, currently v1.1; never the WIP branch HEAD), in a stable detached worktree (e.g. ~/Thesis2/worktrees/_complexity-publish), skipping the latex build when the published tag-SHA marker is unchanged. Copy the built PDF atomically to the deploy web public dir as complexity.pdf and make it live the SAME way the thesis publisher makes thesis.pdf live (so https://protea.ngrok.app/complexity.pdf returns 200). Wire it into deploy-keeper-tick.sh right after the thesis publish step, with its own heartbeat + state/logs/complexity_pdf_publish.log + state/complexity_pdf_published.sha marker, and the same exit-code contract (0 ok/noop, 1 build-failed-noop, 2 env-problem) so a complexity build failure never fails the tick. Do an initial publish so /complexity.pdf is reachable immediately. Optionally add a UI link next to the thesis link. Test mirrors test_deploy_keeper_*.sh patterns (tag-unchanged noop, new-tag rebuild, missing-latexmk env-skip).
+estimated_hours: 3
+priority: P2
+tags: [deploy-keeper, complexity, pdf, publish, visibility]
+requires_human: false
+```
+
+**Goal**: serve the complexity-paper at protea.ngrok.app/complexity.pdf as a separate deposit document, auto-republished from its deposit tags by deploy-keeper, mirroring the FARM-1.8 thesis publisher. (Note: the complexity-paper repo is local-only with no remote; a remote/backup is a separate outward action, not in this slice.)
