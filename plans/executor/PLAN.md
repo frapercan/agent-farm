@@ -3341,6 +3341,10 @@ acceptance: |-
 estimated_hours: 5
 priority: P0
 tags: [reliability, ops, supervisor, stack, env-sourcing]
+requires_human: false
+```
+
+**Goal**: make the stack boot correctly regardless of caller (manage.sh sources .env itself) and self-heal dead components, closing the project_stack_env_not_sourced_outage incident.
 
 ### FIX-REAPER-CTOR — StaleJobReaper constructor signature mismatch (reaper dead on develop)
 
