@@ -2087,7 +2087,7 @@ budget extension or split into batches of 6-8 cells per executor run.
 id: FARM-EXP.14
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: deferred
 deps: [FARM-EXP.13]
 acceptance: |-
   Full single-seed grid: 9 cells × 8 PLMs × 3 K × 2 objectives = 432 reranker runs, where:
@@ -2178,7 +2178,7 @@ funnel pivot (memory `project_knn_first_funnel_pivot_2026_06_07`).
 id: FARM-EXP.16
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: deferred
 deps: [FARM-EXP.14]
 acceptance: |-
   Lab trainer (`src/protea_reranker_lab/reranker.py` or sibling) accepts a list of dataset manifests instead of a single one, joins on (query_id, candidate_id, k_position), and concatenates the PLM-specific feature families (`anc2vec_*`, `emb_pca_*`) under per-PLM column prefixes (e.g. `anc2vec_query_known_cos__esmc_600m`)
@@ -2215,7 +2215,7 @@ under bioinfo-quick budget).
 id: FARM-EXP.17
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: deferred
 deps: [FARM-EXP.14]
 acceptance: |-
   Score-level ensemble of the per-PLM rerankers from FARM-EXP.14: for each (K, cell), aggregate the 8 PLM-specific predicted scores via score_mean and score_max (two ensemble flavours)
@@ -2250,7 +2250,7 @@ champion baseline. Suggested agent: bioinfo-quick.
 id: FARM-EXP.18
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: deferred
 deps: [FARM-EXP.17]
 acceptance: |-
   PROTEA feature pipeline grows an `interproscan` family: protein-level domain/family signatures (Pfam, SUPERFAMILY, CDD, PANTHER subset) mapped to GO terms via the InterPro2GO crosswalk

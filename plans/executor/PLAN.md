@@ -1483,7 +1483,7 @@ tags: [hotfix, rsc, urgent]
 id: LOGIN-PERSIST-DEBUG
 phase: F3
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   Root cause of "login no es persistente" complaint identified and
@@ -1775,7 +1775,7 @@ tags: [ux, review, backlog]
 id: F-GPU-RESUME-EXP13
 phase: F4
 loop: executor
-status: pending
+status: deferred
 deps: [F-OPS-JOBS.1]
 acceptance: |-
   Once FEAT-KNN-GPU-TORCH PRs merge (protea-method #31 + PROTEA #539)
@@ -3189,7 +3189,7 @@ note: "release the stack-owner lock (owner=free) on completion; native engine so
 id: FIX-ANON-PREDICT
 phase: F-OPS
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   The public anonymous annotation flow (home/functional-annotation form)
@@ -3222,7 +3222,7 @@ note: "demo-critical for the presentation tomorrow; after merge, redeploy protea
 id: FIX-PREDICT-COORD-RELIABLE
 phase: F-OPS
 loop: executor
-status: pending
+status: done
 deps: []
 acceptance: |-
   The public annotation flow (annotate -> embeddings -> predict_go_terms
