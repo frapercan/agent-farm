@@ -3279,3 +3279,129 @@ note: "2026-06-06 design with user. THE FINAL THESIS OBJECTIVE: a single pooled,
 ```
 
 **Goal**: replace the per-cell reranker grid with a single universal, aspect-conditioned, pooled reranker (PLM/K as features, K-augmented, balanced-sampled, leakage-audited) that is both simpler to ship and stronger, as the main lever toward LAFA #1.
+
+### F-RERANK-UNIVERSAL.1 — Band-registry/IA bridge into the lab + in-lab f_micro_w evaluator (becomes the canonical selection metric)
+
+```yaml
+id: F-RERANK-UNIVERSAL.1
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-BAND-REGISTRY, F-EVAL-PROTOCOL.b]
+acceptance: |-
+  Add a registry-bridge module to protea-reranker-lab that resolves (band, cutoff) -> (ontology_snapshot obo, IA token/file) by reading PROTEA's merged protea.core.band_registry (BANDS dict + band_for_ia_token + ia_token resolvers, sourced from an origin/develop checkout/worktree or a vendored snapshot of the BANDS constants), so the IA path is NEVER the hardcoded /home/frapercan/Thesis2/protea-lafa-knn/lafa_t0_Sep_2025/IA.tsv (the confirmed IA_PATH free-float in farm_exp_15) and a cross-band IA/snapshot mix raises BandMismatchError. Add an in-lab f_micro_w(predictions.parquet | (protein,go,score,label), band) function wrapping the cafaeval ia= subprocess driver lifted verbatim from farm_exp_15 (prop=fill, norm=cafa, no_orphans, weighted_only=False) returning per-namespace f_micro_w/f_micro/f_w/fmax, replacing evaluate.fmax_per_protein_group as the selection metric for ALL downstream gating. As part of this slice, rebase/cherry-pick the farm_exp_15 harness (delta-VALID construction, cafaeval-IA driver, majority_winner/CSV) from branch feat/knn-226-227-baseline onto the working branch off develop (it is NOT on develop). ACCEPT when a golden test reproduces the FARM-EXP.15 prot_t5 K3 NK+LK mean f_micro_w 0.5849 on the 226->227 VALID band from a frozen predictions.parquet (baseline pinned in the test), the IA/snapshot for v227 resolves through the registry bridge, and run_cafaeval_phase.py is fixed to pass ia=.
+estimated_hours: 3
+priority: P0
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: The spine: every later slice selects on f_micro_w, which does not exist in the lab today (CONFIRMED evaluate.py is fmax_per_protein_group-only, bootstrap.py unweighted). Putting the metric and the registry-resolved IA first means recall (.3), the training feval (.4), selection (.5), and the per-category CIs (.6) all speak the LAFA headline metric. The 0.5849 regression pin makes it landable and verifiable as one PR.
+
+### F-RERANK-UNIVERSAL.2 — Pooled multi-manifest runtime view: source-tagged plm_id + k_context + neighborhood-stat features + protea-contracts change + lineage_* leakage ruling
+
+```yaml
+id: F-RERANK-UNIVERSAL.2
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.1]
+acceptance: |-
+  Build a pooled loader that streams and concatenates rows across the 24 v226-lineage manifests (8 PLM x K{3,5,10}, all staged locally and confirmed at 61 cols) into ONE ranking dataset as a runtime view (no physical all-PLM parquet), relaxing DatasetRef._exactly_one with a new multi-manifest spec field (a list of manifest URIs whose sorted-URI sha256 feeds schema_sha) and wrapping per-file data.iter_batches in a multi-source iterator that tags each row with its source. At stage time inject plm_id (categorical) and k_context (numeric) as constant-per-source-file features (both CONFIRMED absent from the parquets) and derive the neighborhood stats named in the stanza not already present (rank/local-density; vote_count/k_position/neighbor_* already exist). Register plm_id, k_context, and derived neighborhood-stat columns in protea-contracts FEATURE_FAMILIES (new families e.g. plm_context/k_context/neighborhood) with a SemVer-major bump and update the golden compute_schema_sha test. CRITICALLY, run the merged FEATURE_LEAKAGE_AUDIT.md golden rule + check_cutoff_guard.py reasoning against the 4 latent lineage_* columns (lineage_is_ancestor_of_known/descendant_of_known/ancestor_of_count/descendant_of_count, CONFIRMED present in parquet, absent from ALL_FEATURES) AND against plm_id/k_context themselves (plm_id is a bucket-id shortcut risk analogous to the anc2vec_query_known_count replication artifact), recording an explicit GO/NO-GO ruling per column (default EXCLUDE lineage_* unless cleared). ACCEPT when a smoke pool over 2 PLM x K3,K5 yields one protein-contiguous ranking stream whose row count equals the sum of per-manifest filtered counts, plm_id/k_context vary across rows with bit-stable schema_sha, protea-contracts tests pass, and the lineage_*/plm_id leakage ruling is documented.
+estimated_hours: 4
+priority: P0
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: Pooling is the substrate the whole 'one universal artifact' claim rests on; CONFIRMED DatasetRef._exactly_one forbids it today and plm_id/k_context are absent from the parquets so they must be injected at stage time. Landing the contract change + the leakage ruling (including the grafted plm_id-as-bucket-id audit) here, before any objective change, keeps the highest-stakes correctness gate (anc2vec-style replication) ahead of training rather than discovered after.
+
+### F-RERANK-UNIVERSAL.3 — Aspect-conditioned (protein,aspect) staging + VALID(226->227)/TEST(->230) window plumbing bound to window_role + per-cell candidate recall
+
+```yaml
+id: F-RERANK-UNIVERSAL.3
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.2]
+acceptance: |-
+  Change staging so a single fit sees ALL aspects with aspect kept LIVE as a conditioning feature (no _split_cell pre-filter to one cell) and switch the LambdaRank group key from per-protein to per-(protein, aspect): the only code change point is the group-edge computation in _sort_bucket plus the crc32 bucket router, which must keep every (protein,aspect) group contiguous and never split across buckets (revalidate _cap_oversized_groups 9999 against the new key). Thread the VALID window (snapshot_pair=='v226-v227' delta proteins, reusing farm_exp_15's PLM-independent construction) and TEST window (out to v230) through the pooled spec + stage_for_training as first-class train_snapshot_pairs/eval_snapshot_pair (today runner.stage_for_training is called WITHOUT them so it trains on all pairs and evals the full TEST band), bound to the PROTEA window_role marker (#600, ORM at protea/infrastructure/orm/models/annotation/evaluation_set.py + migration f2a4c6e8b0d1, NOT the survey's protea/core/orm path) so selection is select-on-VALID and TEST is evaluate-once. Report per-cell candidate recall (fraction of true v-window annotations surfaced by retrieve-wide + true-path propagation, reusing propagate_labels_to_ancestors + load_parent_map) with separate raw-retrieval and post-propagation columns, since recall is the ceiling. ACCEPT when n_groups == distinct (protein,aspect) pairs (not proteins), every group is single-aspect and single-bucket, the VALID protein set matches farm_exp_15's delta set, candidate recall is reported per (category,aspect) on VALID, and the .1 evaluator runs on the staged VALID split.
+estimated_hours: 4
+priority: P0
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: Three genuinely sequential gaps fixed in one slice: aspect-live conditioning + per-(protein,aspect) grouping (CONFIRMED staging groups by crc32(protein_accession) only) is what the IA metric needs; the VALID/TEST window threading (CONFIRMED stage_for_training is called without snapshot pairs today) is the select-on-VALID/evaluate-once protocol; and folding candidate-recall reporting in here, rather than a separate slice, honors the recall-is-ceiling angle without adding a slice, and surfaces low-recall PK/CCO BEFORE the training run so it reads as a finding, not a failure.
+
+### F-RERANK-UNIVERSAL.4 — IA-weighted LambdaMART objective + balanced leakage-audited negatives + seeded bounded-K augmentation
+
+```yaml
+id: F-RERANK-UNIVERSAL.4
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.1, F-RERANK-UNIVERSAL.3]
+acceptance: |-
+  Extend reranker.fit/TrainConfig so LambdaMART optimizes IA-weighted f_micro_w instead of the CONFIRMED binary label_gain=[0,1]: fold per-(go_term,aspect) IA (from the .1 registry bridge) into LightGBM via IA-scaled label_gain and/or per-row weight and/or a custom feval that mirrors f_micro_w on the (protein,aspect) groups from .3 (objective stays lambdarank). NOTE the likely real mechanism is per-row weight + a custom IA feval, NOT label_gain (which expects integer-indexed gains per discrete relevance level and does not map cleanly to continuous per-(go,aspect) IA); a brief bake-off of weight-vs-feval-vs-label_gain may be needed, guarded by regression against the .1 evaluator so the IA weighting demonstrably moves f_micro_w and is not silently ignored. Implement balanced pos:neg sampling (1:1 default, tunable via the existing neg_pos_ratio/_decide_split) whose negative construction PASSES the merged F-EVAL-PROTOCOL.b feature-leakage audit (anc2vec replication is the cautionary template; negatives must not be replicated in a way that encodes the label). Implement K-augmentation as a SEEDED, bounded K distribution drawing training candidates across the K{3,5,10} pooled sources, plus a deterministic K policy for inference (fixed or adaptive, never an unseeded stream); both the seed/bounds and the inference policy are captured in ExperimentSpec.hash(). ACCEPT when a short pooled fit on 2 PLM produces a booster whose train/val metric is IA-weighted, the negative sampler clears the audit (documented, lineage_* exclusion honored), and two runs with the same seed produce a BYTE-IDENTICAL candidate selection and spec hash; the K-augmented pool's post-propagation recall (via .3 harness) >= best single-K cell.
+estimated_hours: 4
+priority: P0
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: The biggest score lever per the stanza: aligning the objective to IA-weighted f_micro_w (CONFIRMED label_gain=[0,1] binary today, objective already lambdarank so this is an extension not a rewrite). Gated on .3 because IA gains require (protein,aspect) groups, and on .1 because the IA table comes from the registry bridge. Folds K-augmentation here (where the pooled multi-source loader exists) rather than as a standalone slice, with the grafted byte-identical-twice reproducibility gate. Heaviest design risk (IA-in-LightGBM mechanism) is contained by the .1 regression guard.
+
+### F-RERANK-UNIVERSAL.5 — Full pooled universal training run + per-aspect VALID calibration + post-hoc true-path/hierarchical-consistency correction
+
+```yaml
+id: F-RERANK-UNIVERSAL.5
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.4]
+acceptance: |-
+  Run the full pooled, aspect-conditioned, IA-weighted, K-augmented training over all 24 v226-lineage manifests to produce the SINGLE universal booster artifact (one artifact replacing the up-to-216 per-cell phase3a models), dispatched under a bioinfo-quick budget (numpy/FAISS only, NEVER torch GPU KNN, NEVER pgvector on the 12GB host; stay strictly streaming with K10-superset-K5-superset-K3 dedup rather than naive 24x concat to avoid the minijob/write-OOM precedent). Fit per-aspect score calibration (isotonic/Platt per MFO/BPO/CCO) on the VALID window ONLY so scores are comparable for the micro metric, and apply a post-hoc true-path / hierarchical-consistency correction on the GO DAG (parent score >= max child, reusing the parent_map.json TPR closure) before scoring. Persist run.json with full lineage (git sha, multi-manifest schema_sha, feature columns incl plm_id/k_context, K-aug seed, split sizes, feature_importance) and ablate plm_id + per-PLM calibration (guard against collapse to the strongest PLM). ACCEPT when one universal booster + calibrator artifact exists and is reproducible from the spec hash; predictions on VALID are hierarchically consistent; and the calibrated, corrected NK+LK mean f_micro_w on the 226->227 VALID band is reported against the prot_t5 K3 baseline 0.5849, with candidate recall reported alongside as the ceiling.
+estimated_hours: 4
+priority: P0
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: Produces the actual single universal artifact and the headline VALID number to beat (0.5849). Calibration + DAG correction are post-hoc levers that need the trained booster, so they belong after .4. Streaming + K-superset dedup is mandated by the minijob/worker-OOM memory on the 12GB host. The plm_id ablation (grafted from P2) is the guard against the model collapsing to the strongest PLM.
+
+### F-RERANK-UNIVERSAL.6 — Selective-deploy as a measured OUTPUT: IA-weighted paired bootstrap on ALL 9 categories (VALID), freeze map, evaluate ONCE on TEST
+
+```yaml
+id: F-RERANK-UNIVERSAL.6
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.5, FARM-EXP.GRID-v226]
+acceptance: |-
+  Adapt bootstrap.bootstrap_paired_fmax from the CONFIRMED unweighted fmax_per_protein_group (baseline_column='vote_count') to an IA-weighted f_micro_w per-PROTEIN paired bootstrap (resample protein groups; point delta + 95% CI + one-sided p for reranker vs the KNN baseline column = 1-distance/vote_count) and run it on EVERY category cell NK/LK/PK x MFO/BPO/CCO on the VALID window, emitting per_cell_paired_ci.csv with a sig_95 column in the lb3_paired_ci.py output format. Do NOT presume PK=KNN-only, the hardcoded champion==baseline-for-pk verdict in lb3_paired_ci.py is the STALE UNWEIGHTED conclusion and MUST be removed; the deploy choice per (category,aspect) FALLS OUT of the VALID CIs (reranker where CI positive, KNN elsewhere). Freeze the resulting deploy map, then evaluate it EXACTLY ONCE on the held-out TEST window (out to v230) reporting final per-category f_micro_w with CIs. This slice consumes the FARM-EXP.GRID-v226 KNN-BASELINE cells as the per-category KNN reference, so the GRID-v226 KNN-baseline half must report 100% coverage before the final table is reported (the champion/reranker half of the grid is an OUTPUT of this loop, not a blocker). ACCEPT when a 9-row VALID CI table exists for all categories incl PK and CC/BP, the deploy map is derived empirically with no category hardcoded and frozen, and a single TEST evaluation of the frozen map is recorded with per-category CIs.
+estimated_hours: 4
+priority: P1
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: The stanza's hard requirement: selective-deploy is an OUTPUT measured per category with paired CIs, not the stale PK=KNN input. CONFIRMED bootstrap.py is unweighted and lb3_paired_ci.py hardcodes pk=baseline; the work is swapping the scorer to IA-weighted f_micro_w, removing the hardcode, and running all 9 cells. GRID-v226 enters here as a HARD dep but only its KNN-baseline half (the per-category KNN reference), correctly decoupled from the reranker-cell half this loop produces.
+
+### F-RERANK-UNIVERSAL.7 — PROTEA scoring-router wiring of the single universal artifact + external LAFA verification within tolerance + living thesis/ADR/dataset-card docs
+
+```yaml
+id: F-RERANK-UNIVERSAL.7
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.6]
+acceptance: |-
+  Wire the single universal booster + calibrator + frozen deploy map into PROTEA's RerankerScorer / scoring-router as ONE artifact selected by (plm_id, k_context, aspect) features rather than the per-cell model registry, working from a worktree off PROTEA origin/develop (which carries band_registry/window_role; NEVER the developer's PROTEA workspace and NEVER the stale local #507 checkout, which lacks #600/#603/#604/#606; never touch the live DB; dispatch via POST /jobs, never ad-hoc curl), honoring the .6 frozen deploy map, the .4 deterministic inference K policy, and the single-cutoff submission path (F-EVAL-PROTOCOL.c #606 + protea-method#34). Run the EXTERNAL LAFA verification: the deployed LAFA endpoint reproduces the lab's TEST f_micro_w within a STATED tolerance on the v227 band, with the registry-resolved IA + window_role band PINNED on BOTH sides so the known bench-vs-LAFA gap (IA + band per memory, not snapshot drift) is decomposed rather than reported as a phantom regression. Keep thesis ch6 + an ADR for the universal-reranker decision + the affected dataset cards current (doc al dia; no em-dashes, no Claude co-author): record the pooled artifact, the VALID/TEST protocol, the per-category CI table, and the LAFA-parity delta. ACCEPT when PROTEA serves the single universal reranker via the scoring-router with a passing dispatch path and local CI green, LAFA parity is within tolerance (or the residual gap is decomposed into IA/band/retrieval), and the thesis/ADR/dataset-card edits land via PR (base develop for PROTEA, base main for thesis/agent-farm).
+estimated_hours: 4
+priority: P1
+tags: [reranker, universal, lambdarank, ia, lafa]
+requires_human: false
+```
+
+**Goal**: Closes the loop: deploys the single artifact and provides the external LAFA verification that turns the offline VALID/TEST numbers into a defensible thesis claim. Must work from an origin/develop worktree because the local PROTEA is CONFIRMED stale at #507 and lacks all four protocol PRs; pinning IA/band on both sides decomposes the known IA+band bench-vs-LAFA gap rather than reporting a phantom regression. Last because it depends on the frozen deploy map (.6) and the universal artifact (.5).

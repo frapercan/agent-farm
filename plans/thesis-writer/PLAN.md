@@ -978,7 +978,8 @@ tags: [complexity, polish, deposit]
 id: COMPLEXITY.10
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
+shipped_via: "complexity-paper tag v1.1 (PMC-as-design-principle, ch4 4.5 + ch7 axis + falsifiability criterion, 94pp)"
 deps: [COMPLEXITY.9]
 acceptance: |-
   Elevate the membrane lens from complementary tribute to a falsifiable
