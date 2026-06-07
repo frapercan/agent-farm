@@ -3510,3 +3510,25 @@ requires_human: false
 ```
 
 **Goal**: do the VALID-set hyperparameter selection the leakage-free protocol already calls for (select on VALID, freeze, test once), which has NOT been done for the universal reranker -- its hparams are inherited/default. Bounded + gated on .5a being competitive, since this is a marginal-gain lever (recall + objective alignment are the big ones, already addressed). Top suspect: neg_pos_ratio=1:1 is likely wrong for a ranking objective.
+
+### F-RERANK-UNIVERSAL.5d — correct LambdaRank group key (snapshot,protein,aspect,plm) + K-collapse [GATES the number]
+
+```yaml
+id: F-RERANK-UNIVERSAL.5d
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  CORRECTNESS GATE: no universal-reranker f_micro_w is trustworthy until this lands. AUDIT (2026-06-07) found the LambdaRank group key in staging.py is (protein_accession, aspect) ONLY -- it does NOT include snapshot_pair or plm_id, and there is NO (protein,term) dedup across K{3,5,10} or across the 8 PLMs. So the SAME candidate term lands up to 13 snapshots x 8 PLM x 3 K = 312x in a single ranking group, with INCOHERENT labels (a term is negative in an early delta, positive in a late one, both in the same group). This breaks NDCG and implicitly upweights multi-agreed positives (the anc2vec-replication pattern).
+  Reasoning per duplicate axis (do NOT prune indiscriminately): NEIGHBOR axis is already aggregated (vote_count) -- keep. K axis (K3 subset K5 subset K10, same PLM, same snapshot) is genuine redundancy -- COLLAPSE to one row per term. PLM axis is signal (8 different feature lenses, same label) -- do NOT prune, SEPARATE into the group key. SNAPSHOT axis is signal AND labels differ across deltas -- NEVER prune (pruning would be incoherent and would destroy the temporal augmentation), SEPARATE into the group key.
+  FIX: change the LambdaRank group key to (snapshot_pair, protein_accession, aspect, plm_id) in staging.py + pooled_staging.py; the crc32 bucket router must keep each such group contiguous and never split it across buckets. Within each group, emit ONE row per candidate term, realizing K-augmentation by SEEDED per-group K-view sampling from {3,5,10} (NOT 3 copies in one group). Result: snapshots and PLMs become separate ranking TASKS (pooled training, plm_id conditions), each group rankes distinct candidates with a coherent per-snapshot label.
+  Add a test asserting: within any group, go_term_id is unique (no intra-group term duplication); group count == distinct (snapshot_pair, protein, aspect, plm_id) tuples; a term that is neg in one snapshot and pos in another lands in DIFFERENT groups.
+  Then produce the FIRST TRUSTWORTHY NUMBER at tractable scope (prot_t5 x K{3,5,10}-collapsed, correct groups, IA-weighted lambdarank, the fixed early-stop): report NK+LK mean f_micro_w on the 226->227 VALID band vs 0.5863 (KNN) / 0.6589 (per-cell reranker), tree count, n_train_rows, n_groups. The K-collapse also removes the ~/3 redundancy that bloated the 671M-row pool, so this is what makes the full 8-PLM run tractable.
+estimated_hours: 6
+priority: P0
+tags: [reranker, universal, groupkey, dedup, lambdarank, correctness, blocker]
+requires_human: false
+```
+
+**Goal**: fix the structurally-broken ranking group key (currently (protein,aspect), causing up-to-312x intra-group term duplication with incoherent cross-snapshot labels) into (snapshot,protein,aspect,plm) + K-collapse, so the universal reranker trains on coherent ranking tasks. Gates every downstream number (.5a/.5b/.5c/.6). Targeted: only the redundant K axis is pruned; PLM + snapshot signal is preserved as separate groups. Also makes the full-pool tractable.
