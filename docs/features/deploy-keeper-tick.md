@@ -24,7 +24,8 @@ with a fail-kind code on escalation.
 working. Tested via
 `tests/test_deploy_keeper_worker_healthcheck.sh`,
 `tests/test_deploy_keeper_backoff.sh`,
-`tests/test_redeploy_self_heal.sh`.
+`tests/test_redeploy_self_heal.sh`,
+`tests/test_deploy_keeper_frontend_health.sh`.
 
 ## Smoke test
 
