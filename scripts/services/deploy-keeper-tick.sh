@@ -223,5 +223,19 @@ case "$RC" in
   *) heartbeat "$TASK_ID" warn "thesis PDF publish: unexpected exit $RC" ;;
 esac
 
-heartbeat "$TASK_ID" info "tick OK (deploy + ngrok + thesis pdf)"
+# 4) complexity companion paper PDF publish (FARM-DEPLOY.2). Same non-fatal
+# contract as step 3: a complexity build failure MUST NOT fail the tick.
+# The publisher is idempotent: it skips the latex build when the latest
+# annotated tag of the local complexity-paper repo has not moved since the
+# last successful publish (no remote fetch required).
+bash "$LIB/protea_complexity_pdf_publish.sh"
+RC=$?
+case "$RC" in
+  0) ;;  # noop or success; the publisher already logged details
+  1) heartbeat "$TASK_ID" warn "complexity PDF publish: build failed (see state/logs/complexity_pdf_publish.log)" ;;
+  2) heartbeat "$TASK_ID" warn "complexity PDF publish: skipped (missing latexmk, source repo, or deploy worktree)" ;;
+  *) heartbeat "$TASK_ID" warn "complexity PDF publish: unexpected exit $RC" ;;
+esac
+
+heartbeat "$TASK_ID" info "tick OK (deploy + ngrok + thesis pdf + complexity pdf)"
 exit 0
