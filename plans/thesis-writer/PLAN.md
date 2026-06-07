@@ -705,7 +705,7 @@ companion paper. Sequential prereqs.
 id: COMPLEXITY.1
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: []
 acceptance: |-
   New directory ~/Thesis2/complexity-paper/ with:
@@ -739,7 +739,7 @@ tags: [complexity, research, scaffold]
 id: COMPLEXITY.2
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.1]
 acceptance: |-
   Chapter 1 (Introduction, ~5 pages): motivation for complexity
@@ -767,7 +767,7 @@ tags: [complexity, writing, foundations]
 id: COMPLEXITY.3
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.2]
 acceptance: |-
   Chapter 3 (~10 pages): formal complexity decomposition of each
@@ -801,7 +801,7 @@ tags: [complexity, formal, derivations]
 id: COMPLEXITY.4
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.1]
 acceptance: |-
   Chapter 4 (~8 pages): introduction to membrane computing / P systems
@@ -834,7 +834,7 @@ tags: [complexity, membrane, perez-jimenez, foundations]
 id: COMPLEXITY.5
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.3, COMPLEXITY.4]
 acceptance: |-
   Chapter 5 (~12 pages, longest + most original): formal P system
@@ -871,7 +871,7 @@ tags: [complexity, membrane, original-contribution]
 id: COMPLEXITY.6
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.3]
 acceptance: |-
   Chapter 6 (~8 pages): empirical complexity from PROTEA logs +
@@ -899,7 +899,7 @@ tags: [complexity, empirical, charts]
 id: COMPLEXITY.7
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.6]
 acceptance: |-
   Chapter 7 (~6 pages): comparative complexity analysis.
@@ -925,7 +925,7 @@ tags: [complexity, comparison, related-work]
 id: COMPLEXITY.8
 phase: COMPLEXITY
 loop: thesis-writer
-status: pending
+status: done
 deps: [COMPLEXITY.5, COMPLEXITY.6, COMPLEXITY.7]
 acceptance: |-
   Chapter 8 (~5 pages): pull threads together.
