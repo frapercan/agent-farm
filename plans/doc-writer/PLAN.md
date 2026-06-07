@@ -313,3 +313,54 @@ family from "files we made" into a reusable research contribution.
 reference pointer in `thesis/chapters/06-evaluation/` (chapter 6 appendix A).
 
 **Suggested agent**: doc-writer.
+```
+
+**Goal**: produce the citable provenance document that turns the dataset
+family from "files we made" into a reusable research contribution.
+
+**Touches**: `protea-reranker-lab/docs/dataset_provenance.md` (new),
+reference pointer in `thesis/chapters/06-evaluation/` (chapter 6 appendix A).
+
+**Suggested agent**: doc-writer.
+
+### F-LAFA-IA-DOC — Metrics alignment document (Fmax / cafaeval / wFmax / S_min)
+
+```yaml
+id: F-LAFA-IA-DOC
+phase: F-LAFA-IA
+loop: doc-writer
+status: done
+shipped_via: "lab PR #56"
+deps: []
+acceptance: |-
+  Sphinx page in protea-reranker-lab docs/ + a summary that feeds
+  thesis chapter 6, explaining WITHOUT ambiguity every metric used in
+  the LAFA/IA story and why they differ by ~10x:
+  - internal Fmax (fmax_per_protein_group): no propagation, precision
+    ceiling under imbalance; it is a PROXY, not a leaderboard number.
+  - cafaeval Fmax (prop=fill, norm=cafa): CAFA protocol, why propagation
+    inflates it, gt restricted to candidates (optimistic).
+  - wFmax (IA-weighted) and S_min: definition, why this is the honest
+    metric for the hypothesis.
+  - Information Accretion: formal def (Clark and Radivojac 2013,
+    IA(t) = -log2 P(t | parents(t))), reference corpus, GO release v226,
+    ia.txt provenance.
+  - recovery ceiling + two-stage decomposition (retrieval recall x
+    rerank precision).
+  - equivalence table: per cell, the four numbers side by side.
+  No em-dashes in prose. Cited from chapter 6.
+estimated_hours: 6
+priority: P1
+tags: [lafa, ia, metrics, documentation, chapter-6]
+requires_human: false
+note: "2026-06-04 delivered via protea-reranker-lab PR #56 (docs/lafa-ia-metrics, merged); docs/source/metrics.rst added 463 lines covering all four metric families, equivalence table, IA provenance"
+```
+
+**Goal**: lock the metric definitions so the proxy is never again
+confused with the publishable number; ground chapter 6's honest claim.
+
+**Touches**: `protea-reranker-lab/docs/` (new metrics page),
+`thesis/chapters/06-evaluation/` reference. Spec: brief section 6.
+
+**Suggested agent**: doc-writer. Can start in parallel from the brief's
+verified facts; final numbers land from F-LAFA-IA.0.
