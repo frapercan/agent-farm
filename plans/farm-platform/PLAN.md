@@ -3441,3 +3441,24 @@ requires_human: false
 ```
 
 **Goal**: serve the complexity-paper at protea.ngrok.app/complexity.pdf as a separate deposit document, auto-republished from its deposit tags by deploy-keeper, mirroring the FARM-1.8 thesis publisher. (Note: the complexity-paper repo is local-only with no remote; a remote/backup is a separate outward action, not in this slice.)
+
+### F-RERANK-UNIVERSAL.5a — fix IA-feval early-stop bug + wire TRUE pooled multi-manifest staging, re-run
+
+```yaml
+id: F-RERANK-UNIVERSAL.5a
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.5]
+acceptance: |-
+  F-RERANK-UNIVERSAL.5 produced a BROKEN universal booster (NK f_micro_w 0.069, -0.481 vs the 0.55 KNN NK-only baseline) due to two confounds, NOT a real verdict on the universal approach. Fix both and re-run:
+  (1) IA-feval recall denominator bug at src/protea_reranker_lab/reranker.py:231: it computes recall as tp/(tp+fn+tp) (= tp/(n_pos+tp)) instead of tp/(tp+fn) (= tp/n_pos). This systematically underestimates recall -> the custom feval is wrong -> LightGBM early-stops at iteration 12 (12-tree undertrained model). Fix to tp/(tp+fn) and confirm training now runs to a sensible iteration count (~100+), not 12. This bug pre-existed in .4; add a unit test pinning the recall formula on a known fixture.
+  (2) TRUE pooled multi-manifest staging: .5 trained on a SINGLE manifest (prot_t5 K10) because runner.stage_for_training consumes one parquet; the MultiManifestSpec built in .2 (multi_source.py) was never fed into staging. Extend stage_for_training (or add a sibling) to consume the MultiManifestSpec and STREAM-concatenate all 24 v226-lineage manifests (8 PLM x K{3,5,10}) into one ranking dataset WITHOUT a physical combined parquet (memory-bounded streaming, K10-superset-K5-superset-K3 dedup; avoid the write-OOM precedent). Confirm the run actually trains on all 24 sources (run.json lists 24 manifests + plm_id varies across rows).
+  Then RE-RUN the full pooled, aspect-conditioned, IA-weighted, K-augmented universal training (reusing .5's per-aspect calibration + hierarchical true-path correction) and report the REAL calibrated+corrected NK+LK mean f_micro_w on the 226->227 VALID band vs the prot_t5 K3 baseline (0.5863 KNN / 0.6589 per-cell reranker), with candidate recall alongside. Honest result either way. numpy/FAISS only, never torch GPU.
+estimated_hours: 4
+priority: P0
+tags: [reranker, universal, bugfix, pooled, lambdarank, ia]
+requires_human: false
+```
+
+**Goal**: turn the .5 broken negative (single-manifest, 12-tree undertrained model from an IA-feval recall bug) into a REAL test of the universal booster by fixing the early-stopping bug and actually training pooled over all 24 manifests. This is also the user's "chew more data": .5 never used the pooled data.
