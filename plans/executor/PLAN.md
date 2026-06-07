@@ -3341,3 +3341,21 @@ acceptance: |-
 estimated_hours: 5
 priority: P0
 tags: [reliability, ops, supervisor, stack, env-sourcing]
+
+### FIX-REAPER-CTOR — StaleJobReaper constructor signature mismatch (reaper dead on develop)
+
+```yaml
+id: FIX-REAPER-CTOR
+phase: F-OPS
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  scripts/worker.py constructs StaleJobReaper with loose kwargs timeout_seconds=/stall_seconds= (line ~92), but StaleJobReaper.__init__ on origin/develop is (self, session_factory, amqp_url=None, config=None): those tuning values live in StaleJobReaperConfig now. Result CONFIRMED 2026-06-07: the reaper worker raises TypeError "unexpected keyword argument timeout_seconds" and dies on every start, so stale/leased jobs are never reaped on the deployed develop stack (protea-deploy at #606, 0 behind). Fix worker.py to build a StaleJobReaperConfig(timeout_seconds=..., stall_seconds=..., ...) from WorkerTuning and pass it as config=, keeping amqp_url. Add a regression test that constructs the reaper via the exact scripts/worker.py code path (or a small extracted builder) and asserts no TypeError, plus that the tuning values land in the config (to_timedeltas). Confirm the reaper starts clean (worker.py --queue reaper) on a dev stack. PR base develop.
+estimated_hours: 2
+priority: P1
+tags: [ops, reaper, reliability, jobs, regression]
+requires_human: false
+```
+
+**Goal**: restore the stale-job reaper on develop (dead since a WorkerTuning/StaleJobReaperConfig refactor moved the timeout/stall args into a config object but left scripts/worker.py passing them as loose kwargs).

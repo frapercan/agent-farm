@@ -3405,3 +3405,21 @@ requires_human: false
 ```
 
 **Goal**: Closes the loop: deploys the single artifact and provides the external LAFA verification that turns the offline VALID/TEST numbers into a defensible thesis claim. Must work from an origin/develop worktree because the local PROTEA is CONFIRMED stale at #507 and lacks all four protocol PRs; pinning IA/band on both sides decomposes the known IA+band bench-vs-LAFA gap rather than reporting a phantom regression. Last because it depends on the frozen deploy map (.6) and the universal artifact (.5).
+
+### FARM-DEPLOY.1 — deploy-keeper redeploy must heal the Next.js frontend
+
+```yaml
+id: FARM-DEPLOY.1
+phase: F-FEAT
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  deploy-keeper's redeploy path (scripts/services/lib/protea_redeploy.sh + deploy-keeper-tick.sh) health-checks only the worker and API pid files and explicitly "does NOT touch the frontend", so a redeploy (triggered by a develop merge) can leave the public Next.js frontend (:3000) down while API+workers come back up. Observed 2026-06-07: after a redeploy the frontend was down and ngrok returned 502 on protea.ngrok.app while /health was 200. Add a frontend health gate to the tick: after the redeploy step, curl http://localhost:3000; if down, bring the frontend back up via the canonical manage.sh frontend start path (or the standalone node .next/standalone/server.js start the way manage.sh section 9 does), log it via heartbeat, and keep it idempotent/debounced so a brief restart blip does not flood. ACCEPT when a simulated frontend-down state after a tick is detected and recovered within one tick, and the change does not trigger a runaway redeploy loop.
+estimated_hours: 3
+priority: P2
+tags: [deploy-keeper, frontend, ops, ngrok, visibility]
+requires_human: false
+```
+
+**Goal**: stop deploy-keeper from leaving the public demo frontend dark after a redeploy; the redeploy currently brings up API+workers but not the frontend, breaking protea.ngrok.app for anyone testing the demo.
