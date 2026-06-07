@@ -2943,37 +2943,47 @@ note: |-
 ```
 
 
-### FEAT-KNN-GPU-TORCH-RESUME — Resume EXP.13 with torch GPU backend (6 missing cells)
+### FEAT-KNN-GPU-TORCH-RESUME — Resume EXP.13 (6 missing cells); numpy backend (torch nonviable)
 
 ```yaml
 id: FEAT-KNN-GPU-TORCH-RESUME
 phase: F-EXP-RESET
 loop: executor
-status: pending
+status: done
+shipped_via: "import-by-reference replay of surviving artefacts (executor-1780797917-02cc, 2026-06-07); no recompute needed"
 deps: [FEAT-KNN-GPU-TORCH-PREP]
+backend_override: |-
+  search_backend=numpy, NOT torch (user decision 2026-06-07): torch GPU KNN
+  thrashes in an endless CUDA-OOM loop on the 12GB host GPU. See memory
+  project_torch_gpu_knn_nonviable_12gb_2026_06_07. The torch pre-conditions
+  below are obsolete and were not exercised.
 acceptance: |-
-  Six EXP.13 cells reach status SUCCEEDED in `dataset` table with
-  `search_backend=torch`:
+  Six EXP.13 cells reach status present (registered) in the `dataset` table
+  for the v226-lineage grid:
    K=3: ankh_large, esm2_650m, esmc_600m, prostt5
    K=5: ankh_base, esmc_600m
-  Pre-conditions (verified upfront, abort if any fails):
+  Resolution (2026-06-07): no recompute was required. All six cells already
+  had complete artefacts in MinIO from the 2026-06-04 export run
+  (train/eval parquet + manifest.json). Five had surviving Dataset rows;
+  bench-v1-K3-v226-lineage-ankh_large lost only its DB row in the 5th DB
+  wipe (2026-06-06, restored from a pre-2026-06-04 dump). It was re-registered
+  via POST /v1/datasets/import-by-reference from its surviving manifest
+  (n_train_rows=121240333, n_eval_rows=8698709, schema_sha=81a2a723fcf2),
+  under the stack-owner lock (owner=export, task_id=executor-1780797917-02cc).
+  The full 24-cell grid (8 PLM x K{3,5,10}) is now complete in `dataset`.
+  Obsolete torch pre-conditions (superseded by the numpy override; not run):
    - protea-method >= the commit shipping torch GPU KNN (PRs #31 + #32)
    - both venvs have `torch.cuda.is_available() == True`
    - host driver supports CUDA 12.8 (driver 570+ ok, no upgrade required)
-   - smoke parity on one small cell (K=3 ankh_large) matches the numpy
-     baseline Fmax within tolerance (per-aspect delta < 1e-3)
-   - deploy-keeper paused or stack-owner lock acquired with
-     reason=FEAT-KNN-GPU-TORCH-RESUME so no mid-export redeploys
-  Each cell uses the same payload template as the v226-lineage grid
-  (k, output_name, train_versions, test_versions=[230], use_embedding_pca,
-   compute_taxonomy, compute_alignments, expand_votes_to_ancestors,
-   annotation_set_id, annotation_source, embedding_config_id,
-   ontology_snapshot_id) with `search_backend` flipped to `torch`.
-  Post-completion: re-launch deploy-keeper, write a 3-line memory note
-  with the final 24-cell grid status.
+   - smoke parity on one small cell vs numpy baseline (per-aspect delta < 1e-3)
+  If any cell artefacts had been missing, the recompute payload is the same
+  v226-lineage template (k, output_name, train_versions, test_versions=[230],
+  use_embedding_pca, compute_taxonomy, compute_alignments,
+  expand_votes_to_ancestors, annotation_source, embedding_config_id,
+  ontology_snapshot_id) with `search_backend=numpy`.
 estimated_hours: 12
 priority: P0
-tags: [exp13, torch, gpu, resume]
+tags: [exp13, numpy, resume, db-wipe-replay]
 ```
 
 
