@@ -3462,3 +3462,26 @@ requires_human: false
 ```
 
 **Goal**: turn the .5 broken negative (single-manifest, 12-tree undertrained model from an IA-feval recall bug) into a REAL test of the universal booster by fixing the early-stopping bug and actually training pooled over all 24 manifests. This is also the user's "chew more data": .5 never used the pooled data.
+
+### F-RERANK-UNIVERSAL.5b — gap-matched sliding-window temporal augmentation (gated on .5a verdict)
+
+```yaml
+id: F-RERANK-UNIVERSAL.5b
+phase: F-RERANK
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.5a]
+acceptance: |-
+  GATE: run ONLY if F-RERANK-UNIVERSAL.5a shows the pooled, fully-trained universal booster is SUPERVISION-limited (not capacity- or recall-limited). Candidate recall is already 94.9%, so retrieval is NOT the ceiling; if .5a's healthy-tree-count booster already saturates near the per-cell baseline, this slice is likely low-value (the null hypothesis -- random/sliding windows mostly RESAMPLE the same finite annotation events -- holds) and should be deferred. Decide from .5a's numbers before spending export compute.
+  Design (NOT pure-random windows; gap-matched sliding windows): instead of only the 13 fixed 5-release consecutive deltas (v160-v165 ... v220-v226), generate ADDITIONAL training deltas as SLIDING windows over the v160->v226 history at MULTIPLE gap widths -- including ~1-release windows that MATCH the deployment gap (the eval is the 1-release 226->227 band) plus a small distribution around it (e.g. 1/2/5-release widths), sliding the start. Rationale: (a) fix the train/deploy gap mismatch (train deltas are 5-release, eval is 1-release); (b) a closer-in-time reference changes the real feature distribution (alignment to nearer references), not just duplicate rows.
+  HARD leakage guard: every generated window MUST end <= v226; VALID(226->227)/TEST(227->230) are untouched; the merged cutoff CI guard (PROTEA #604 scripts/check_cutoff_guard.py) must pass on every emitted artifact (random/sliding sampling makes future-leakage easier -- blind it structurally).
+  Overlap/dedup: sliding windows overlap heavily, so de-duplicate (query, candidate, label, snapshot_pair-source) rows OR down-weight resampled positives to avoid the anc2vec-replication-style implicit upweighting bias; document the dedup/weighting policy and run it past the F-EVAL-PROTOCOL.b feature-leakage audit.
+  Bounded export budget: each new window is a REAL KNN+feature export (~33 min+); CAP the number of generated windows and LOG what was dropped (no silent truncation). Reuse the align-cache (K10 superset K5 superset K3) + MinIO artifacts to avoid recompute.
+  Retrain the .5a-fixed pooled universal booster on the augmented window set; report NK+LK mean f_micro_w on the 226->227 VALID band vs (a) the .5a universal (fixed-deltas-only) and (b) baselines (0.5863 KNN / 0.6589 per-cell reranker), with a paired bootstrap (.5a-universal vs augmented) at 95% CI. Honest result either way; a neutral/negative delta (augmentation buys little) is a publishable finding that validates the resampling-not-new-information hypothesis. numpy/FAISS only, never torch GPU.
+estimated_hours: 14
+priority: P2
+tags: [reranker, universal, augmentation, temporal, sampling, leakage]
+requires_human: false
+```
+
+**Goal**: test the user's "train on more/random temporal deltas" intuition in its principled form -- gap-matched sliding-window augmentation, not pure random -- to see if extra training-window supervision beats the fixed 5-release deltas. Gated on .5a showing supervision (not recall/capacity) is the bottleneck, since recall is already 94.9% and the underlying annotation events are finite (sliding windows resample, they do not add new ground truth).
