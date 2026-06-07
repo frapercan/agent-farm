@@ -2140,34 +2140,37 @@ batches across 4-8 executor passes.
 id: FARM-EXP.15
 phase: F-EXP-RESET
 loop: farm-platform
-status: pending
+status: done
 deps: [FARM-EXP.13]
 acceptance: |-
-  For each (PLM, K, cell) in the 24-dataset family: compute the KNN-only "scores" baseline (no reranker) and persist Fmax + AuPRC + coverage under runs/transversal/<shortid>/ with reranker=knn-baseline in the axis tuple
-  Lab CLI `scripts/run_knn_baseline.py` or equivalent path that reads the dataset's eval.parquet, applies the GO-transfer rule, and emits the same run.json schema as reranker runs (so FARM-EXP.4 champion table and FARM-EXP.3 paired-CI machinery treat both uniformly)
-  216 baseline cells logged in `agent-farm/plans/farm-platform/artefacts/farm_exp_15_baseline_log.csv` with: plm, k, cell, fmax, auprc, coverage
-  Paired bootstrap (10000 resamples) per (PLM, K) family confirms the reranker uplift sign vs baseline at 95% per FARM-EXP.3 grouping
+  REFRAMED 2026-06-07 (KNN-first funnel, user-approved): KNN-only f_micro_w on the 226->227 VALIDATION band, reranker OUT OF SCOPE (the EXP.14 reranker grid was stopped as scattershot). See scope-knn-226-227.md.
+  For the full grid 8 PLM x K{3,5,10} x 9 cells (NK/LK/PK x MFO/BPO/CCO) = 216 cells: KNN-only score = 1 - cosine distance read from the frozen bench-v1-K{3,5,10}-v226-lineage-<plm> eval.parquet (NO fresh KNN inference, fully offline)
+  GT = eval.parquet label>0 restricted to the 226->227 delta proteins (canonical, matches phase3d_val227); delta proteins+positive pairs derived once from bench-v1-K3-v227-lineage-prostt5 train.parquet snapshot_pair='v226-v227' (PLM-independent). Legacy ankh_large K3 export has an unpopulated label column -> GT reconstructed from delta positive pairs and flagged gt_source=delta_pos_pairs
+  cafa_eval(ia=lafa_t0_Sep_2025/IA.tsv, prop=fill, norm=cafa, no_orphans=True, max_terms=500, th_step=0.001, weighted_only=False); headline metric = f_micro_w per aspect namespace
+  216 cells logged in `agent-farm/plans/farm-platform/artefacts/knn_226_227_fmicrow.csv` (plm,k,regime,aspect,cell,f_micro_w,n_proteins,status); majority winner over NK+LK cells (PK excluded) in the sibling .md
+  Idempotent reproducible runner committed at lab `scripts/farm_exp_15_knn_226_227.py`
 estimated_hours: 6
 priority: P1
-tags: [benchmark, baseline, lineage]
+tags: [benchmark, baseline, lineage, knn-first, v227]
 requires_human: false
 ```
 
-**Goal**: provide the "scores" column the user asked for explicitly.
-KNN-only is the cheapest single-PLM baseline and the reference against
-which every per-PLM reranker uplift is measured for paired CIs.
+**Goal**: KNN-only f_micro_w baseline on the 226->227 validation band,
+LAFA-comparable (IA-weighted), as the reference funnel before any
+reranker work. Provides the "scores" column the user asked for.
 
 **Repos touched**: protea-reranker-lab.
 
 **Out of scope**:
-1. The legacy `bench-v1-K5-filtered` pre-leakage rows (not comparable
-   per memory `[[no-archaeology-recompute]]`).
+1. Reranker training/scoring (EXP.14 grid stopped; reframed away).
+2. The 227->230 TEST band (validation window only).
+3. The legacy `bench-v1-K5-filtered` pre-leakage rows.
 
-**Notes**: Cheap pass: KNN scoring is already produced by the dataset
-build (it's the input to feature generation); this slice just
-formalises the read path and the per-cell metric write-out so the
-"scores" column exists in the chapter-6 table. Suggested agent:
-bioinfo-quick.
+**Notes**: Fully offline (no GPU, no PROTEA stack, no DB). cafaeval runs
+in the PROTEA venv (where cafaeval-protea is installed) via a subprocess
+driver; everything else is the lab venv. The runner is idempotent
+(per-cell metrics.json gates recompute). Shipped via the KNN-first
+funnel pivot (memory `project_knn_first_funnel_pivot_2026_06_07`).
 
 ### FARM-EXP.16 — All-PLM derived reranker (multi-manifest trainer)
 
