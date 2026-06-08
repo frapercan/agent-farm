@@ -15,7 +15,7 @@ that is NOT in an explicit allowlist. By default, it scans docs/,
 chapters/, README*, and ADR* files. Changelog files (CHANGELOG*) are
 intentionally excluded because version histories legitimately contain
 bare `vN` tokens (schema versions, build numbers, semver-without-dot)
-unrelated to reranker shorthands. Four token classes are allowed:
+unrelated to reranker shorthands. Five token classes are allowed:
 
 1. GOA snapshot identifiers: v160, v200, v210, v215, v220, v226, v227,
    v229, v230
@@ -30,10 +30,14 @@ unrelated to reranker shorthands. Four token classes are allowed:
    inline code span, ``.. http:get:: /v1/jobs`` Sphinx directives).
    URL versioning is an independent axis from reranker version
    shorthand; see ADR-D4 for the API versioning policy.
+5. LAFA-container names: any token immediately preceded by ``knn-``
+   (e.g. ``protea-knn-v1``, ``knn-v1``, ``knn-v18``).  These are the
+   canonical LAFA submission image/method names (ghcr ``protea/knn-v1``),
+   a fixed product-naming scheme, not a reranker shorthand.
 
 Slice: FARM-EXP.6 (farm-platform loop); policy carve-outs Q1 (semver)
 and Q2 (bench-vN) added in FIX-47-linter-policy; Q3 (URL path) added
-in FIX-395-api-path-carve-out.
+in FIX-395-api-path-carve-out; Q4 (knn-vN LAFA names) added 2026-06-08.
 
 Exit codes:
     0 — clean (no offences)
@@ -202,6 +206,13 @@ def scan_file(path: Path) -> list[tuple[int, int, str]]:
             # shorthand (see ADR-D4); reranker shorthand always lacks
             # the leading slash.
             if prefix.endswith("/"):
+                continue
+            # Q4: LAFA-container carve-out.  Skip tokens immediately
+            # preceded by ``knn-``, e.g. the ``v1`` in ``protea-knn-v1``
+            # / ``knn-v1`` (and ``knn-v18``).  These are the canonical
+            # LAFA submission image/method names (ghcr ``protea/knn-v1``),
+            # a fixed product-naming scheme, not a reranker shorthand.
+            if prefix.endswith("knn-"):
                 continue
             offences.append((line_no, match.start() + 1, token))
     return offences
