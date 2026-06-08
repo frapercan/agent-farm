@@ -15,7 +15,7 @@ that is NOT in an explicit allowlist. By default, it scans docs/,
 chapters/, README*, and ADR* files. Changelog files (CHANGELOG*) are
 intentionally excluded because version histories legitimately contain
 bare `vN` tokens (schema versions, build numbers, semver-without-dot)
-unrelated to reranker shorthands. Five token classes are allowed:
+unrelated to reranker shorthands. Six token classes are allowed:
 
 1. GOA snapshot identifiers: v160, v200, v210, v215, v220, v226, v227,
    v229, v230
@@ -34,10 +34,15 @@ unrelated to reranker shorthands. Five token classes are allowed:
    (e.g. ``protea-knn-v1``, ``knn-v1``, ``knn-v18``).  These are the
    canonical LAFA submission image/method names (ghcr ``protea/knn-v1``),
    a fixed product-naming scheme, not a reranker shorthand.
+6. Method/scoring identifier ``v6``: the v6 composite feature-scoring
+   stage (``--no_v6`` flag, "v6 features") in protea-method/method-runtime.
+   A fixed product name, not a reranker study version (v22/v26/v27) the
+   linter targets. (Bare ``v1`` stays flagged; ``knn-v1`` passes via Q4.)
 
 Slice: FARM-EXP.6 (farm-platform loop); policy carve-outs Q1 (semver)
 and Q2 (bench-vN) added in FIX-47-linter-policy; Q3 (URL path) added
-in FIX-395-api-path-carve-out; Q4 (knn-vN LAFA names) added 2026-06-08.
+in FIX-395-api-path-carve-out; Q4 (knn-vN LAFA names) added 2026-06-08;
+method-token allowlist (v1/v6) added 2026-06-08.
 
 Exit codes:
     0 — clean (no offences)
@@ -59,6 +64,14 @@ GOA_ALLOWLIST: frozenset[str] = frozenset({
     "v160", "v200", "v210", "v215", "v220",
     "v226", "v227", "v229", "v230",
 })
+
+# Method/scoring identifier that is NOT a reranker-version shorthand.
+# ``v6`` = the v6 composite feature-scoring stage (``--no_v6`` flag,
+# "v6 features") in protea-method/method-runtime: a fixed product name,
+# not a reranker study version (v22/v26/v27) the linter targets. (``v1``
+# is intentionally NOT allowlisted: the ``knn-v1`` LAFA image already
+# passes via the knn- carve-out, and bare ``v1`` must stay flagged.)
+METHOD_TOKEN_ALLOWLIST: frozenset[str] = frozenset({"v6"})
 
 # Word-bounded vN token. Case-sensitive; the GOA shorthand is always
 # lowercase. We match v followed by one or more digits, no letters.
@@ -183,6 +196,9 @@ def scan_file(path: Path) -> list[tuple[int, int, str]]:
             token = match.group(0)
             # GOA snapshot allowlist.
             if token in GOA_ALLOWLIST:
+                continue
+            # Method/scoring identifier allowlist (v1 KNN, v6 feature stage).
+            if token in METHOD_TOKEN_ALLOWLIST:
                 continue
             # Q1: semver carve-out.  Skip tokens where the match is
             # immediately followed by a dot and at least one digit,
