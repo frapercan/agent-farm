@@ -170,6 +170,31 @@ class TestScanFile:
         finally:
             tmp.unlink(missing_ok=True)
 
+    # -- Q4: LAFA-container (knn-) carve-out ---------------------------------
+
+    def test_knn_container_prefix_inline(self) -> None:
+        """Tokens like protea-knn-v1 / knn-v18 must not fire."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("The protea-knn-v1 image and knn-v18 ship to ghcr.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_bare_v1_after_non_knn_still_flagged(self) -> None:
+        """A bare ``v1`` not preceded by knn- must still be flagged."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Re-ranker v1 trains on per-aspect data.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            tokens = [t for _, _, t in offences]
+            assert "v1" in tokens
+        finally:
+            tmp.unlink(missing_ok=True)
+
     # -- Q3: URL-path carve-out ----------------------------------------------
 
     def test_url_path_file_is_clean(self) -> None:
