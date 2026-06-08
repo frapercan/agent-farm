@@ -195,6 +195,31 @@ class TestScanFile:
         finally:
             tmp.unlink(missing_ok=True)
 
+    # -- method-token allowlist (v6) -----------------------------------------
+
+    def test_v6_method_token_allowed(self) -> None:
+        """``v6`` (--no_v6 flag / "v6 features" stage) must not fire."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("Runs KNN + v6 features; pass --no_v6 to disable.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            assert offences == [], f"Expected no offences; got {offences}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_bare_v22_still_flagged_with_v6_allowlist(self) -> None:
+        """A reranker study version like ``v22`` must still be flagged."""
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mktemp(suffix=".md"))
+        tmp.write_text("The re-ranker v22 lambdarank model.\n")
+        try:
+            offences = linter.scan_file(tmp)
+            tokens = [t for _, _, t in offences]
+            assert "v22" in tokens
+        finally:
+            tmp.unlink(missing_ok=True)
+
     # -- Q3: URL-path carve-out ----------------------------------------------
 
     def test_url_path_file_is_clean(self) -> None:
