@@ -3697,3 +3697,25 @@ note: "2026-06-09. User: 'no se si enviaremos a LAFA, pero yo lo quiero en el co
 ```
 
 **Goal**: ship the validated champion (retrieval + reranker + InterPro) as a reproducible container, regardless of whether we submit to LAFA.
+
+### F-METHOD-INTERPRO.perf — audit and fix InterProScan throughput (restore the precalc match-lookup)
+
+```yaml
+id: F-METHOD-INTERPRO.perf
+phase: F-METHOD
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  Root cause documented: the EBI precalculated match-lookup service (md5-keyed cache that returns precomputed matches in seconds) returned 404 / "Could not determine server version", so InterProScan fell back to LOCAL HMMER for all 7401 proteins (Gene3D/PANTHER/SMART/PRINTS scanned from scratch, ~3h) instead of the expected minutes
+  The precalc lookup is restored: either (a) point to a working EBI match-lookup endpoint matching the InterProScan data version (5.77-108.0), or (b) download and host the precalc match-lookup data locally so it works offline/deterministically, or (c) document the version/endpoint pin that makes it resolve
+  Verified: a re-run on the same 7401 LAFA targets (and a >=100k-protein batch) completes via the precalc lookup in MINUTES, not hours; local-HMMER fallback only for the genuine cache-miss tail
+  The working lookup config is pinned and folded into the container path (Arm 3 / F-METHOD-CONTAINER) so submission/inference is fast and reproducible
+estimated_hours: 6
+priority: P1
+tags: [interpro, performance, precalc-lookup, audit, container, ebi]
+requires_human: false
+note: "2026-06-09. User: InterProScan took ~3h for 7401 proteins; historically 200k proteins ran in minutes (that throughput = the precalc md5 match-lookup hitting, NOT local analysis). This session's log: 'lookupUp service at https://www.ebi.ac.uk/interpro/match-lookup is accessible - code: 404' + 'Lookup version check failed ... Could not determine server version' -> BerkeleyPrecalculatedProteinLookup fell back to local HMMER. The 404/version mismatch suggests the bundled InterProScan version's lookup endpoint is deprecated or out of sync with the EBI service release; fix = realign the version/endpoint or host the lookup DB locally. Memory: project_lafa_container_gpu_blocker_2026_06_09 (separate container GPU issue). Relates to F-METHOD-INTERPRO, F-METHOD-CONTAINER, F-EVAL-PROTOCOL.valid (the VALID InterProScan run needs this fix to be fast)."
+```
+
+**Goal**: get InterProScan back to precalc-lookup speed (minutes for 100k+ proteins) so Arm 3, the container, and the VALID InterProScan run are fast and reproducible instead of grinding local HMMER for hours.
