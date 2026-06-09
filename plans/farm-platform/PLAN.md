@@ -3532,3 +3532,103 @@ requires_human: false
 ```
 
 **Goal**: fix the structurally-broken ranking group key (currently (protein,aspect), causing up-to-312x intra-group term duplication with incoherent cross-snapshot labels) into (snapshot,protein,aspect,plm) + K-collapse, so the universal reranker trains on coherent ranking tasks. Gates every downstream number (.5a/.5b/.5c/.6). Targeted: only the redundant K axis is pruned; PLM + snapshot signal is preserved as separate groups. Also makes the full-pool tractable.
+
+## F-METHOD — 3-arm method (core + optional arms)
+
+The PROTEA function-prediction method as one non-optional CORE plus uniformly-optional,
+feature-flagged, gated extension arms (per ADR-method-3arm-ensemble_2026_06_09). Every
+optional arm obeys the same contract: off by default behind one flag; offline pinned +
+leakage-audited artifact; measured per-(category,aspect) delta vs core in the LAFA frame
+(IA-weighted paired bootstrap on VALID, evaluated once on TEST); selectively enabled only
+where it beats the core; documented uniformly. F-LAFA-SUBMIT.gpufix below carries the
+F-LAFA-SUBMIT phase (placed here for proximity to the method work).
+
+### F-METHOD-PERASPECT-K — per-aspect K (high-K BPO, K10 MFO/CCO) plus reranker retrain as the production core
+
+```yaml
+id: F-METHOD-PERASPECT-K
+phase: F-METHOD
+loop: farm-platform
+status: pending
+deps: [F-RERANK-UNIVERSAL.5d]
+acceptance: |-
+  KNN candidate generation uses per-aspect K: high K (K30 baseline) for BPO, K~10 for MFO/CCO, behind a per-aspect-K config knob in the scoring path
+  Universal LightGBM reranker RETRAINED on the chosen-K candidates (so it filters high-K BPO noise instead of seeing K10-OOD candidates)
+  LAFA-frame f_micro_w on the v227->v230 window does not regress NK/MFO/CCO vs the K10 core and lifts NK-BPO toward the TransFew/FunBind BPO level; measured per (category,aspect), IA-weighted, evaluated once on TEST
+  This becomes the non-optional CORE config the LAFA submission ships
+estimated_hours: 8
+priority: P0
+tags: [method, core, reranker, per-aspect-k, lafa]
+requires_human: false
+note: "2026-06-09. The cheap Arm-1 win (memory: highk_lever_verdict). Higher K lifts BPO recall (NK-BPO 0.289->0.301 ~ TransFew) but hurts MFO/CCO at fixed K10-reranker (OOD); per-aspect K + retrain converts the BPO headroom without the MFO/CCO precision loss. CORE per the optional-arm consistency decision: it is NOT a flag, it is the baseline everything else is a delta on. ADR: protea-neural-head/design/ADR-method-3arm-ensemble_2026_06_09.md."
+```
+
+**Goal**: lock the strongest non-optional KNN+reranker core (per-aspect K + matched retrain) as the LAFA submission baseline.
+
+### F-METHOD-INTERPRO — Arm 3 InterPro as a uniformly-optional gated arm (late-fusion plus reranker-vNext modes)
+
+```yaml
+id: F-METHOD-INTERPRO
+phase: F-METHOD
+loop: farm-platform
+status: pending
+deps: [F-METHOD-PERASPECT-K]
+acceptance: |-
+  InterProScan -> InterPro2GO predictions produced offline for the eval window, GO-propagated, leakage-audited (sequence-only signal; InterProScan + InterPro2GO + member-DB versions PINNED and stated; strict <=t0)
+  Implemented behind ONE config flag, OFF by default; the core runs identically with the arm off (optional-arm contract)
+  BOTH integration modes evaluated and compared on the same LAFA-frame harness: (a) late-fusion score-blend over the candidate union; (b) reranker-vNext = InterPro terms as first-class KNN candidates + interpro_backed/n_signatures/term_IA reranker features, retrained
+  Per-(category,aspect) measured delta vs core, IA-weighted paired bootstrap on VALID, evaluated ONCE on TEST; arm selectively enabled ONLY in cells where it beats the core (targeting LK/PK)
+  Whichever mode wins its gate is the shipped integration; documented uniformly in ADR + model/dataset cards
+estimated_hours: 16
+priority: P1
+tags: [method, optional-arm, interpro, reranker-vnext, lafa, lk-pk]
+requires_human: false
+note: "2026-06-09. Arm 3, OPTIONAL and held to the optional-arm contract identically to Arm 2. reranker-vNext is NOT a separate paradigm: it is Arm3's sharper integration mode (learned weighting) vs the late-fusion blend, and is itself optional. InterProScan run + parse/ensemble/eval harness staged in storage/interpro_run/. ADR: ADR-method-3arm-ensemble_2026_06_09.md. GATE RESULT (memory: interpro_arm3_result_2026_06_09): late-fusion PASSES decisively on the weak flanks (LAFA-frame, th_step=0.01 directional) -- LK 0.394->0.470 (+0.076, ~#2), PK 0.229->0.260 (+0.031, ~#1), NK +0.006. So mode (a) already clears the gate on LK/PK; mode (b) reranker-vNext must beat the late-fusion baseline; precise th_step=0.001 confirmation + per-cell calibration are the open items before publishing."
+```
+
+**Goal**: add orthogonal sequence-domain evidence as an optional, gated arm that lifts the LK/PK cells where the core is #3, without touching the cells it already wins.
+
+### F-METHOD-MLP-TOWER — Arm 2 full-GO MLP tower (CAFA6-win style, 5x IEA data) as a uniformly-optional gated arm
+
+```yaml
+id: F-METHOD-MLP-TOWER
+phase: F-METHOD
+loop: farm-platform
+status: pending
+deps: [F-METHOD-PERASPECT-K, F-EVAL-PROTOCOL]
+acceptance: |-
+  Multi-tower MLP on frozen cached PLM embeddings -> full-GO multi-label (adapted from CAFA6-win [2048,1024,512] + TPR label propagation + IA), training fits the 12GB GPU
+  Trained on 5x+ data: all annotated proteins + IEA electronic annotations as weak labels/pretrain + GOA history, STRICT temporal cutoff <=t0 (v227), fine-tuned on experimental; leakage-audited
+  Implemented behind ONE config flag, OFF by default; core runs identically with the arm off (optional-arm contract)
+  Per-(category,aspect) measured delta vs core, IA-weighted paired bootstrap on VALID, evaluated ONCE on TEST; selectively enabled only where it beats the core (targeting LK/PK + terms the KNN ranks poorly)
+  Documented uniformly in ADR + model/dataset cards
+estimated_hours: 40
+priority: P2
+tags: [method, optional-arm, mlp-tower, deep-learning, iea, lk-pk]
+requires_human: false
+note: "2026-06-09. Arm 2, the main DL workstream, OPTIONAL under the same contract as Arm 3. Closes the LK/PK gap to TransFew/FunBind via a full-label classifier not bounded by KNN candidate recall. Data verified available (cached embeddings ~100%, IEA 65.7M = 5x+). Supersedes the DL-deferred posture (memory: dl_postponed) now that it is framed as an optional arm, not a pivot. Scaffold at protea-neural-head/. ADR: ADR-method-3arm-ensemble_2026_06_09.md; detail: full_go_classifier_plan_2026_06_09.md."
+```
+
+**Goal**: a full-GO embedding classifier as an optional, gated arm covering the label space and LK/PK cells the retrieval core cannot rank.
+
+### F-LAFA-SUBMIT.gpufix — pin container torch/CUDA to the host driver + re-run predictions on GPU
+
+```yaml
+id: F-LAFA-SUBMIT.gpufix
+phase: F-LAFA-SUBMIT
+loop: farm-platform
+status: pending
+deps: []
+acceptance: |-
+  The protea-knn-v1 / method-runtime container's torch is pinned to a CUDA build the host NVIDIA driver (12.8 / "12080") accepts, OR a documented GPU-host requirement + a fast path; verified by a container run that uses the GPU (no silent CPU fallback)
+  Both ghcr images (method-runtime + knn-v1) rebuilt/pushed WITH the protea-method #35 + protea-sources #22 fixes folded in
+  A full-window prediction run completes in container in reasonable wall-clock (not the ~15h CPU-fallback) and matches the offline universal numbers
+  Submit WITHOUT --self_prior
+estimated_hours: 6
+priority: P0
+tags: [lafa, container, gpu, cuda, ghcr, blocker]
+requires_human: true
+note: "2026-06-09. Blocker found this session (memory: lafa_container_gpu_blocker): the container's bundled torch needs a newer CUDA than the host driver, so it silently CPU-fell-back to ProtT5 embedding and wedged ~15h for 7401 seqs. Folds into the already-pending ghcr rebuild for protea-method #35 + protea-sources #22. requires_human: ghcr push + submission are person-in-the-loop."
+```
+
+**Goal**: make the submitted container actually emit GPU-speed predictions so the LAFA #1-NK core can be delivered, not just measured offline.
