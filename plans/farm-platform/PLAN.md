@@ -3632,3 +3632,68 @@ note: "2026-06-09. Blocker found this session (memory: lafa_container_gpu_blocke
 ```
 
 **Goal**: make the submitted container actually emit GPU-speed predictions so the LAFA #1-NK core can be delivered, not just measured offline.
+
+### F-EVAL-PROTOCOL.valid — leakage-clean select-on-VALID(226-227) / touch-TEST(227-230)-once gate + LAFA-frame VALID harness
+
+```yaml
+id: F-EVAL-PROTOCOL.valid
+phase: F-EVAL
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL]
+acceptance: |-
+  A LAFA-frame VALID harness on the 226->227 window built from the lab bands (bench-v1-*-v226 + v227 staged), mirroring the parity-locked TEST harness (CAFA_forever Sep_2025_Mar_2026 = 227->230): same IA/TOI/prop=fill/norm=cafa/no_orphans/PK-known-excluded, with a 226->227 NK/LK/PK GT
+  HARD GATE: ALL model/config selection (per-aspect K, InterPro on/off + integration mode + blend weights, reranker-vNext hparams, Arm2 gating) is decided on VALID only; TEST is evaluated ONCE on the frozen champion and never used for selection
+  This session's TEST-derived verdicts RE-DERIVED on VALID: (a) per-aspect-K NK effect, (b) InterPro late-fusion LK/PK lift -- the latter requires InterProScan run on the VALID(226->227) target proteins (currently only the TEST/LAFA targets have InterPro)
+  The champion config is FROZEN from VALID, then scored once on TEST; the reported LAFA-frame number is that single TEST score
+estimated_hours: 14
+priority: P0
+tags: [eval, protocol, leakage, valid, test, gate, lafa]
+requires_human: false
+note: "2026-06-09. User flagged selection leakage: this session's InterPro/per-aspect-K verdicts + the PK#1/LK#2/NK#4 numbers were measured on the TEST window (Sep_2025_Mar_2026 = 227->230) and used for selection = winner's curse. The intended protocol (memory: v227_campaign_design, lafa_v227_band_correction) is select on VALID 226->227, evaluate champion ONCE on TEST 227->230. Lab has v226+v227 bands so VALID is buildable. The InterPro LK/PK direction is mechanistically robust (orthogonal domain evidence) and should survive VALID; the magnitude + final number need this gate. Blocks vNext/Arm2 development (they must be tuned on VALID). Harness: storage/interpro_run/eval_lafa_frame.py (parity-locked, reproduces plain-KNN row)."
+```
+
+**Goal**: make every selection decision leakage-clean by tuning on a held-out VALID(226->227) in the LAFA frame and touching TEST(227->230) exactly once on the frozen champion.
+
+### F-METHOD-EVAL-SURFACE — platform benchmark UI reflects the LAFA-frame champion, not the stale internal-frame matrix
+
+```yaml
+id: F-METHOD-EVAL-SURFACE
+phase: F-METHOD
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL.valid]
+acceptance: |-
+  The benchmark page no longer reads as the LAFA standing while showing stale internal-frame, embedding-only data (current: eval_set dd9f16ed, stage=embedding_only, k=3 -- a different frame, no reranker/InterPro)
+  Either the LAFA-frame champion standing (core + arms, VALID-selected, TEST-scored once) is wired into the app as a first-class view, or the internal-frame matrix is clearly labelled as an internal/diagnostic view distinct from the LAFA leaderboard frame
+  Provenance surfaced: which window (VALID 226->227 vs TEST 227->230), which frame (LAFA vs internal), which arms enabled, per (category,aspect)
+estimated_hours: 10
+priority: P1
+tags: [ui, ux, eval, lafa, provenance, frame]
+requires_human: false
+note: "2026-06-09. User: the benchmark page 'no refleja los avances, esta lioso'. Root cause: the LAFA-frame KNN+reranker+InterPro work is OFFLINE (eval_lafa_frame.py is the only source of truth); the app shows the old internal-frame embedding-only matrix. Relates to FIX-METRIC-IA.b (re-run persisted matrix evals in LAFA frame). Keep research params visible (memory: ui_surface_provenance_not_hide_params)."
+```
+
+**Goal**: one trustworthy eval surface so the platform shows the real LAFA-frame standing, not a stale different-frame matrix.
+
+### F-METHOD-CONTAINER — package the frozen leakage-clean champion (core + InterPro arm) into the container path
+
+```yaml
+id: F-METHOD-CONTAINER
+phase: F-METHOD
+loop: farm-platform
+status: pending
+deps: [F-EVAL-PROTOCOL.valid, F-LAFA-SUBMIT.gpufix, F-METHOD-INTERPRO]
+acceptance: |-
+  The VALID-frozen champion (per-aspect/K core + the InterPro arm in whichever integration mode won its VALID gate) runs end-to-end in the container path: query in -> KNN + reranker + InterProScan/InterPro2GO -> fused, calibrated, propagated predictions out
+  Container uses the GPU (F-LAFA-SUBMIT.gpufix) and InterProScan is invoked inside the pipeline (or its outputs are a pinned input), versions pinned + stated (leakage hygiene)
+  A container run on a fresh-cutoff input reproduces the champion's offline LAFA-frame TEST number within tolerance
+  Independent of the LAFA submission decision: the user wants the method IN the container regardless
+estimated_hours: 16
+priority: P1
+tags: [container, method, interpro, deploy, champion, ghcr]
+requires_human: true
+note: "2026-06-09. User: 'no se si enviaremos a LAFA, pero yo lo quiero en el contenedor.' Containerize the frozen, leakage-clean champion (NOT the test-tuned config). Adds the InterPro arm to the existing knn-v1 container path; depends on the GPU fix (gpufix) and the VALID freeze. requires_human: ghcr push is person-in-the-loop. Relates to F-LAFA-SUBMIT.knn/.reranker."
+```
+
+**Goal**: ship the validated champion (retrieval + reranker + InterPro) as a reproducible container, regardless of whether we submit to LAFA.
