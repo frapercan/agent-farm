@@ -3177,7 +3177,8 @@ loop: farm-platform
 status: pending
 deps: [F-EVAL-PROTOCOL.c, FIX-METRIC-IA]
 acceptance: |-
-  PROTEA-KNN container (ghcr.io/frapercan/protea/knn-v1) conforms to the LAFA container guide: runs OFFLINE, fixed input/output format, deterministic; the ProtT5/Swiss-Prot reference embeddings live in a persistent data volume per LAFA's hosting requirement
+  PROTEA-KNN container (ghcr.io/frapercan/protea/knn-v1, OR the protea-method/method_main.py LAFA wrapper which is already interface-compliant) conforms to the LAFA container guide (github.com/anphan0828/LAFA_container_guide): WORKDIR /app, ENTRYPOINT python3 method_main.py, mounts /app/data:ro + /app/output:rw, CLI --query_file/--train_sequences/--annot_file/--graph/--output_file, 3-col NO-HEADER tab TSV (Query_ID, GO:#######, Score, gzip-optional), runs OFFLINE, deterministic
+  Uses PROTEA's OWN t0-clean reference pool (NOT LAFA's train_sequences/annotations) shipped in a persistent/external data volume; consumes only LAFA's test sequences (--query_file) + go-basic.obo (--graph); reference annotations temporally cut at the entry timepoint t0 (no post-t0 leakage), documented; own-reference design declared in the GHCR description + README
   A dry-run on a LAFA-shaped timepoint input produces a valid prediction file that scores under cafaeval with the IA-weighted f_micro_w matching our internal numbers
   Submission completed via the LAFA intake form + host coordination; entry name + dataset (XaxiPiruli/protea-lafa-knn-v227) recorded
 estimated_hours: 10
@@ -3688,6 +3689,9 @@ acceptance: |-
   The VALID-frozen champion (per-aspect/K core + the InterPro arm in whichever integration mode won its VALID gate) runs end-to-end in the container path: query in -> KNN + reranker + InterProScan/InterPro2GO -> fused, calibrated, propagated predictions out
   Container uses the GPU (F-LAFA-SUBMIT.gpufix) and InterProScan is invoked inside the pipeline (or its outputs are a pinned input), versions pinned + stated (leakage hygiene)
   A container run on a fresh-cutoff input reproduces the champion's offline LAFA-frame TEST number within tolerance
+  Uses PROTEA's OWN t0-clean reference pool shipped as a documented external data volume (NOT LAFA's train_sequences/annotations); the container consumes only LAFA's test sequences (--query_file) + go-basic.obo (--graph), while still accepting --train_sequences/--annot_file for interface compliance
+  Temporal cutoff PROVEN: the reference annotations contain nothing newer than the entry timepoint t0 (align the v227-lineage cutoff to the timepoint, e.g. Jun_2026); the cutoff is documented and auditable
+  No large data (>=5GB: reference embeddings, PLM weights, InterPro datadir) embedded in the image; all shipped as documented external volumes; README + GHCR description declare the own-reference design + external-data location
   Independent of the LAFA submission decision: the user wants the method IN the container regardless
 estimated_hours: 16
 priority: P1
