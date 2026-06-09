@@ -3544,27 +3544,26 @@ leakage-audited artifact; measured per-(category,aspect) delta vs core in the LA
 where it beats the core; documented uniformly. F-LAFA-SUBMIT.gpufix below carries the
 F-LAFA-SUBMIT phase (placed here for proximity to the method work).
 
-### F-METHOD-PERASPECT-K — per-aspect K (high-K BPO, K10 MFO/CCO) plus reranker retrain as the production core
+### F-METHOD-CORE-K10 — uniform K10 KNN+reranker as the confirmed production core (per-aspect-K REJECTED on VALID)
 
 ```yaml
-id: F-METHOD-PERASPECT-K
+id: F-METHOD-CORE-K10
 phase: F-METHOD
 loop: farm-platform
-status: pending
+status: done
 deps: [F-RERANK-UNIVERSAL.5d]
 acceptance: |-
-  KNN candidate generation uses per-aspect K: high K (K30 baseline) for BPO, K~10 for MFO/CCO, behind a per-aspect-K config knob in the scoring path
-  Universal LightGBM reranker RETRAINED on the chosen-K candidates (so it filters high-K BPO noise instead of seeing K10-OOD candidates)
-  LAFA-frame f_micro_w on the v227->v230 window does not regress NK/MFO/CCO vs the K10 core and lifts NK-BPO toward the TransFew/FunBind BPO level; measured per (category,aspect), IA-weighted, evaluated once on TEST
-  This becomes the non-optional CORE config the LAFA submission ships
+  VERDICT 2026-06-09 (leakage-clean, held-out VALID band v220-v226): uniform K10 BEATS the K30-retrained per-aspect-K reranker on ALL NK aspects (BPO 0.4167 vs 0.3726, CCO 0.5284 vs 0.4810, MFO 0.5669 vs 0.5176; n_gt 5.5k-7k). Per-aspect-K (K30 for BPO) is REJECTED -- even the K30-retrained reranker loses to K10 on held-out
+  The non-optional CORE is therefore uniform K10 KNN + universal reranker (the existing config; /tmp/uni/universal_nosp.tsv lineage); this is the confirmed LAFA-submittable deliverable
+  No per-aspect-K knob, no K30 retrain -- closed as decided
 estimated_hours: 8
 priority: P0
-tags: [method, core, reranker, per-aspect-k, lafa]
+tags: [method, core, reranker, k10, lafa, verdict]
 requires_human: false
-note: "2026-06-09. The cheap Arm-1 win (memory: highk_lever_verdict). Higher K lifts BPO recall (NK-BPO 0.289->0.301 ~ TransFew) but hurts MFO/CCO at fixed K10-reranker (OOD); per-aspect K + retrain converts the BPO headroom without the MFO/CCO precision loss. CORE per the optional-arm consistency decision: it is NOT a flag, it is the baseline everything else is a delta on. ADR: protea-neural-head/design/ADR-method-3arm-ensemble_2026_06_09.md."
+note: "2026-06-09. RENAMED from F-METHOD-PERASPECT-K (which hypothesised K30-BPO as the cheap win). The held-out VALID band rejected it: K10 wins all NK aspects (memory: highk_lever_verdict). status=done = the decision is made (core = uniform K10); no per-aspect-K work. Supersedes the per-aspect-K hypothesis. ADR: protea-neural-head/design/ADR-method-3arm-ensemble_2026_06_09.md."
 ```
 
-**Goal**: lock the strongest non-optional KNN+reranker core (per-aspect K + matched retrain) as the LAFA submission baseline.
+**Goal**: record the confirmed non-optional core = uniform K10 KNN+reranker, with per-aspect-K rejected on held-out VALID; this is the leakage-clean LAFA-submittable baseline.
 
 ### F-METHOD-INTERPRO — Arm 3 InterPro as a uniformly-optional gated arm (late-fusion plus reranker-vNext modes)
 
@@ -3573,18 +3572,18 @@ id: F-METHOD-INTERPRO
 phase: F-METHOD
 loop: farm-platform
 status: pending
-deps: [F-METHOD-PERASPECT-K]
+deps: [F-METHOD-CORE-K10, F-EVAL-PROTOCOL.valid]
 acceptance: |-
-  InterProScan -> InterPro2GO predictions produced offline for the eval window, GO-propagated, leakage-audited (sequence-only signal; InterProScan + InterPro2GO + member-DB versions PINNED and stated; strict <=t0)
-  Implemented behind ONE config flag, OFF by default; the core runs identically with the arm off (optional-arm contract)
-  BOTH integration modes evaluated and compared on the same LAFA-frame harness: (a) late-fusion score-blend over the candidate union; (b) reranker-vNext = InterPro terms as first-class KNN candidates + interpro_backed/n_signatures/term_IA reranker features, retrained
-  Per-(category,aspect) measured delta vs core, IA-weighted paired bootstrap on VALID, evaluated ONCE on TEST; arm selectively enabled ONLY in cells where it beats the core (targeting LK/PK)
-  Whichever mode wins its gate is the shipped integration; documented uniformly in ADR + model/dataset cards
-estimated_hours: 16
-priority: P1
-tags: [method, optional-arm, interpro, reranker-vnext, lafa, lk-pk]
+  RESULT 2026-06-09: late-fusion mode (a) is REJECTED. Flat-0.5 max-blend showed big TEST gains (LK +0.076, PK +0.031) but they DID NOT replicate on the held-out VALID band in EITHER frame (lab + LAFA-frame deltas identical: NK -0.011, LK +0.007, PK -0.010) = operating-point optimism / winner's curse. Do NOT ship the late-fusion blend
+  Therefore the ONLY remaining viable integration is mode (b) reranker-vNext: InterPro terms as first-class KNN candidates + interpro_backed/n_signatures/term_IA reranker features, RETRAINED and CALIBRATED (a learned, not flat, weighting). This is a TRAINING run (gated)
+  InterProScan -> InterPro2GO produced via the validated InterProScan 6 pipeline (--goterms --interpro latest=108.0 --formats tsv --batchSize 1000), versions PINNED + stated, strict <=t0 (leakage hygiene). Artifacts ready (storage/interpro_run/, interproscan6/)
+  HARD GATE: reranker-vNext must BEAT the core on the HELD-OUT VALID band (per-(category,aspect), IA-weighted, same-frame), THEN evaluated once on TEST. No claim/ship without held-out proof (the flat-blend's TEST gain is the cautionary tale)
+  Arm enabled per-cell only where it beats core on VALID; documented in ADR + cards
+estimated_hours: 20
+priority: P2
+tags: [method, optional-arm, interpro, reranker-vnext, lafa, training, held-out]
 requires_human: false
-note: "2026-06-09. Arm 3, OPTIONAL and held to the optional-arm contract identically to Arm 2. reranker-vNext is NOT a separate paradigm: it is Arm3's sharper integration mode (learned weighting) vs the late-fusion blend, and is itself optional. InterProScan run + parse/ensemble/eval harness staged in storage/interpro_run/. ADR: ADR-method-3arm-ensemble_2026_06_09.md. GATE RESULT (memory: interpro_arm3_result_2026_06_09): late-fusion PASSES decisively on the weak flanks (LAFA-frame, th_step=0.01 directional) -- LK 0.394->0.470 (+0.076, ~#2), PK 0.229->0.260 (+0.031, ~#1), NK +0.006. So mode (a) already clears the gate on LK/PK; mode (b) reranker-vNext must beat the late-fusion baseline; precise th_step=0.001 confirmation + per-cell calibration are the open items before publishing."
+note: "2026-06-09. Arm 3 OPTIONAL. CRITICAL UPDATE (memory: interpro_arm3_result_2026_06_09): the late-fusion blend's TEST LK/PK lift (+0.076/+0.031) was NOT robust -- it vanished on the held-out VALID band in BOTH frames (frame ruled out: deltas identical lab vs LAFA-frame). So mode (a) is dead; only the learned mode (b) reranker-vNext remains, and it MUST be proven on held-out before any claim (this is exactly the winner's curse the leakage protocol caught). Downgraded P1->P2: it is now a speculative training lever, not a near-certain win. InterProScan 6 validated (3:47 for 7401, GO content matches the legacy 5.x run). Reranker scoring needs the lab pooled staging (categorical code_maps; see highk_lever_verdict). ADR: ADR-method-3arm-ensemble_2026_06_09.md."
 ```
 
 **Goal**: add orthogonal sequence-domain evidence as an optional, gated arm that lifts the LK/PK cells where the core is #3, without touching the cells it already wins.
@@ -3596,7 +3595,7 @@ id: F-METHOD-MLP-TOWER
 phase: F-METHOD
 loop: farm-platform
 status: pending
-deps: [F-METHOD-PERASPECT-K, F-EVAL-PROTOCOL]
+deps: [F-METHOD-CORE-K10, F-EVAL-PROTOCOL]
 acceptance: |-
   Multi-tower MLP on frozen cached PLM embeddings -> full-GO multi-label (adapted from CAFA6-win [2048,1024,512] + TPR label propagation + IA), training fits the 12GB GPU
   Trained on 5x+ data: all annotated proteins + IEA electronic annotations as weak labels/pretrain + GOA history, STRICT temporal cutoff <=t0 (v227), fine-tuned on experimental; leakage-audited
