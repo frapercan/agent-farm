@@ -3656,7 +3656,7 @@ note: "2026-06-09. User flagged selection leakage: this session's InterPro/per-a
 
 **Goal**: make every selection decision leakage-clean by tuning on a held-out VALID(226->227) in the LAFA frame and touching TEST(227->230) exactly once on the frozen champion.
 
-### F-METHOD-EVAL-SURFACE — platform benchmark UI reflects the LAFA-frame champion, not the stale internal-frame matrix
+### F-METHOD-EVAL-SURFACE — reformulate the app to make the METHOD PROCESS + results intelligible (process view, temporal split, provenance-labelled results)
 
 ```yaml
 id: F-METHOD-EVAL-SURFACE
@@ -3665,17 +3665,42 @@ loop: farm-platform
 status: pending
 deps: [F-EVAL-PROTOCOL.valid]
 acceptance: |-
-  The benchmark page no longer reads as the LAFA standing while showing stale internal-frame, embedding-only data (current: eval_set dd9f16ed, stage=embedding_only, k=3 -- a different frame, no reranker/InterPro)
-  Either the LAFA-frame champion standing (core + arms, VALID-selected, TEST-scored once) is wired into the app as a first-class view, or the internal-frame matrix is clearly labelled as an internal/diagnostic view distinct from the LAFA leaderboard frame
-  Provenance surfaced: which window (VALID 226->227 vs TEST 227->230), which frame (LAFA vs internal), which arms enabled, per (category,aspect)
-estimated_hours: 10
+  PROCESS VIEW: the app visualises the method pipeline -- KNN -> reranker (IA-weighted LightGBM) -> [+ InterPro arm] -> calibrate -> propagate -> threshold -- with core vs optional arms, per (category, aspect)
+  TEMPORAL-WORKFLOW VIEW: the app shows the train/valid/test split explicitly -- TRAIN (< v220-v226) -> VALID (v220-v226, hundreds+ GT rows, where ALL selection happens) -> TEST (v227-v230 = LAFA window, evaluate-once) -- so the methodology is self-evident (NOT the degenerate v226-v227 interim)
+  RESULTS WITH PROVENANCE: every f_micro_w tagged with frame (LAFA-leaderboard vs internal/lab), window (VALID vs TEST), and arms enabled (KNN / +reranker / +InterPro); VALID and TEST shown SEPARATELY so a selection number is never read as a test number
+  INTEGRITY surfaced: leakage-clean (select-VALID / test-once), temporal cutoff, pinned versions
+  CLEANUP: the stale/ambiguous eval_sets (e.g. dd9f16ed, stage=embedding_only, k=3 -- internal-frame, no reranker/InterPro, no provenance) are deprecated/hidden or clearly labelled internal-diagnostic; one canonical frame-consistent eval store backs the views
+  Champion-path cells (KNN / +reranker / +InterPro x NK/LK/PK x BPO/MFO/CCO, VALID + TEST) shown immediately from EXISTING artifacts (run.json valid_band_metrics + offline eval_lafa_frame.py); the full-matrix LAFA-frame recompute is consumed when F-METHOD-RECOMPUTE-MATRIX lands
+estimated_hours: 18
 priority: P1
-tags: [ui, ux, eval, lafa, provenance, frame]
+tags: [ui, ux, eval, lafa, provenance, frame, process, methodology]
 requires_human: false
-note: "2026-06-09. User: the benchmark page 'no refleja los avances, esta lioso'. Root cause: the LAFA-frame KNN+reranker+InterPro work is OFFLINE (eval_lafa_frame.py is the only source of truth); the app shows the old internal-frame embedding-only matrix. Relates to FIX-METRIC-IA.b (re-run persisted matrix evals in LAFA frame). Keep research params visible (memory: ui_surface_provenance_not_hide_params)."
+note: "2026-06-09. User: 'reformulemos la APP para mostrar el proceso y hacerlo inteligible'. The app must make the METHOD legible (pipeline + temporal split + provenance-labelled results), not dump numbers. Confusion root cause: LAFA-frame KNN+reranker+InterPro work is OFFLINE; app shows the stale internal-frame embedding-only matrix with no window/frame/arms provenance. Correct workflow (lab universal_runner): train(<v220-v226) < VALID(v220-v226) < TEST(v227-v230); v226-v227 was a degenerate interim probe. Champion-path numbers already exist in run.json valid_band_metrics + offline harness. Full recompute = F-METHOD-RECOMPUTE-MATRIX (deferred). Keep research params visible (memory: ui_surface_provenance_not_hide_params)."
 ```
 
-**Goal**: one trustworthy eval surface so the platform shows the real LAFA-frame standing, not a stale different-frame matrix.
+**Goal**: the platform tells the method's story truthfully -- pipeline, train/valid/test workflow, and provenance-labelled VALID-vs-TEST results -- on one clean, frame-consistent eval store.
+
+### F-METHOD-RECOMPUTE-MATRIX — full LAFA-frame benchmark-matrix recompute for thesis publication (deferred)
+
+```yaml
+id: F-METHOD-RECOMPUTE-MATRIX
+phase: F-METHOD
+loop: farm-platform
+status: deferred
+deps: [F-EVAL-PROTOCOL.valid, F-METHOD-EVAL-SURFACE]
+acceptance: |-
+  Every benchmark-matrix cell re-evaluated in the LAFA-leaderboard frame (LAFA IA + CAFA_forever-style GT + TOI + prop=fill/norm=cafa/no_orphans + PK-known-excluded), per (PLM, K, arms, category, aspect), window-labelled VALID(v220-v226) and TEST(v227-v230)
+  Each persisted cell carries full provenance (frame, window, arms, IA, cutoff, model/schema sha) so the thesis tables + the app read from ONE canonical store
+  Stale internal-frame eval_sets reconciled or retired; no two cells in incomparable frames are presented side by side
+  Heavy job: parts need the stack (export/eval); run under the stack-owner lock, never an agent at the live DB, --jobs 1 discipline
+estimated_hours: 30
+priority: P2
+tags: [eval, recompute, lafa-frame, thesis, matrix, deferred, heavy]
+requires_human: false
+note: "2026-06-09. User: 'full recompute for thesis publication, pero no tiene porque ser ahora' -> status=deferred. Thesis-grade rigor needs the WHOLE matrix in ONE frame with provenance, not a champion-path subset. Heavy + partly stack/DB-bound (hard rule: never point agents at the live DB; export needs the stack via the stack-owner lock). F-METHOD-EVAL-SURFACE ships first on existing champion-path artifacts; this backfills the full matrix when scheduled. Relates to FIX-METRIC-IA.b, FARM-EXP.GRID-v226, FARM-EXP.11 (ch6 table)."
+```
+
+**Goal**: one canonical, fully-provenanced LAFA-frame benchmark matrix that thesis chapter 6 and the app both read from -- no mixed frames, no winner's-curse, no ambiguity.
 
 ### F-METHOD-CONTAINER — package the frozen leakage-clean champion (core + InterPro arm) into the container path
 
