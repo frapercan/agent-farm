@@ -90,21 +90,41 @@ LAFA-frame. This is also thesis Ch6 Exp 9 (the #1 content gap).
   (PLM, K, score, category, aspect) cell on 220->227, all visible in the app.
 
 ### A2. Select the best KNN-scored cells  [P0, critical path]
-Rank on 220->227 only; keep the highest-scoring cell per aspect (the "best
-model" the reranker will sit on top of). No 227->230 numbers consulted.
+Rank on 220->227 only; record the highest-scoring KNN config per aspect. This
+fixes the candidate-generation baseline and the per-aspect winner used for
+reporting. It does NOT narrow what the reranker may consume: the reranker pools
+across ALL models (see A3). No 227->230 numbers consulted.
 - Exit: a frozen selection table (best PLM/K/score per aspect) committed and
   UI-visible, with a leakage-clean badge.
 
-### A3. Reranker on the selected cells  [P0, critical path]
-Fit the pooled, aspect-conditioned reranker on the A2 winners' data (the per-cell
-selected ones), still selecting/validating on 220->227 (supersedes per-cell
-phase3a). This is "train a classifier on the best ones".
-- Slices: F-RERANK-UNIVERSAL and .1-.7. Gating sub-slices that decide the
-  number: .5a (IA-feval early-stop fix + true pooled staging), .5d (correct
-  LambdaRank group key + K-collapse). .5b/.5c are gated augmentation/HPO.
-- Exit: pooled artifact beats the KNN baseline on 220->227 via IA-weighted
-  paired bootstrap across all 9 categories; frozen; selective-deploy map is a
-  measured OUTPUT, not a hand-pick (.6).
+### A3. Universal reranker, as complete as possible  [P0, critical path]
+User directive (2026-06-10): the reranker must be as complete as possible. Train
+on the MAXIMUM data, pooling the embeddings and KNN candidates of ALL PLM models
+and Ks (multi-manifest), with IA weighting and the OBO ontology used correctly.
+Concretely:
+- POOLED MULTI-MANIFEST: one reranker over the union of all (PLM, K) manifests,
+  candidates source-tagged with plm_id + k_context + neighborhood-stat features,
+  so it exploits every model's KNN, not just the A2 winner. (F-RERANK-UNIVERSAL.2,
+  FARM-EXP.16 all-PLM derived trainer.)
+- MAXIMUM DATA: the full pooled candidate set across models and the widest
+  leakage-clean training window the SELECT side allows; balanced,
+  leakage-audited negatives; seeded bounded-K augmentation. (.4, .5b.)
+- IA CORRECT: Information Accretion inside training (sample weight / label_gain /
+  feval) and as the selection metric (IA-weighted f_micro_w, wFmax). (.1, .4.)
+- OBO CORRECT: the right ontology snapshot per band, with a post-hoc
+  true-path / hierarchical-consistency correction so predictions respect the GO
+  DAG. (F-BAND-REGISTRY done, .5 hierarchical-consistency.)
+- Validation/selection still on 220->227; the K-collapse and the correct
+  LambdaRank group key (snapshot, protein, aspect, plm) gate the number.
+- Slices: F-RERANK-UNIVERSAL and .1-.7; gating .5a (IA-feval early-stop fix +
+  true pooled staging) and .5d (group key + K-collapse). .5c is gated HPO.
+- Caveat: an earlier pooled booster regressed the binary champion on a
+  candidate-ranking subproblem (memory: project_universal_reranker_gate); that is
+  why the number is gated on a real IA-weighted paired bootstrap on full GT, not
+  on candidate-set f_micro_w.
+- Exit: the single pooled artifact beats the KNN baseline on 220->227 via
+  IA-weighted paired bootstrap across all 9 categories; frozen; the
+  selective-deploy map is a measured OUTPUT, not a hand-pick (.6).
 
 ### A4. Ensemble with the two arms  [P1/P2, critical path tail]
 On top of the core (best KNN + reranker), add Arm 2 (full-GO MLP tower) and
