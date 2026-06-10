@@ -240,6 +240,20 @@ F-AUTH-E2E, HARNESS-E2E-FIXTURES.1, UX-ADMIN-AUDIT.
 
 ## TRACK D: docs, the linear thesis
 
+### D0. Non-negotiable manuscript cuts  [P1, before D1]
+Two surgical, non-rewrite cuts the 163pp audit flagged (loop
+`plans/thesis-cuts/PLAN.md`), engineering-thesis identity preserved (Ch4/Ch5
+platform weight and the complexity profile stay). TC-CUT.1 moves Ch6's
+pre-leakage Exp 1 to 7 chronology into a new appendix ("Development trace") and
+reframes the Ch6 body to the leakage-clean, live-reproducible Exp 8/9 plus the
+multi-PLM grid, all UI-sourced. TC-CUT.2 reframes the RQ2 answer and the "Value
+of Feature Engineering" subsection off the anc2vec replication artefact (told as
+a rigor finding, not the winning signal), with a forward pointer to A-SCORE.
+- Loop: `plans/thesis-cuts/PLAN.md` (TC-CUT.1, TC-CUT.2; deps []).
+- Exit: Ch6 body cites only live `/benchmark` or `/evaluation` numbers, pre-leakage
+  to appendix; no primary RQ2 claim rests on the anc2vec artefact; clean
+  publish.sh build redistributed to the served frontend PDF.
+
 ### D1. Close the Ch6 content gap  [P1, critical path, needs A1 + B1]
 Incorporate the multi-PLM grid (from A1) into Ch6 Exp 9 with final numbers, each
 traceable to a UI cell. Replace all "in progress" prose.
