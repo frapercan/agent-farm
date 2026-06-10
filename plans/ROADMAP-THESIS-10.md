@@ -16,8 +16,9 @@ per-arm provenance, or the leakage-clean train/VALID/TEST story.
 Thesis defended and deposited, defensible at 10/10. Concretely:
 1. The PROTEA method is complete, leakage-clean, reproducible, and fully
    operable from the UI.
-2. The benchmark (PLM x K x score) is selected without leakage on VALID and
-   scored ONCE on TEST; the frozen champion is externally validated on LAFA.
+2. The benchmark (PLM x K x score) is selected without leakage on the SELECT
+   window 220->227; the frozen ensemble is scored ONCE on the FINAL window
+   227->230 and externally validated on LAFA.
 3. The manuscript tells ONE linear story; every number it reports is verifiable
    live in the app.
 4. The 8 repos are released v1.0 with green Sphinx docs.
@@ -32,8 +33,11 @@ Thesis defended and deposited, defensible at 10/10. Concretely:
   shows, with provenance (temporal split, arm, frame). An examiner reproduces a
   number by opening the page, not a spreadsheet. No manuscript number may exist
   that the UI cannot surface.
-- NO LEAKAGE. Select on VALID(226->227), touch TEST(227->230) exactly once on
-  the frozen champion. LAFA-frame f_micro_w / wFmax are the selection metrics.
+- NO LEAKAGE, FIXED WINDOWS. Selection happens on the SELECT window 220->227
+  (the KNN-scored grid is ranked here). The reranker is then fit on the
+  per-cell winners. The FINAL window 227->230 is touched once, for the frozen
+  ensemble (core + tower + InterProScan). LAFA-frame f_micro_w / wFmax are the
+  metrics in both windows.
 - IMPECCABLE FORM. Clean trees, no orphan worktrees, no root cruft, every loop.
 
 ## Critical path to defense
@@ -51,65 +55,74 @@ The user's sequence: different PLM x different K x different score, select the
 best without leakage, train a classifier on the winners using their data, then
 ensemble with InterProScan. DL is the stale tail.
 
-### A0. Freeze the no-leakage protocol  [P0, on critical path]
-Build the VALID(226->227) staging in LAFA-frame and lock the select-on-VALID /
-touch-TEST-once gate. Today eval.parquet is TEST-only.
-- Slices: F-EVAL-PROTOCOL.valid, F-EVAL-PROTOCOL.c (fresh-cutoff single-knob
-  inference / LAFA submission generator), F-EVAL-PROTOCOL.
-- Open decision: the user referenced selection on "220->227"; the current
-  protocol uses VALID 226->227 (interim) with TEST 227->230. Confirm whether
-  VALID is the single interim window 226->227 or a wider 220->227 multi-window
-  selection. Default: 226->227 unless the wider window is wanted for power.
-- Exit: VALID harness emits LAFA-frame f_micro_w per (category, aspect); TEST is
-  sealed behind a one-touch guard; both frames documented as identical machinery.
+The exact protocol the user fixed:
+1. SELECT on 220->227: rank the KNN-scored grid (PLM x K x score), keep the
+   highest-scoring cells.
+2. On the best cells, fit and test the reranker (the per-cell winners feed it).
+3. FINAL on 227->230: evaluate the frozen ensemble = core + Arm 2 (tower) +
+   Arm 3 (InterProScan). This window is touched once.
 
-### A1. Full benchmark grid, leakage-clean, LAFA-frame  [P1, critical path]
-PLM(8) x K{3,5,10} x score{KNN raw, scoring-configs, reranker}, measured on
-VALID in LAFA-frame. This is also thesis Ch6 Exp 9 (the #1 content gap).
+### A0. Freeze the no-leakage protocol  [P0, on critical path]
+Stand up both windows in LAFA-frame: SELECT 220->227 and FINAL 227->230. Lock
+the select-on-220->227 / touch-227->230-once gate. Today eval.parquet is the
+later window only; build the 220->227 selection staging.
+- Slices: F-EVAL-PROTOCOL.valid (repurposed to the 220->227 SELECT window),
+  F-EVAL-PROTOCOL.c (fresh-cutoff single-knob inference / LAFA submission
+  generator), F-EVAL-PROTOCOL.
+- Exit: SELECT harness emits LAFA-frame f_micro_w per (PLM, K, score, category,
+  aspect) on 220->227; the 227->230 FINAL window is sealed behind a one-touch
+  guard; both windows run identical machinery.
+
+### A1. KNN-scored grid on the SELECT window  [P1, critical path]
+PLM(8) x K{3,5,10} x score{KNN raw, scoring-configs}, measured on 220->227 in
+LAFA-frame. This is also thesis Ch6 Exp 9 (the #1 content gap).
 - Slices: FARM-EXP.GRID-v226 (closed-set + coverage query), FARM-EXP.8
   (constrained grid execution), FARM-EXP.7 (8-PLM ensemble cell),
   FARM-EXP.11 (per-aspect results table for Ch6).
-- Exit: coverage query green over the declared closed set; one
-  f_micro_w per (PLM, K, score, category, aspect) cell, all visible in the app.
+- Exit: coverage query green over the declared closed set; one f_micro_w per
+  (PLM, K, score, category, aspect) cell on 220->227, all visible in the app.
 
-### A2. Selection without leakage  [P0, critical path]
-Pick the best cells on VALID only. Record winners per aspect with their
-provenance. No TEST numbers consulted.
+### A2. Select the best KNN-scored cells  [P0, critical path]
+Rank on 220->227 only; keep the highest-scoring cell per aspect (the "best
+model" the reranker will sit on top of). No 227->230 numbers consulted.
 - Exit: a frozen selection table (best PLM/K/score per aspect) committed and
   UI-visible, with a leakage-clean badge.
 
-### A3. Train the classifier (universal aspect-conditioned reranker)  [P0, critical path]
-One pooled, aspect-conditioned reranker trained on the winning cells' data
-(supersedes per-cell phase3a). This is "train a classifier on the best ones".
+### A3. Reranker on the selected cells  [P0, critical path]
+Fit the pooled, aspect-conditioned reranker on the A2 winners' data (the per-cell
+selected ones), still selecting/validating on 220->227 (supersedes per-cell
+phase3a). This is "train a classifier on the best ones".
 - Slices: F-RERANK-UNIVERSAL and .1-.7. Gating sub-slices that decide the
   number: .5a (IA-feval early-stop fix + true pooled staging), .5d (correct
   LambdaRank group key + K-collapse). .5b/.5c are gated augmentation/HPO.
-- Exit: single pooled artifact beats the KNN baseline on VALID via IA-weighted
+- Exit: pooled artifact beats the KNN baseline on 220->227 via IA-weighted
   paired bootstrap across all 9 categories; frozen; selective-deploy map is a
   measured OUTPUT, not a hand-pick (.6).
 
-### A4. Ensemble: Arm 2 (MLP tower) + Arm 3 (InterProScan)  [P1/P2, critical path tail]
-Gated late-fusion per (category, aspect) in LAFA frame.
+### A4. Ensemble with the two arms  [P1/P2, critical path tail]
+On top of the core (best KNN + reranker), add Arm 2 (full-GO MLP tower) and
+Arm 3 (InterProScan), gated late-fusion per (category, aspect) in LAFA frame.
+Composition is fit/validated on 220->227.
 - Slices: F-METHOD-INTERPRO.perf (restore the EBI precalc match-lookup; today
   ~3h/7401 proteins via local-HMMER fallback, blocks fast InterPro),
   F-METHOD-INTERPRO (Arm 3 as a uniformly-optional gated arm), FARM-EXP.18
   (InterPro feature family), F-METHOD-MLP-TOWER (Arm 2 full-GO tower).
 - OPEN SCIENTIFIC QUESTION (must resolve here): the InterPro late-fusion lift
-  showed big TEST gains but did NOT replicate on a held-out VALID window (could
-  be frame mismatch, crude blend, or genuine winner's curse). Resolve on a
-  SAME-FRAME LAFA VALID with learned integration before shipping. If it does not
-  hold leakage-clean, InterPro stays optional-and-off in the champion and the
-  thesis reports it as an investigated-but-unconfirmed arm. (memory:
-  project_interpro_arm3_result_2026_06_09.)
-- Exit: gated ensemble >= core on VALID, each arm's contribution measured;
+  showed gains on the later window but did NOT replicate on a held-out earlier
+  window (could be frame mismatch, crude blend, or genuine winner's curse).
+  Resolve on a same-frame 220->227 selection with learned integration before
+  shipping. If it does not hold leakage-clean, InterPro stays optional-and-off
+  in the champion and the thesis reports it as an investigated-but-unconfirmed
+  arm. (memory: project_interpro_arm3_result_2026_06_09.)
+- Exit: gated ensemble >= core on 220->227, each arm's contribution measured;
   ensemble composition frozen.
 
-### A5. Freeze champion, score TEST once  [P0, critical path]
+### A5. Freeze champion, score the FINAL window once  [P0, critical path]
 F-METHOD-CORE-K10 confirmed the uniform-K10 KNN+reranker core (per-aspect-K was
-rejected on VALID). Freeze the full champion (core + any arm that survived A4),
-run the single TEST pass, record final numbers. These become the thesis Ch6
-numbers and the LAFA submission.
-- Exit: exactly one TEST evaluation; frozen results stored and UI-visible.
+rejected). Freeze the full ensemble (core + whichever arms survived A4), run the
+single 227->230 pass, record final numbers. These become the thesis Ch6 numbers
+and the LAFA submission.
+- Exit: exactly one 227->230 evaluation; frozen results stored and UI-visible.
 
 ### A6. LAFA external validation + submission  [P0/P1, parallel after A5]
 - Slices: F-LAFA-SUBMIT.gpufix (pin container torch/CUDA to host driver, re-run
@@ -243,10 +256,11 @@ entries and tags. This is PAPER-TMLR.9 (release tags v1.0 on 8 repos).
 
 ## Sequencing summary
 
-1. A0 (protocol freeze) and B1 (eval surface) start first; B2 unblocks the
-   full-method grid.
-2. A1 grid (leakage-clean, LAFA-frame) runs and immediately populates Ch6 (D1).
-3. A2 selection -> A3 reranker -> A4 ensemble -> A5 single TEST pass.
+1. A0 (window freeze: SELECT 220->227, FINAL 227->230) and B1 (eval surface)
+   start first; B2 unblocks the full-method grid.
+2. A1 KNN-scored grid on 220->227 runs and immediately populates Ch6 (D1).
+3. A2 select winners -> A3 reranker on winners -> A4 two-arm ensemble -> A5
+   single 227->230 pass.
 4. A6 LAFA submission validates the frozen champion externally.
 5. C (ops) runs in parallel from the start; E (releases) once the method is
    frozen so versions capture the final code; F at the end.
@@ -255,9 +269,10 @@ entries and tags. This is PAPER-TMLR.9 (release tags v1.0 on 8 repos).
 
 ## What "10/10" requires that is not yet true
 
-- A leakage-clean VALID harness in LAFA-frame (A0).
-- The full PLM x K x score grid measured and UI-visible (A1 + B1).
-- A single frozen champion scored once on TEST, no variant stories (A5).
+- A leakage-clean SELECT harness on 220->227 in LAFA-frame, with 227->230
+  sealed behind a one-touch guard (A0).
+- The full PLM x K x score grid measured on 220->227 and UI-visible (A1 + B1).
+- A single frozen ensemble scored once on 227->230, no variant stories (A5).
 - Every Ch6 number reproducible from the app (B1 + D1).
 - 8 repos at v1.0 with green Sphinx docs (E1-E3).
 - Supervisor sign-off and a deposit-ready PDF (D3).
