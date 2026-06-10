@@ -7,17 +7,25 @@ rather than a silent incident.
 
 ## Managed repos
 
-| Repo | Protected branch | Also protects main |
+The module is a codified mirror of the LIVE branch protection on each repo.
+Required status-check contexts are the real CI job names, aligned to the
+Python 3.12 matrix (the `test (3.10)` / `test (3.11)` legs were dropped).
+Each repo declares protection per branch pattern under `protections`; a repo
+with no develop branch simply omits the develop key.
+
+| Repo | Default branch | Protected branches |
 |---|---|---|
-| PROTEA | develop | yes |
-| protea-contracts | develop | yes |
-| protea-method | develop | yes |
-| protea-sources | main | no |
-| protea-runners | main | no |
-| protea-backends | main | no |
-| protea-reranker-lab | develop | yes |
-| cafaeval-protea | main | no |
-| agent-farm | main | no |
+| PROTEA | main | main, develop |
+| protea-contracts | main | main, develop |
+| protea-method | main | main, develop |
+| protea-sources | main | main, develop |
+| protea-runners | main | main, develop |
+| protea-backends | main | main, develop |
+| protea-reranker-lab | develop | main, develop |
+| cafaeval-protea | main | main |
+| agent-farm | main | main |
+
+The exact required-check contexts per (repo, branch) live in `variables.tf`.
 
 ## Policy bundle
 
@@ -26,12 +34,12 @@ For every protected branch:
 - Require a pull request before merging (0 required approvers, matching
   the solo-dev workflow; the rule still blocks direct push for everyone
   including admins).
-- Required status checks must pass (strict mode: branch must be up to
-  date with base).
-- Stale reviews dismissed on new push.
-- `require_code_owner_reviews = true` on each repo's default branch,
-  enforcing the CODEOWNERS gate on `.github/workflows/**` and
-  `.github/actions/**` that was added manually on PROTEA via PR #483.
+- Required status checks must pass. Contexts are declared per branch to
+  match the real CI jobs; `strict` is false (live state does not require the
+  branch to be up to date before merge).
+- On `main` patterns, stale reviews are dismissed on a new push. On
+  `develop` patterns (and on the main of repos that have no develop), the
+  CODEOWNERS gate is enforced via `require_code_owner_reviews = true`.
 - `enforce_admins = true`: no bypass even for the repo owner.
 - Force-push and branch deletion blocked.
 - `delete_branch_on_merge = true`: head branches are deleted automatically
