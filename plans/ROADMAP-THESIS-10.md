@@ -22,7 +22,10 @@ Thesis defended and deposited, defensible at 10/10. Concretely:
 3. The manuscript tells ONE linear story; every number it reports is verifiable
    live in the app.
 4. The 8 repos are released v1.0 with green Sphinx docs.
-5. The DL/neural track is explicitly parked behind a documented gate.
+5. Bootstrap, infrastructure, container images, and the LAFA submission are
+   fully documented, PUBLIC, and reproducible by a third party from the docs
+   alone.
+6. The DL/neural track is explicitly parked behind a documented gate.
 
 ## Governing principles (non-negotiable)
 
@@ -39,6 +42,10 @@ Thesis defended and deposited, defensible at 10/10. Concretely:
   ensemble (core + tower + InterProScan). LAFA-frame f_micro_w / wFmax are the
   metrics in both windows.
 - IMPECCABLE FORM. Clean trees, no orphan worktrees, no root cruft, every loop.
+- PUBLIC AND REPRODUCIBLE. Bootstrap, infra, images, and LAFA are documented to
+  the point that a third party reproduces them from public docs alone. Images
+  are public on ghcr; secrets are externalised, never in the repo; every
+  operational step has a runbook.
 
 ## Critical path to defense
 
@@ -254,6 +261,65 @@ entries and tags. This is PAPER-TMLR.9 (release tags v1.0 on 8 repos).
 
 ---
 
+## TRACK G: bootstrap, infrastructure, images, LAFA (public + documented)
+
+Everything an outside reader needs to stand the system up and trust it. The
+machinery mostly exists (cold-boot, fresh-machine bootstrap, boot diagnostic,
+Dockerfiles, the method-runtime and knn images, the LAFA guide); this track
+makes it public, documented to a 10/10 bar, and reproducible by a stranger.
+
+### G1. Bootstrap and getting-started, public  [P1]
+Consolidate cold-boot.sh, scripts/bootstrap-fresh-machine.sh, the boot.sh
+diagnostic, and install_gpu_torch.sh into ONE public getting-started path: from
+a clean machine to a healthy stack, with the GPU-torch caveat (never
+`poetry install --sync`) called out. No leftover V1/V2 procedures.
+- Sources: project_cold_boot_procedure, FARM-INFRA.2.
+- Exit: a third party brings the stack up from the public docs alone; boot.sh
+  green; one canonical procedure, no variants.
+
+### G2. Infrastructure documented and reproducible  [P1]
+One authoritative infra doc + diagram: the full topology (PostgreSQL, RabbitMQ,
+MinIO, FastAPI, Next.js, workers, the 10 queues), the docker-compose files
+(full-stack + monitoring), the native docker-ce decision (Docker.raw only
+grows), secrets externalised to ~/.secrets (never in the repo), ngrok tunnels,
+and the observability stack (Grafana, Prometheus, Loki).
+- Sources: FARM-INFRA.4 (docker-compose.full-stack), T-OPS.2 (bundle compose),
+  F7.6 (observability runbook), F7.7 (deployment guide), monitoring_stack_ngrok,
+  docker_raw_recurring_disk, FARM-INFRA.3 (restore-from-backup), FARM-1.7
+  (postgres volume audit + restore-test cron).
+- Exit: infra reproducible from docs; a secret scan is clean (no creds tracked);
+  backup/restore drill documented and tested.
+
+### G3. Container images, public on ghcr  [P1, aligns with E3]
+Build and publish the images publicly and versioned: the method-runtime image,
+the knn submission image, and the protea-bundle. Fold in the torch/CUDA host
+pin (the LAFA gpufix) so GPU works in-container. Tag images to the v1.0 release
+(Track E3) and document `docker run` usage for each.
+- Sources: T-OPS.1 (Dockerfiles per plugin), T-OPS.12 (method-runtime image),
+  T-OPS.2 (bundle), F-LAFA.1-3 (containers), F-LAFA-SUBMIT.gpufix,
+  reference_lafa_container_contract.
+- Exit: images public and pullable on ghcr, versioned with v1.0, each with a
+  documented run recipe; in-container GPU confirmed.
+
+### G4. LAFA submission, public and documented  [P1, shares A6]
+The submission system end to end: the own-reference temporal-cutoff design, An's
+container contract (generic flags, 3-col TSV, /app/data + /app/output binds),
+the export_lafa_bundle path, and LAFA_SUBMISSION_GUIDE.md as a public document.
+The actual server submission is requires_human.
+- Sources: A6 slices (F-LAFA-SUBMIT.knn/.reranker, F-METHOD-CONTAINER),
+  lafa_own_reference_decision, lafa_submission_system_exists.
+- Exit: the LAFA entry is produced from the documented public image; the guide
+  is public; the submission story is the same frozen champion as A5 (no variant).
+
+### G5. Reproducibility ceremony (capstone)  [P2]
+End-to-end: a stranger on a clean box, from public docs, reproduces stack +
+a benchmark cell + the frozen champion. This proves "public + 10/10".
+- Slice: FARM-INFRA.5 (currently deferred; un-defer for the finish).
+- Exit: a recorded fresh-box rebuild reaches /health green and reproduces one
+  published number.
+
+---
+
 ## Sequencing summary
 
 1. A0 (window freeze: SELECT 220->227, FINAL 227->230) and B1 (eval surface)
@@ -262,8 +328,9 @@ entries and tags. This is PAPER-TMLR.9 (release tags v1.0 on 8 repos).
 3. A2 select winners -> A3 reranker on winners -> A4 two-arm ensemble -> A5
    single 227->230 pass.
 4. A6 LAFA submission validates the frozen champion externally.
-5. C (ops) runs in parallel from the start; E (releases) once the method is
-   frozen so versions capture the final code; F at the end.
+5. C (ops) and G1/G2 (bootstrap + infra docs) run in parallel from the start;
+   E (releases) once the method is frozen so versions capture the final code;
+   G3/G4 (public images + LAFA) ride E3 and A5/A6; F and G5 at the end.
 6. D3 (defense + deposit) gates on D1 + D2 + supervisor availability.
 7. A7 (DL) stays parked behind its gate; never on the critical path.
 
@@ -275,4 +342,10 @@ entries and tags. This is PAPER-TMLR.9 (release tags v1.0 on 8 repos).
 - A single frozen ensemble scored once on 227->230, no variant stories (A5).
 - Every Ch6 number reproducible from the app (B1 + D1).
 - 8 repos at v1.0 with green Sphinx docs (E1-E3).
+- One public, documented bootstrap + infra path a stranger can reproduce, with
+  no secrets in the repo (G1-G2).
+- Public, versioned ghcr images with documented run recipes and in-container GPU
+  (G3), and a public LAFA submission from those images (G4).
+- A recorded fresh-box reproducibility run reaching /health green and
+  reproducing a published number (G5).
 - Supervisor sign-off and a deposit-ready PDF (D3).
