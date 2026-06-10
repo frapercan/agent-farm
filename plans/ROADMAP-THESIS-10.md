@@ -89,6 +89,23 @@ LAFA-frame. This is also thesis Ch6 Exp 9 (the #1 content gap).
 - Exit: coverage query green over the declared closed set; one f_micro_w per
   (PLM, K, score, category, aspect) cell on 220->227, all visible in the app.
 
+### A1b. Derive the SELECT score by ablation  [P1, critical path]
+The grid showed the score axis moves the number (stages within 0.02-0.04) while
+the PLM axis barely does (8 PLMs within 0.03), and the KNN is precision-limited,
+not recall-limited. So the next Track A step is not more PLMs, it is deriving the
+single SELECT score by full feature + K ablation on the light winner (Ankh-base,
+ProtT5 control), replacing the trivial 0/1 scores. Converges to one frozen
+`scoring_config` visible in `/benchmark`, no `vN`. The whole loop hangs off
+F-EVAL-PROTOCOL.valid (the 220->227 VALID window, eval_set 817c6b9f marked
+`window_role='valid'`); 227->230 is sealed and untouched here.
+- Loop: `plans/score-ablation/PLAN.md`.
+- Slices: A-SCORE.0 (K ablation) and A-SCORE.1 (feature ablation) in parallel,
+  A-SCORE.3 (term-level drill) independent, A-SCORE.2 (calibrated log-odds score)
+  after .0+.1, A-SCORE.4 (instance-conditional gating) after .2. All depend on
+  F-EVAL-PROTOCOL.valid; params fit only on 220->227 with per-protein internal CV.
+- Exit: one frozen `scoring_config` registered and UI-visible, the SELECT grid
+  rankable with it, the trivial stages recovered as its T->0 / T->inf extremes.
+
 ### A2. Select the best KNN-scored cells  [P0, critical path]
 Rank on 220->227 only; record the highest-scoring KNN config per aspect. This
 fixes the candidate-generation baseline and the per-aspect winner used for
