@@ -3,7 +3,7 @@
 name: thesis-writer
 kind: subagent
 persistent: false
-model: sonnet-4.6            # academic prose quality
+model: fable-5            # academic prose quality
 
 permissions: acceptEdits
 

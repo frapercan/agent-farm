@@ -6,7 +6,7 @@
 name: ux-reviewer
 kind: subagent
 persistent: false
-model: sonnet-4.6            # judgment: information hierarchy, readability, flow
+model: fable-5            # judgment: information hierarchy, readability, flow
 
 permissions: acceptEdits     # may install playwright/lighthouse for measurement
 

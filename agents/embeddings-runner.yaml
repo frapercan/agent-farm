@@ -8,7 +8,7 @@
 name: embeddings-runner
 kind: headless
 persistent: false
-model: haiku-4.5             # mechanical: validate FASTA, dispatch, poll, report
+model: fable-5             # mechanical: validate FASTA, dispatch, poll, report
 permissions: bypassPermissions
 
 worktree:
