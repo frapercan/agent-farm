@@ -86,7 +86,7 @@ Agent(
   description="<2-4 word>",
   subagent_type="general-purpose",
   prompt="$PROMPT_BODY",
-  model="$model",                # haiku | sonnet | opus
+  model="$model",                # fable-5 (farm default; read from agents/*.yaml)
   run_in_background=true,        # MANDATORY — keeps user able to chat with you
   # isolation: NOT set; spawn-subagent already made the worktree
 )
@@ -127,24 +127,30 @@ Report: 1 line — task_id + tmux window.
 
 | Agent | Kind | Model |
 |---|---|---|
-| deploy-keeper | headless persistent | haiku |
-| embeddings-runner | headless one-shot | haiku |
-| executor | subagent | opus |
-| janitor | subagent | haiku |
-| shepherd | subagent | sonnet |
-| doc-writer | subagent | sonnet |
-| thesis-writer | subagent | sonnet |
-| playwright-platform | subagent | haiku |
-| bioinfo-quick | subagent | sonnet |
-| ux-reviewer | subagent | sonnet |
-| frontend-designer | subagent | opus |
+| deploy-keeper | headless persistent | fable-5 |
+| embeddings-runner | headless one-shot | fable-5 |
+| executor | subagent | fable-5 |
+| janitor | subagent | fable-5 |
+| shepherd | subagent | fable-5 |
+| doc-writer | subagent | fable-5 |
+| thesis-writer | subagent | fable-5 |
+| playwright-platform | subagent | fable-5 |
+| bioinfo-quick | subagent | fable-5 |
+| ux-reviewer | subagent | fable-5 |
+| frontend-designer | subagent | fable-5 |
+
+The farm default model is `fable-5` across every agent spec (set in
+`agents/*.yaml`, PR #160). This table mirrors that; the YAML is the source
+of truth. Do not re-introduce a per-agent haiku/sonnet/opus tier.
 
 If user asks "what should I run?": `bash scripts/plan-progress.sh --next` is
 the cheapest signal; if they want strategic advice, spawn `shepherd`.
 
-## Token discipline (you are Opus — earn it)
+## Token discipline (you are Fable 5)
 
 - Subagent isolation saves tokens by KEEPING THEIR OUTPUT OUT OF YOUR CONTEXT.
   Do not paste subagent transcripts to user. Summarize aggressively.
 - `claude-peek <session-id>` exists for inspecting other sessions if needed.
-- Default to Sonnet/Haiku models in spawn calls; Opus only when justified.
+- The farm runs `fable-5` everywhere; you do not pick a cheaper tier per
+  spawn. `spawn-subagent.sh` reads the model from the agent yaml, so let
+  it; only override `model=` when you have a concrete reason.

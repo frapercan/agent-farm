@@ -14,16 +14,16 @@ conductor reads it, runs the boot sequence in order, and reports back.
 Once boot is green and the user has explicitly OK'd spawning, the farm
 runs four threads concurrently:
 
-1. **Plan execution** (executor, opus) — one slice at a time from
+1. **Plan execution** (executor, fable-5) — one slice at a time from
    `plans/executor/PLAN.md`. Picks the highest-priority unblocked slice
    per shepherd's recommendation.
 2. **Operational reactive** (deploy-keeper persistent + janitor on
    demand). deploy-keeper holds `develop` deployed at protea.ngrok.app;
    janitor only fires when shepherd flags a red CI PR or a 1-line
    landmine.
-3. **Documentation** (doc-writer, sonnet) — one slice at a time from
+3. **Documentation** (doc-writer, fable-5) — one slice at a time from
    `plans/doc-writer/PLAN.md` when there is one pending.
-4. **Thesis** (thesis-writer, sonnet) — one slice at a time from
+4. **Thesis** (thesis-writer, fable-5) — one slice at a time from
    `plans/thesis-writer/PLAN.md` when there is one pending. Worktree is
    in `~/Thesis2/thesis`, NOT PROTEA — they don't collide with executor.
 
@@ -142,7 +142,7 @@ Spawn the 4 threads, respecting these gates:
 
   Spawn command: `bash ~/Thesis2/agent-farm/scripts/spawn.sh deploy-keeper`.
 
-- **shepherd**: spawn as subagent (sonnet, background) for top-3
+- **shepherd**: spawn as subagent (fable-5, background) for top-3
   recommendations.
 
 - **executor**: spawn on the top P0/P1 slice from
