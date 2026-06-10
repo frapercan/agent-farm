@@ -6,7 +6,7 @@
 name: janitor
 kind: subagent
 persistent: false
-model: haiku-4.5
+model: fable-5
 
 permissions: acceptEdits
 

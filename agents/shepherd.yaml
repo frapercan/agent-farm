@@ -6,7 +6,7 @@
 name: shepherd
 kind: subagent
 persistent: false
-model: sonnet-4.6            # judgment about priorities
+model: fable-5            # judgment about priorities
 
 permissions: acceptEdits     # may write a fresh coord.md to results/<task_id>/
 

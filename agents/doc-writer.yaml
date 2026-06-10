@@ -3,7 +3,7 @@
 name: doc-writer
 kind: subagent
 persistent: false
-model: sonnet-4.6            # writing quality matters
+model: fable-5            # writing quality matters
 
 permissions: acceptEdits
 
