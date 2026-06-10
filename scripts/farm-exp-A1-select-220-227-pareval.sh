@@ -82,10 +82,10 @@ print(jwt.encode({
 log "minted JWT len=${#TOKEN}"
 
 # Canonical IDs shared across every cell (A0-validated SELECT window).
-QUERY_SET=132fdab7-bf38-43f8-bab8-f8037734fa10          # SELECT delta targets 220->227 (26111)
+QUERY_SET=d95af71f-320c-43bb-a6f4-c56b3fef6f6b          # SELECT delta targets 220->227 (26111) — re-staged 2026-06-10 after DB restore
 ANN_SET=1559d9f7-195d-4892-af16-8b58f7fc9942            # t0 reference pool (goa@220)
 ONT=35c3ad67-3002-47db-8f71-eeed69d22ad6                 # GO snapshot
-EVAL_SET=817c6b9f-62cc-42bc-afac-6f72a21525f6            # goa:220 -> goa:227 SELECT (NK/LK/PK tiers)
+EVAL_SET=a3be0a6d-7f21-4e7e-8ac8-eabccf77e8e0            # goa:220 -> goa:227 SELECT (NK/LK/PK tiers) — re-staged 2026-06-10
 # 220-corpus IA table (built by A0 from snapshot 35c3ad67 over goa@220).
 # Passed as eval payload ia_file so f_micro_w is SELECT-window-comparable.
 # WITHOUT this the eval falls back to the snapshot ia_url (generic CAFA6
@@ -105,31 +105,40 @@ SCORING_CONFIGS=(
 
 # (k|embedding_config_id|plm_label)  24 canonical (ADR D35) cells:
 # 8 canonical PLMs x K{3,5,10}.
+#
+# PLM-MAJOR ordering (2026-06-10): the three K values for each PLM run
+# consecutively so the per-process reference pool (worker.ref_cache_max=1)
+# is loaded ONCE per PLM and reused across K=3/5/10 (same cache key
+# embedding_config+annotation_set+aspect) instead of three cold reloads.
+# esm2_3b (the 2560-dim, ~2.8 GB float16 pool) is placed LAST so every
+# lighter cell is banked before the heaviest one runs; if it ever trips
+# memory again, only its own three cells are at risk, not the whole grid.
+# (Resume-skip is order-independent, so re-runs land on whatever is undone.)
 CELLS=(
   "3|08234f06-ba76-4d7d-aaec-ae601096b4fa|ankh_base"
-  "3|238f79b1-3068-4c6f-9013-5cc52b4f662b|ankh_large"
-  "3|2bf1e753-022f-44b8-a131-9a90acb4024e|esmc_600m"
-  "3|500a0c59-be09-424d-9d51-b7997629c95a|esm2_150m"
-  "3|c2e9dda3-e505-4170-b50d-435a451761ac|esm2_650m"
-  "3|55e43f1c-1a3b-4b1d-88c0-26b433f5f673|esm2_3b"
-  "3|c0ae5b69-d6dc-41cf-a711-1739d3d2e170|prostt5"
-  "3|084943c6-fec1-441d-bdc5-63b0268ada1b|prot_t5"
   "5|08234f06-ba76-4d7d-aaec-ae601096b4fa|ankh_base"
-  "5|238f79b1-3068-4c6f-9013-5cc52b4f662b|ankh_large"
-  "5|2bf1e753-022f-44b8-a131-9a90acb4024e|esmc_600m"
-  "5|500a0c59-be09-424d-9d51-b7997629c95a|esm2_150m"
-  "5|c2e9dda3-e505-4170-b50d-435a451761ac|esm2_650m"
-  "5|55e43f1c-1a3b-4b1d-88c0-26b433f5f673|esm2_3b"
-  "5|c0ae5b69-d6dc-41cf-a711-1739d3d2e170|prostt5"
-  "5|084943c6-fec1-441d-bdc5-63b0268ada1b|prot_t5"
   "10|08234f06-ba76-4d7d-aaec-ae601096b4fa|ankh_base"
+  "3|238f79b1-3068-4c6f-9013-5cc52b4f662b|ankh_large"
+  "5|238f79b1-3068-4c6f-9013-5cc52b4f662b|ankh_large"
   "10|238f79b1-3068-4c6f-9013-5cc52b4f662b|ankh_large"
+  "3|2bf1e753-022f-44b8-a131-9a90acb4024e|esmc_600m"
+  "5|2bf1e753-022f-44b8-a131-9a90acb4024e|esmc_600m"
   "10|2bf1e753-022f-44b8-a131-9a90acb4024e|esmc_600m"
+  "3|500a0c59-be09-424d-9d51-b7997629c95a|esm2_150m"
+  "5|500a0c59-be09-424d-9d51-b7997629c95a|esm2_150m"
   "10|500a0c59-be09-424d-9d51-b7997629c95a|esm2_150m"
+  "3|c2e9dda3-e505-4170-b50d-435a451761ac|esm2_650m"
+  "5|c2e9dda3-e505-4170-b50d-435a451761ac|esm2_650m"
   "10|c2e9dda3-e505-4170-b50d-435a451761ac|esm2_650m"
-  "10|55e43f1c-1a3b-4b1d-88c0-26b433f5f673|esm2_3b"
+  "3|c0ae5b69-d6dc-41cf-a711-1739d3d2e170|prostt5"
+  "5|c0ae5b69-d6dc-41cf-a711-1739d3d2e170|prostt5"
   "10|c0ae5b69-d6dc-41cf-a711-1739d3d2e170|prostt5"
+  "3|084943c6-fec1-441d-bdc5-63b0268ada1b|prot_t5"
+  "5|084943c6-fec1-441d-bdc5-63b0268ada1b|prot_t5"
   "10|084943c6-fec1-441d-bdc5-63b0268ada1b|prot_t5"
+  "3|55e43f1c-1a3b-4b1d-88c0-26b433f5f673|esm2_3b"
+  "5|55e43f1c-1a3b-4b1d-88c0-26b433f5f673|esm2_3b"
+  "10|55e43f1c-1a3b-4b1d-88c0-26b433f5f673|esm2_3b"
 )
 
 psql_one() {
