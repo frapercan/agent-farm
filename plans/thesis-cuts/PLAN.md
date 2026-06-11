@@ -32,7 +32,8 @@ audit encontro y que sobrevivieron al pass #55 de consolidacion lineal:
 id: TC-CUT.1
 phase: TC
 loop: thesis-cuts
-status: pending
+status: done
+shipped_via: "thesis PR #60 + #61"
 deps: []
 ```
 
@@ -67,7 +68,8 @@ apendice; TODO cerrado. Suggested agent: doc-writer / thesis-writer
 id: TC-CUT.2
 phase: TC
 loop: thesis-cuts
-status: pending
+status: done
+shipped_via: "thesis PR #59"
 deps: []
 ```
 
