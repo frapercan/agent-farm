@@ -11,9 +11,9 @@
 # override that the deploy worktree needs on every fresh install.
 #
 # Why this script exists (the recurring cold-boot failures):
-#   1. Native docker-ce (Docker Desktop was removed): the postgres /
-#      rabbitmq / minio containers exit cleanly on shutdown and nobody
-#      restarts them. They must be `docker start`ed before anything else.
+#   1. Native docker-ce: the postgres / rabbitmq / minio containers exit
+#      cleanly on shutdown and nobody restarts them. They must be
+#      `docker start`ed before anything else.
 #   2. `poetry install --sync` is WRONG here. pyproject.toml pins torch
 #      to the `pytorch-cpu` source on purpose (GitHub CI has no GPU, see
 #      PROTEA PR #122). `--sync` forces the lock and wipes the CUDA torch
@@ -39,7 +39,7 @@ warn() { printf "  ${YELLOW}WARN${RESET} %s\n" "$*"; }
 die()  { printf "  ${RED}FAIL${RESET} %s\n" "$*" >&2; exit 1; }
 
 # --------------------------------------------------------------------------
-# 1. Docker daemon (native docker-ce, default context -- NOT desktop-linux)
+# 1. Docker daemon (native docker-ce, default context)
 # --------------------------------------------------------------------------
 step "Docker daemon"
 docker info >/dev/null 2>&1 || die "docker daemon unreachable -- sudo systemctl start docker"

@@ -331,8 +331,9 @@ a clean machine to a healthy stack, with the GPU-torch caveat (never
 ### G2. Infrastructure documented and reproducible  [P1]
 One authoritative infra doc + diagram: the full topology (PostgreSQL, RabbitMQ,
 MinIO, FastAPI, Next.js, workers, the 10 queues), the docker-compose files
-(full-stack + monitoring), the native docker-ce decision (Docker.raw only
-grows), secrets externalised to ~/.secrets (never in the repo), ngrok tunnels,
+(full-stack + monitoring), the native docker-ce decision (layers under
+/var/lib/docker, `docker system prune` reclaims space), secrets externalised
+to ~/.secrets (never in the repo), ngrok tunnels,
 and the observability stack (Grafana, Prometheus, Loki).
 - Sources: FARM-INFRA.4 (docker-compose.full-stack), T-OPS.2 (bundle compose),
   F7.6 (observability runbook), F7.7 (deployment guide), monitoring_stack_ngrok,
