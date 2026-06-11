@@ -1,14 +1,23 @@
 # score-ablation — Plan
 
-Deriva el UNICO score del grid SELECT (Track A del ROADMAP-THESIS-10) por
-ablation completa de features y de retrieval (K), sobre el modelo ganador
+Sustituye los scores triviales del grid SELECT (embedding_only / vote_fraction /
+composite, pesos 0/1 a mano) por una EXPLORACION DE SCORE SENSATA, DERIVADA
+IN-SITU PARA CADA CATEGORIA (NK/LK/PK x BPO/MFO/CCO), sobre el modelo ganador
 ligero, en la ventana SELECT 220->227 (LAFA-frame, full-GT `f_micro_w`).
+Track A del ROADMAP-THESIS-10.
 
-Esto NO es un score rival ni un `vN`: converge a un campeon congelado que se
-registra como un `scoring_config` y se ve en `/benchmark`. Sustituye los
-scores triviales actuales (embedding_only / vote_fraction / composite, pesos
-0/1 a mano) por un score derivado y calibrado. La ventana FINAL 227->230 no
-se toca en este loop.
+El score se EXPLORA y AJUSTA por (categoria, aspecto), no global: la K de
+retrieval (A-SCORE.0), los pesos de features (A-SCORE.1) y la temperatura /
+prior / calibracion (A-SCORE.2) se fijan por celda. El entregable es una TABLA
+DE SCORE POR CATEGORIA (que celda usa que knobs), no un unico juego colapsado.
+
+Disciplina (NO rompe el rigor): sigue siendo UN solo metodo principiado, una
+familia `scoring_config` condicionada por categoria, vista en `/benchmark`; no
+son scores rivales ni `vN`. Cada especializacion por categoria debe BATIR al
+ajuste agrupado (pooled) en CV interno held-out de 220->227 (k-fold por
+proteina) o se REVIERTE al pooled (anti winner's-curse: NK tiene pocas
+proteinas y sobre-ajusta facil). La ventana FINAL 227->230 no se toca en este
+loop.
 
 Motivacion (medido sobre 220->227, embedding_only, media de 8 PLMs):
 - El KNN esta limitado por PRECISION, no por recall (R_w casi dobla a P_w en
