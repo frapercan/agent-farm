@@ -3321,7 +3321,8 @@ tags: [reliability, performance, annotation, ops]
 id: FIX-STACK-SELF-HEAL
 phase: F-OPS
 loop: executor
-status: pending
+status: done
+shipped_via: "PR #593 (core: env-source + watchdog) + PR #626 (cold-boot: oomd advisory + watchdog auto-start)"
 deps: []
 acceptance: |-
   "Operative always": the dev/deploy stack must boot correctly regardless
