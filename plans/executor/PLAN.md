@@ -3363,3 +3363,49 @@ requires_human: false
 ```
 
 **Goal**: restore the stale-job reaper on develop (dead since a WorkerTuning/StaleJobReaperConfig refactor moved the timeout/stall args into a config object but left scripts/worker.py passing them as loose kwargs).
+
+### FIX-UI-PROVENANCE — stale 92% progress bar + eval=?->? window provenance (UI is source of truth)
+
+```yaml
+id: FIX-UI-PROVENANCE
+phase: F-UI
+loop: executor
+status: pending
+deps: []
+acceptance: |-
+  Two small UI/provenance correctness bugs surfaced 2026-06-11, both
+  violating "the UI is the single source of truth". CODE-ONLY and SAFE
+  under a running grid: work in your ephemeral worktree, NEVER restart the
+  live deploy stack (a SELECT grid is running with stack-owner=export) and
+  NEVER write to the live DB. For any data backfill, deliver an idempotent
+  SQL/script for the conductor to run; do not run it yourself.
+
+  (1) Job progress bar frozen at 92%. The predict_go_terms coordinator job
+  5836b872 is SUCCEEDED with 26/26 batches (meta.batches_completed=26) and
+  full coverage (26111/26111 targets), but progress_current stayed at 24
+  (progress_total=26): the terminal SUCCEEDED transition never bumps
+  progress_current to progress_total. Fix at the source: on terminal
+  SUCCEEDED set progress_current=progress_total (coordinator finalize
+  and/or BaseWorker). The frontend must also render any terminal status as
+  100% so a stale counter never shows <100% on a SUCCEEDED job. Regression
+  test included.
+
+  (2) Eval job context shows eval=?->?. evaluation_set.window_role is blank
+  and evaluation_result.frame / temporal_window / leakage_role are blank on
+  the re-staged SELECT sets (eval_set a3be0a6d), so the UI cannot render the
+  window label. Fix at the source: the eval dispatch / run_cafa_evaluation
+  must stamp window_role on the EvaluationSet and frame / temporal_window /
+  leakage_role on EvaluationResult (SELECT window 220->227, role=valid).
+  Make the UI label resolve from those fields with a graceful fallback.
+  Provide an idempotent backfill SQL for existing rows (conductor runs it).
+  Test that a freshly evaluated set carries the provenance fields.
+
+  Local CI green (ruff+mypy+pytest). PR base develop. Frontend + backend
+  both live in the PROTEA repo.
+estimated_hours: 4
+priority: P1
+tags: [ui, provenance, jobs, evaluation, source-of-truth]
+requires_human: false
+```
+
+**Goal**: kill the two display bugs (92% stale progress bar, eval=?->? window label) so every state and number the UI shows is correct and provenance-stamped.
