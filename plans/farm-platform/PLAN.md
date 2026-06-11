@@ -3633,7 +3633,7 @@ note: "2026-06-09. Blocker found this session (memory: lafa_container_gpu_blocke
 
 **Goal**: make the submitted container actually emit GPU-speed predictions so the LAFA #1-NK core can be delivered, not just measured offline.
 
-### F-EVAL-PROTOCOL.valid — leakage-clean select-on-VALID(226-227) / touch-TEST(227-230)-once gate + LAFA-frame VALID harness
+### F-EVAL-PROTOCOL.valid — leakage-clean select-on-VALID(220-227) / touch-TEST(227-230)-once gate
 
 ```yaml
 id: F-EVAL-PROTOCOL.valid
@@ -3642,18 +3642,17 @@ loop: farm-platform
 status: pending
 deps: [F-EVAL-PROTOCOL]
 acceptance: |-
-  A LAFA-frame VALID harness on the 226->227 window built from the lab bands (bench-v1-*-v226 + v227 staged), mirroring the parity-locked TEST harness (CAFA_forever Sep_2025_Mar_2026 = 227->230): same IA/TOI/prop=fill/norm=cafa/no_orphans/PK-known-excluded, with a 226->227 NK/LK/PK GT
-  HARD GATE: ALL model/config selection (per-aspect K, InterPro on/off + integration mode + blend weights, reranker-vNext hparams, Arm2 gating) is decided on VALID only; TEST is evaluated ONCE on the frozen champion and never used for selection
-  This session's TEST-derived verdicts RE-DERIVED on VALID: (a) per-aspect-K NK effect, (b) InterPro late-fusion LK/PK lift -- the latter requires InterProScan run on the VALID(226->227) target proteins (currently only the TEST/LAFA targets have InterPro)
-  The champion config is FROZEN from VALID, then scored once on TEST; the reported LAFA-frame number is that single TEST score
+  The SELECT VALID window is 220->227 (eval_set a3be0a6d, NK/LK/PK tiers, IA-weighted f_micro_w), already operational and used by the SELECT grid
+  HARD GATE: ALL model/config selection (per-aspect K, score axes, feature/calibration choices) is decided on VALID(220->227) only; TEST(227->230) is evaluated ONCE on the frozen champion and never used for selection
+  The champion config is FROZEN from VALID, then scored once on TEST; the reported final number is that single TEST score
 estimated_hours: 14
 priority: P0
-tags: [eval, protocol, leakage, valid, test, gate, lafa]
+tags: [eval, protocol, leakage, valid, test, gate]
 requires_human: false
-note: "2026-06-09. User flagged selection leakage: this session's InterPro/per-aspect-K verdicts + the PK#1/LK#2/NK#4 numbers were measured on the TEST window (Sep_2025_Mar_2026 = 227->230) and used for selection = winner's curse. The intended protocol (memory: v227_campaign_design, lafa_v227_band_correction) is select on VALID 226->227, evaluate champion ONCE on TEST 227->230. Lab has v226+v227 bands so VALID is buildable. The InterPro LK/PK direction is mechanistically robust (orthogonal domain evidence) and should survive VALID; the magnitude + final number need this gate. Blocks vNext/Arm2 development (they must be tuned on VALID). Harness: storage/interpro_run/eval_lafa_frame.py (parity-locked, reproduces plain-KNN row)."
+note: "2026-06-10 direction: one linear narrative, SELECT window 220->227 (eval_set a3be0a6d), FINAL 227->230 sealed. No 226 sub-split. The earlier LAFA-band interim-validation framing is superseded; select on VALID(220->227), evaluate champion ONCE on TEST(227->230)."
 ```
 
-**Goal**: make every selection decision leakage-clean by tuning on a held-out VALID(226->227) in the LAFA frame and touching TEST(227->230) exactly once on the frozen champion.
+**Goal**: make every selection decision leakage-clean by tuning on the held-out VALID(220->227) SELECT window and touching TEST(227->230) exactly once on the frozen champion.
 
 ### F-METHOD-EVAL-SURFACE — reformulate the app to make the METHOD PROCESS + results intelligible (process view, temporal split, provenance-labelled results)
 
