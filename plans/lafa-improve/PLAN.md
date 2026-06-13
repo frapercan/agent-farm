@@ -70,3 +70,17 @@ TransFew (0.381) is a stretch; honest target = clear #2-3.
    sealed on 7401. (Fastest proof; if a 2-feature learned blend beats max-union 0.327, P1+P2 thesis confirmed.)
 2. P2 full reranker once P1 features land.
 3. P3 structure last.
+
+## OUTCOME (2026-06-14)
+
+**P1 REFUTED on SELECT (both probes).** Self-prior maxblend `max(knn, alpha*sp)`: alpha=0 (KNN alone) is
+best; alpha>=0.85 hurts PK (0.162->0.147); the 7401 max-union +0.002 did not replicate (winner's-curse
+noise). Agreement-boost `min(1, knn+beta)` on shared terms: flat (LK slightly down). Cause: composite KNN
+saturates high and its neighbors already subsume the protein's own electronic (IEA) annotations, so
+self-prior adds no generalizable signal at the score level. See
+[[project_selfprior_maxblend_refuted_2026_06_14]].
+
+**DECISION: consolidate 0.324 as the thesis result** (see RESULTS.md). Cheap levers exhausted. P2
+(learned reranker: agreement + cross-aspect association + InterPro + structure features) and P3
+(structure for NK) are DEFERRED, not abandoned: revisit only if the thesis narrative needs a leaderboard
+push, since they require out-engineering dedicated learned models for uncertain, marginal gain.
