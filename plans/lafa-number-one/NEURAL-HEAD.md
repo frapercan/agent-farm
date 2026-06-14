@@ -46,6 +46,24 @@ A minimal MLP underperforming a tuned KNN is expected (TransFew/FunBind are tune
 (~0.35-0.42) requires the full multi-week M1-M4 effort with uncertain payoff. DECISION PENDING: commit
 to the full build vs consolidate at 0.330/0.324. Do not proceed to M1 without an explicit decision.
 
+## PROGRESS (2026-06-14) — the build is working
+
+Trajectory, all sealed on 7401 / SELECT-validated:
+- KNN composite 0.324 -> learned re-scorer 0.330 -> **KNN + classifier learned ensemble 0.349** (#3, closing on FunBind #2 0.366; #1 TransFew 0.381).
+- Classifier recipe: concat 6 PLM pooled embeddings (Ankh-base + ESM2-3B + Ankh-large + ESM2-650M + ESMC-600M + ProtT5 = 8320-d) + 2-layer MLP + ASL loss. Standalone 0.326 (7401) / 0.305 (SELECT) -- at parity with KNN, recipe generalises (not 7401-overfit).
+- Ensemble: per-category GBM over [KNN sub-features + classifier_score + IA + log_freq], candidates = union(KNN, classifier) (removes the KNN recall ceiling), fit on SELECT, sealed on 7401. NK **0.4466** (already > FunBind's 0.441 = NK #1), LK 0.4015, PK 0.1991. clf feature dominates importance.
+- Scripts (prototype, /tmp): m0v3_extract.py / sel_extract.py (6-PLM data), m0_train_asl.py (classifier+ASL), gbm_ensemble_seal.py (ensemble).
+
+Remaining gap to #1 (+0.032) is concentrated in **LK (0.40 vs 0.485)** and **PK (0.199 vs 0.230)**; NK is already #1-tier.
+
+## NEXT (prioritised by the remaining gap)
+
+1. **LK lever = label-aware classifier.** Feed the protein's OWN t0 propagated experimental labels (in other namespaces) as an INPUT channel to the classifier (or as features to the ensemble GBM). This is the prior-knowledge signal done as a model INPUT (not the refuted score-blend); TransFew's edge. Targets the biggest gap.
+2. **PK + rare terms = frequency-grouped heads + scale.** TransFew recipe: per-frequency-tier heads; train on the full annotated proteome (500k) with IEA weak-label pretraining (strict <=t0).
+3. **M2 label semantics** (BioBERT GO-def + GCN over the GO-DAG) for rare/zero-shot terms.
+4. **ProstT5 structure** as a 7th PLM (NK/PK remote homologs) and **classifier capacity/epochs/calibration** sweeps.
+5. **Productise:** move the prototype into protea-neural-head, register the classifier + ensemble as a platform model, re-seal via run_cafa_evaluation so the 0.349 is live in /benchmark.
+
 ## Discipline
 
 Evaluate ONLY through cafaeval with the exact published harness (`-toi -known(exclude) -no_orphans`,
