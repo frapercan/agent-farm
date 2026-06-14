@@ -33,6 +33,19 @@ architecture-alone plateaus ~0.30-0.35. #1 is plausible but not assured.
   retrieval are complementary: classifier removes the recall ceiling, retrieval anchors high-homology
   hits) via the learned re-scorer, sealed.
 
+## M0 OUTCOME (2026-06-14)
+
+Built the minimal full-label MLP (768 Ankh-base pooled -> 1024 -> 1024 -> 29461 TOI terms, IA-weighted
+BCE, 88k v227-t0 proteins, propagated labels, 25 ep GPU). Sealed on the 7401 frame (exact harness):
+**NK 0.324 / LK 0.301 / PK 0.134 / mean 0.253** -- BELOW the KNN composite (0.324) and the 0.330
+re-scorer. Optimistic max-union with the KNN HURTS at every alpha (0.21-0.26 vs 0.324): the classifier
+is **anti-complementary** in this minimal form. See [[project_neural_head_m0_2026_06_14]].
+
+A minimal MLP underperforming a tuned KNN is expected (TransFew/FunBind are tuned classifiers at
+0.38/0.37), but M0 gives NO early positive signal that the build is on track. Reaching competitive
+(~0.35-0.42) requires the full multi-week M1-M4 effort with uncertain payoff. DECISION PENDING: commit
+to the full build vs consolidate at 0.330/0.324. Do not proceed to M1 without an explicit decision.
+
 ## Discipline
 
 Evaluate ONLY through cafaeval with the exact published harness (`-toi -known(exclude) -no_orphans`,
