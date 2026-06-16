@@ -28,17 +28,20 @@ CLI-only.
 - Owner: a UI-operations track (extends Track B / the UI work). Today the UI has
   /benchmark, /evaluation and job views; the gap is full operation coverage.
 
-### FR-2: scores and intervals aligned with LAFA  [partial]
-The platform reproduces LAFA's metric AND its uncertainty: not only the mean
-f_micro_w per category/aspect but the confidence intervals, matching LAFA's harness
-and its reported intervals.
-- Rationale: a score without an interval is not comparable to LAFA; the thesis
-  claims must be defensible with the same uncertainty quantification.
-- Acceptance: /benchmark shows, per cell, the f_micro_w plus a CI (e.g. bootstrap)
-  that agrees with LAFA's published intervals within tolerance; the offline harness
-  and the platform agree on both.
-- Owner: Track 1 (native integration) + Track 2 (the sealed grid), extended to emit
-  intervals.
+### FR-2: temporal-interval alignment with LAFA  [partial]
+The platform reproduces the LAFA evaluation across LAFA's MULTIPLE rolling temporal
+windows (the t0 to t1 intervals: Sep to Nov, Sep to Dec, Sep to Mar, Nov to Dec,
+Nov to Mar, Dec to Mar, and the rest of the LAFA window set), not only the single
+227 to 230 window used for the headline result. The leakage-clean protocol holds
+window by window, and our per-window scores align with LAFA's per-window results.
+- Rationale: LAFA is a CONTINUOUS benchmark; alignment on one window is not full
+  alignment. Showing the method tracks LAFA across its intervals is what makes the
+  comparison and the thesis claim complete.
+- Acceptance: the eval surface reports our f_micro_w per LAFA temporal window, and
+  they agree with LAFA's published per-window numbers within tolerance, using the
+  same harness and the same frames; each window is staged leakage-clean (its t0
+  reference is at or before that window's cutoff).
+- Owner: Track 2 (the sealed grid) extended to the full LAFA window set.
 
 ### FR-3: local LAFA-inference product with our method integrated  [open]
 The final product includes LAFA runnable locally in INFERENCE mode (not the whole
@@ -50,6 +53,19 @@ the method on LAFA inputs without standing up the full stack.
   reranked predictions reproducing the sealed score, documented and runnable from
   the docs alone, with no database/queue/worker stack required.
 - Owner: Track 3 (LAFA submission/product) on top of Track 1.
+
+### FR-4: confidence intervals on every reported score  [partial]
+Every reported score carries a confidence interval (for example bootstrap), per cell
+(category by aspect). A point estimate without an interval is not a complete result;
+this raises the quality and defensibility of the whole project.
+- Rationale: comparability and rigour. "Ahead of TransFew (0.381)" must hold with
+  the uncertainty included, not as a bare point comparison. Already done offline
+  (Experiment 8 reports bootstrap CIs); the requirement is to carry intervals through
+  to the LAFA-frame surface and the headline numbers.
+- Acceptance: the eval surface shows score plus CI per cell; the platform and the
+  offline harness agree on both the point estimate and the interval; the thesis
+  reports intervals for the headline figures, including the first-place mean.
+- Owner: Track 1 / Track 2, extended to emit intervals (pairs naturally with FR-2).
 
 ## Non-functional requirements
 

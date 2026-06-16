@@ -8,7 +8,7 @@ exit criteria per track. The canonical per-slice catalog for the platform
 integration is `plans/lafa-integrate/PLAN.md`.
 
 This plan is REQUIREMENTS-DRIVEN: the work is organised around the requirements in
-`plans/REQUIREMENTS.md` (functional FR-1..FR-3, non-functional NFR-UI / NFR-TEST /
+`plans/REQUIREMENTS.md` (functional FR-1..FR-4, non-functional NFR-UI / NFR-TEST /
 NFR-INFRA / NFR-DOCS / NFR-ARCH / NFR-PROCESS / NFR-PERF). Each track below delivers
 one or more requirement IDs; the thesis carries a requirements-engineering framing
 that enumerates them and shows the design and evaluation satisfy each. New work
