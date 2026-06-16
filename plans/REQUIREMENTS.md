@@ -130,6 +130,28 @@ on TEST).
   mean and generalise on the SELECT-internal held-out check; PK headroom pursued.
 - Owner: a continuous-improvement track (Track A science spine), kept open.
 
+### NFR-REPRO: end-to-end reproducibility  [partial]
+The complete pipeline, from raw inputs (sequences, GOA releases, the OBO) through
+embeddings, KNN, features, the classifier, and the per-category combiner, to the
+sealed LAFA score, is reproducible END TO END. A third party reproduces the headline
+result from the documentation and persisted artifacts alone, deterministically: there
+is no uncontrolled randomness (randomness is averaged out by the converged
+seed-averaging of NFR-PERF, not pinned to lucky seeds), every intermediate artifact
+(datasets, embeddings, models, predictions) carries provenance back to the exact data
+version, code commit, and config that produced it, and the platform and the offline
+harness agree at every stage.
+- Rationale: a doctoral result must be independently reproducible end to end, not
+  only the final number; this is the scientific bar and underpins the defence. It
+  unifies NFR-PERF's anti-winner's-curse discipline, NFR-DOCS's third-party docs, and
+  NFR-INFRA's deployability into one acceptance test: someone else gets our number.
+- Acceptance: a documented "from raw inputs to the sealed score" runbook that a third
+  party executes without privileged access and reproduces the result within the
+  converged seed band; every artifact is provenance-tagged; a CI/parity check asserts
+  the native platform path and the offline harness agree end to end on a fixed frame.
+- Owner: cross-cutting (Tracks 1, 2, 3, 5; the lab REPRODUCE.md and the versioned data
+  model are the seeds). Pairs tightly with NFR-PERF (converged seed-averaging) and FR-3
+  (the local inference product is the smallest end-to-end reproducible artefact).
+
 ## How this maps
 
 - Thesis: add a requirements-engineering framing (enumerate FR/NFR; show the design
