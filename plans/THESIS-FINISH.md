@@ -151,6 +151,45 @@ InterProScan binary prerequisite doc.
 Rotate the three tokens (still exposed in chat). Final clean-tree audit and
 memory consolidation.
 
+## TRACK 7: documentation quality (every doc has a function, aligned to the goals)
+
+Principle: every document is either maximum-quality and on the main research line,
+or it is moved to a clearly-marked appendix, or it is removed. Nothing of genuine
+value is deleted; secondary material is preserved and MARKED for later
+recovery/improvement. The marking convention is a one-line banner at the top of any
+deferred or secondary doc: `> [DEFERRED <date>: recover/improve/update later -
+<reason>]` (or `[SUPERSEDED <date> by <pointer>]` for history kept for the record).
+
+- **Thesis (mostly already clean, audited 2026-06-16).** The spine is correct:
+  main chapters carry the leakage-clean experiments (8 to 13, including the LAFA
+  first-place 0.391), and appendix D holds the pre-leakage-fix development trace
+  (experiments 1 to 7), already marked with its caveat. Figures pass (no broken
+  images, all data files present, no broken refs). The ONLY real gaps are the two
+  known content placeholders, owned by Track 2: Experiment 9 multi-PLM grid
+  (`\gridna`) and Experiment 10 universal reranker (`\TODO`). Remaining doc-quality
+  work on the thesis is a final pass after Track 2 fills those: one linear read for
+  any residual stale number, a `latexmk` undefined-ref check, and a confirmation
+  that every reported figure points at the live `/benchmark`. NOTE: the local
+  working checkout had drifted behind `origin/main` and must be kept in sync (a
+  stale checkout produced a false "fourth place" audit reading on 2026-06-16; the
+  real manuscript is first place 0.391).
+- **Repository docs.** Audit the 8 repos so every doc (README, Sphinx pages, ADRs,
+  RESULTS/REPRODUCE) has a clear function and no stale numbers. The lab `fullgo/`
+  docs are already updated to 0.391; the READMEs are production-grade per the v1.0
+  audit. Sweep for any residual superseded numbers or orphaned pages; mark or fix.
+- **Plans store.** Stale plans whose goal is achieved are marked SUPERSEDED/DONE
+  with a banner pointing at the current direction (done 2026-06-15 for
+  `lafa-number-one/PLAN.md` and `NEURAL-HEAD.md`). Keep the catalog honest: one
+  current direction, the rest clearly history.
+- **Memory.** Consolidated 2026-06-15: one START HERE (the 0.391 result), the older
+  date-blocks relabelled as history, three contradictory topic-file descriptions
+  marked SUPERSEDED, index back under budget.
+
+Exit: every doc is max-quality-and-on-the-spine, or appendix-and-marked, or removed;
+the marking banner is applied to all deferred/secondary docs so nothing is silently
+lost; the thesis tells one linear story with no errors and no low-relevance noise in
+the main chapters.
+
 ## Recommended sequence
 
 1. Maintainer decision pending: feature-freeze for the v1.0 / develop-to-main

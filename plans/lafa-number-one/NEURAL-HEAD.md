@@ -1,3 +1,5 @@
+> **[SUPERSEDED / DONE 2026-06-15]** The #1 goal was ACHIEVED: PROTEA reached first place on LAFA (mean 0.391, ahead of TransFew 0.381). This plan describes the offline push toward it and is kept for history only. Current direction: `plans/THESIS-FINISH.md` and `plans/lafa-integrate/PLAN.md`.
+
 # NEURAL-HEAD — end-to-end full-label classifier toward LAFA #1
 
 The retrieval+reranker family caps at ~0.330 sealed ([[project_learned_rescorer_lever_2026_06_14]]).

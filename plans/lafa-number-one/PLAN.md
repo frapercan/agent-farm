@@ -1,3 +1,5 @@
+> **[SUPERSEDED / DONE 2026-06-15]** The #1 goal was ACHIEVED: PROTEA reached first place on LAFA (mean 0.391, ahead of TransFew 0.381). This plan describes the offline push toward it and is kept for history only. Current direction: `plans/THESIS-FINISH.md` and `plans/lafa-integrate/PLAN.md`.
+
 # LAFA-NUMBER-ONE — push for the #1 leaderboard position
 
 ## Target and honest framing
