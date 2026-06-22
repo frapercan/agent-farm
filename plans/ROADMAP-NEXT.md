@@ -29,18 +29,20 @@ offline->platform, the continuous product).
 
 ## Leading slices (this cycle, the three in parallel)
 
-### SCIENCE - SDR-A (the cheapest decisive experiment)
-- Add a `metric="tanimoto"` branch to `protea-method/.../knn_search.py` (binary
-  matmul intersection over fixed-k active sets) + a k-WTA binarisation transform of
-  the cached embedding matrix.
-- Build the readout-1 analysis as a TRACKED runner (not a /tmp script): sample
-  protein pairs; correlate (i) dense cosine, (ii) SDR Tanimoto, (iii) GO semantic
-  similarity (Resnik/Lin over the DAG). Log params + Spearman to MLflow.
-- Gate: if SDR overlap correlates with GO semantics at least as well as dense cosine,
-  proceed to the full SDR-A k-NN arm on `/benchmark`; else record the negative
-  cleanly. De-risk leakage-clean on the SELECT window first.
-- Reuses: cached embeddings (`SequenceEmbedding`), the GO DAG + anc2vec, cafaeval.
-  Plugs in later as an `EvidenceScorer` (ADR-D43).
+### SCIENCE - SDR-A (the cheapest decisive experiment) - DONE, gate NEGATIVE (2026-06-22)
+- Readout-1 ran on the SELECT v227 pool (574k ProtT5, t0). Spearman vs GO-semantic:
+  dense cosine 0.3153 (Resnik) vs SDR Tanimoto k-WTA 0.2551 (k=128). **Gate NEGATIVE:**
+  dense cosine is the stronger biology proxy by ~0.06. Exactly sparse.pdf's Strategy-A
+  caveat (naive k-WTA inherits the dense space's miscalibration). PR #96 merged (lab):
+  reusable SDR primitives + MLflow-tracked runner (`sdr-a-correlation`) + runbook + 13 tests.
+  Stays OUT of the thesis (decision D-B, negative signal). See memory
+  `project_sdr_a_result_2026_06_22`.
+- **Next science moves (T-CIENCIA continues):** (1) cheap wider-k sweep 256/512 on the same
+  runner to confirm the ceiling; (2) **SDR-C** = learned k-sparse autoencoder over cached
+  embeddings (the LEARNED arm, where sparse.pdf says the value actually lives) with a
+  function/contrastive objective; (3) SDR-D structure arm later (heavier). The `metric="tanimoto"`
+  branch in `search_knn` + EvidenceScorer integration (ADR-D43) is only worth building once a
+  sparse arm clears the correlation gate.
 
 ### PRODUCT - INT-8 prep + continuous-container design
 - The native seal on `/benchmark` (full-system row beside the 0.324 baseline) is
