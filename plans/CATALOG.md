@@ -50,12 +50,17 @@ captured in the campaign dossier; the plans are kept for provenance.
 
 ## 5. Worktrees (ephemeral build state)
 
+Resolved 2026-06-22: the three build worktrees were all confirmed merged and
+removed. Boot flagged two as salvage only because squash-merge changes the SHA
+(branch looks unmerged by ancestry) and the local checkouts had a stale fetch;
+the content is on develop in every case. Only the two persistent worktrees remain.
+
 | Worktree | Branch | Status | Disposition |
 |---|---|---|---|
-| **native-boosters-lab** | `feat/native-boosters-lab` | **A MEDIAS** — 1 commit, no PR. Lab-native per-category booster training module + MLflow; replaces the ad-hoc `storage/fullgo_models/train_native_boosters.py`. Real, valuable, unpreserved. | OPEN A PR (preserve), then remove worktree. |
-| **exp-combiners** | merged | DONE — HEAD merged into develop (#94, MR-2.5: drop IA-harmful frequency/interpro columns + binary-calibrated default). | Safe to remove. |
-| **pm-main-hotfix** | `hotfix/v6-array-safe-centroid` | DONE — merged via protea-method #45 (array-safe centroid placeholder check). | Safe to remove. |
-| **protea-deploy** | persistent | The deploy worktree (holds develop deployed at protea.ngrok.app). 6 commits behind develop. | KEEP. Sync to develop during stack-state-update. |
+| **native-boosters-lab** | `feat/native-boosters-lab` | DONE — merged via protea-reranker-lab #95. Lab-native per-category booster training module + MLflow (replaced the ad-hoc `storage/fullgo_models/train_native_boosters.py`); module + tests on develop. | REMOVED. |
+| **exp-combiners** | merged | DONE — merged into develop (#94, MR-2.5: drop IA-harmful frequency/interpro columns + binary-calibrated default). | REMOVED. |
+| **pm-main-hotfix** | `hotfix/v6-array-safe-centroid` | DONE — merged via protea-method #45 (array-safe centroid placeholder check). | REMOVED. |
+| **protea-deploy** | persistent | The deploy worktree (holds develop deployed at protea.ngrok.app). Behind develop. | KEEP. Sync to develop during stack-state-update. |
 | **_thesis-publish** | persistent | Thesis publish worktree. | KEEP. |
 
 ## 6. Open PRs to resolve (plan store)
