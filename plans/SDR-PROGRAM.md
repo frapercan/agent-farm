@@ -40,8 +40,13 @@ clean, publishable result.
 
 ## 3. SDR-C design (the learned arm, where sparse.pdf says the value lives)
 
-A top-k sparse autoencoder (the mechanistic-interpretability SAE family) trained on the
-cached ProtT5 embeddings (pooled and/or per-residue):
+A top-k sparse autoencoder (the mechanistic-interpretability SAE family). CRITICAL
+(operator steer 2026-06-22): SDR-C must NOT default to the cached MEAN-POOLED vectors.
+The SDR-A negative may be a pooling artifact (pool-then-sparsify on an already-smeared
+average), so SDR-C trains on PER-RESIDUE ProtT5 states (the recompute) combined
+sparsify-then-bundle, OR on a richer-pooling recompute, never on the naive mean-pooled
+cache. The fair-pooling re-test (section 2) gates this: only once a non-mean-pooled
+representation is in hand does SDR-C train on it. Specifics:
 
 - **Architecture:** encoder `e -> z` with a top-k bottleneck (k active latents), decoder
   `z -> e_hat`. The active dictionary atoms of `z` are the SDR. Start small (dict size
