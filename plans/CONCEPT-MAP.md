@@ -103,9 +103,13 @@ continuous rebuild loop. Anchors: `protea-method/.../method_main.py`,
   producer), `RerankerModel` (feature_schema_sha/dataset_id/external_source),
   `OntologySnapshot` (obo_version), `EvaluationSet` (window_role), `Job/JobEvent`
   (audit). This underpins **NFR-REPRO** (a third party gets the same number).
-- **The 52/56 thesis drift is a symptom** of losing the canon (56 is canonical at
-  `PROTEA/docs/source/reference/infrastructure.rst:270`; stale "52" in thesis figures
-  + defensa). Rule: cite `feature_schema.py`, never hand-typed numbers.
+- The real governance GAP is the live JSONB-blob seam above, NOT a thesis number.
+  (Checked 2026-06-22: the "52" mentions in the thesis figures + defensa correctly
+  label the historical Exp 6 FullFeature run, which was genuinely 52-feature
+  pre-interpro; the current canon is correctly 56 in intro/conclusion/appendix_d, and
+  the defensa documents the 52->56 bump. No drift; do NOT swap.) Canon = 56 at
+  `PROTEA/docs/source/reference/infrastructure.rst:270`; rule: cite `feature_schema.py`,
+  never hand-typed numbers.
 
 ---
 
@@ -124,8 +128,9 @@ false for 0.391). Canonical example to migrate: reranker training is a UI dead-e
 
 - **Thesis** [stale]: overstates 0.391 as native/live (abstract, `06_evaluation:803/
   829-835`, `07:117`); Exp 9 `\gridna` + Exp 10 `\TODO`; defensa stale (vN labels,
-  residual "CAFA #2", LAFA 0.391 absent); 52/56; **sparse/SDR entirely absent** (clean
-  forward chapter). Correct pattern already present: Appendix D = pre-leakage trace,
+  residual "CAFA #2", LAFA 0.391 absent); **sparse/SDR entirely absent** (clean
+  forward chapter). (52/56 was a false positive: the thesis correctly labels Exp6 as
+  52-feature and the canon as 56.) Correct pattern already present: Appendix D = pre-leakage trace,
   marked. Fix philosophy = same as memories: one linear spine, only validated +
   live numbers, dev-trail quarantined + marked in appendices, reflect real method +
   forward direction, kept current as we go.
