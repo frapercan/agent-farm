@@ -1,203 +1,186 @@
 # agent-farm
 
-Manual-orchestration agent farm. A conductor session spawns specialised Claude
-Code agents (subagents, headless one-shots, headless persistents) on demand,
-records their state in sqlite, and gives the human a single tabla-de-mando
-to drive long-running engineering work without paying for a wall-to-wall
-cron baseline.
+agent-farm is an autonomous multi-agent orchestration system for software
+engineering work. A long-lived conductor session reads a plan store, selects
+the next ready unit of work, dispatches it to a specialised agent running in
+an isolated git worktree, and delivers the result as a pull request. State for
+every task is recorded in a local sqlite database so a human operator has a
+single place to see what is planned, what is running, and what is done.
 
-The agent zoo is project-agnostic by construction: agents are defined as a
-`prompts/<name>.md` + `agents/<name>.yaml` pair, registered via the registry
-helpers in `scripts/lib/`, and dispatched by the conductor or by slash
-commands. Wire any project in by writing its prompts and pointing the
-agents at its repos.
+It was built to drive a doctoral research project (PROTEA, a protein function
+annotation pipeline) without paying for an always-on cron baseline: deterministic
+work runs on a plain bash happy path and only escalates to an agent on failure,
+while open-ended engineering and research work is handled by agents spawned on
+demand. The orchestration layer itself is project-agnostic. Agents are declared
+as data, so the same machinery can drive any codebase by pointing it at a
+different set of repositories and prompts.
 
-## Why this exists
+## How it works
 
-Always-on agentic loops (cron + Claude every 5-30 min) burn token budget
-even on quiet days. Long-running deploys leave a Claude session blocked
-just to babysit a healthy process. Per-project orchestrators leak credentials
-between unrelated repos. agent-farm separates the three concerns:
+The system is organised around three ideas: a plan store, on-demand agents, and
+worktree-isolated delivery.
 
-- **bash happy-path** for any deterministic work (deploys, embeddings dispatch),
-  invoking Claude only on failure
-- **subagents on demand** for cognitive work (executor, doc-writer, shepherd)
-  spawned by a conductor in natural language
-- **per-agent permission scope** baked into each agent yaml, no global
-  blast-radius
+1. Work is described as **plan slices** in `plans/`. Each slice is a Markdown
+   section with a small YAML frontmatter block (`id`, `phase`, `status`, `deps`,
+   `priority`, `acceptance`, ...). Slices form a latent dependency graph through
+   their `deps` field.
+2. A **scheduler** (`scripts/lib/plan_parser.py`, surfaced by
+   `scripts/plan-progress.sh`) walks every plan, joins it against the sqlite
+   task history, and reports which slices are pickable, in flight, blocked, or
+   done. `find_next` returns the highest-priority slice whose dependencies are
+   all met.
+3. The **conductor** picks up a slice and dispatches an agent. Implementation
+   agents run inside an ephemeral git worktree created by the lifecycle hooks in
+   `scripts/hooks/`, so concurrent agents never touch each other's working tree.
+4. The agent completes the slice, runs local checks, and opens a **pull request**.
+   The slice status moves to done once its acceptance criteria are met and the PR
+   is merged.
 
-Token efficiency analysis with concrete numbers: see `docs/token-savings.md`.
-
-## Agent zoo (current)
-
-### Persistent services
-| Agent | Kind | Model | Purpose |
-|---|---|---|---|
-| `deploy-keeper` | headless persistent | haiku | keep `develop` deployed on the configured tunnel; escalate to Claude only on failure |
-
-### One-shot batch jobs (headless)
-| Agent | Kind | Model | Purpose |
-|---|---|---|---|
-| `embeddings-runner` | headless | haiku | dispatch + poll PROTEA `/jobs` for massive embedding batches |
-
-### Subagents (spawned by conductor via Agent tool)
-| Agent | Kind | Model | Purpose |
-|---|---|---|---|
-| `executor` | subagent | opus | implement one master plan slice, open PR |
-| `janitor` | subagent | haiku | trivial CI/PR cleanup across the repo stack |
-| `shepherd` | subagent | sonnet | scan state + recommend next priorities |
-| `doc-writer` | subagent | sonnet | sync docs ↔ código, write ADRs |
-| `thesis-writer` | subagent | sonnet | sync LaTeX manuscript with código + experiments |
-| `playwright-platform` | subagent | haiku | e2e test the platform UI live |
-| `bioinfo-quick` | subagent | sonnet | choose + run next experiment in the lab repo |
-| `ux-reviewer` | subagent | sonnet | audit UX of platform, prioritized findings |
-| `frontend-designer` | subagent | opus | implement UX recommendations on the web app, open PR |
-
-Add a new one: `cp agents/_template.yaml agents/<new>.yaml` + write
-`prompts/<new>.md`.
+A single unit of work therefore flows: plan slice, selected by the scheduler,
+executed in a dedicated worktree, delivered as a PR.
 
 ## Layout
 
 ```
 agent-farm/
 ├── README.md
-├── agents/                      # type registry (one yaml per agent type)
+├── agents/            # agent type registry (one YAML per agent type)
 │   ├── _template.yaml
 │   └── <name>.yaml
-├── prompts/                     # system prompt bodies (one per agent)
+├── prompts/           # system prompt bodies (one Markdown file per agent)
 │   ├── conductor.md
 │   └── <name>.md
+├── plans/             # canonical plan store (see plans/README.md for the schema)
+│   ├── README.md      # slice schema specification
+│   ├── render.py      # builds the aggregate PLAN.md index from per-loop plans
+│   └── <loop>/PLAN.md # one plan file per loop (executor, doc-writer, ...)
 ├── scripts/
-│   ├── init.sh                  # init sqlite from schema
-│   ├── spawn.sh                 # spawn an agent (headless kinds)
-│   ├── spawn-subagent.sh        # spawn helper for the Agent tool
-│   ├── status.sh                # tabla live tasks
-│   ├── kill.sh                  # cancel + cleanup
-│   ├── cleanup.sh               # GC stale tmux/worktrees
-│   ├── plan-progress.sh         # parse plans/<loop>/PLAN.md + join sqlite
-│   ├── launch-conductor.sh      # boot the conductor in tmux
-│   ├── lib/                     # shared bash + python helpers
-│   ├── hooks/                   # worktree lifecycle hooks
-│   └── services/                # per-persistent-agent supervisor + tick
-├── docs/
-│   └── token-savings.md         # cost analysis + 5 levers
+│   ├── init.sh             # initialise the sqlite state DB from schema
+│   ├── spawn.sh            # spawn a headless agent
+│   ├── spawn-subagent.sh   # spawn helper for conductor-driven agents
+│   ├── status.sh           # tabular view of live tasks
+│   ├── kill.sh             # cancel a task and clean up
+│   ├── cleanup.sh          # garbage-collect stale tmux sessions and worktrees
+│   ├── plan-progress.sh    # report plan status, next pickable slice
+│   ├── launch-conductor.sh # boot the conductor in a tmux session
+│   ├── lib/                # shared bash and python helpers (incl. plan_parser.py)
+│   ├── hooks/              # git worktree lifecycle hooks
+│   └── services/           # supervisor and tick loop for persistent agents
+├── apps/
+│   └── farm-api/      # FastAPI sidecar exposing read-only views over the state DB
+├── commands/          # installable slash commands for the orchestration CLI
+├── docs/              # design notes, runbooks, and a cost analysis
 ├── state/
 │   ├── schema.sql
-│   └── tasks.sqlite             # created by init.sh; gitignored
-└── results/                     # per-task artifacts; gitignored
+│   └── tasks.sqlite   # created by init.sh; gitignored
+└── results/           # per-task artifacts; gitignored
 ```
 
-`state/` and `results/` are runtime data, not source — they are gitignored.
+`state/` and `results/` hold runtime data, not source, and are gitignored.
 
-## Bootstrap
+## Agents
+
+An agent is a `prompts/<name>.md` system prompt paired with an
+`agents/<name>.yaml` registration that declares its kind, model, and permission
+scope. Permissions are scoped per agent, so no single agent has repo-wide blast
+radius. To add a new type, copy `agents/_template.yaml` to `agents/<new>.yaml`
+and write `prompts/<new>.md`.
+
+Agents fall into three kinds:
+
+- **Persistent services** run continuously and escalate to an agent only on
+  failure (for example, keeping a development deployment healthy on its tunnel).
+- **Headless one-shot jobs** dispatch and poll a long-running external batch and
+  exit when it finishes.
+- **Conductor-spawned agents** do open-ended cognitive work: implementing a plan
+  slice and opening a PR, syncing documentation with code, reviewing UX, running
+  the next research experiment in the lab, and similar tasks.
+
+## Plan store
+
+The plan store is the single source of truth for what the system is working on.
+It lives at `plans/<loop>/PLAN.md`, one Markdown file per loop. Each `###`
+section is a slice carrying a YAML frontmatter block; the full field reference
+(required and optional fields, status semantics) is in `plans/README.md`.
+`plans/render.py` aggregates every loop's plan into a generated `plans/PLAN.md`
+index and can run as a CI gate (`render.py --check`) that fails if the index is
+stale.
+
+Every implementation spawn carries the `slice` and `phase` it is working on, so
+`scripts/plan-progress.sh` can join the live sqlite task history back to the plan
+and report progress without manual bookkeeping.
+
+## Getting started
 
 ```bash
-# 1. create sqlite
-bash ~/Thesis2/agent-farm/scripts/init.sh
+# 1. initialise the sqlite state database
+bash scripts/init.sh
 
-# 2. boot conductor — autoyes ON by default
-bash ~/Thesis2/agent-farm/scripts/launch-conductor.sh
+# 2. boot the conductor in a tmux session
+bash scripts/launch-conductor.sh
 
-# 3. attach
+# 3. attach to the session
 tmux attach -t agent-farm
 ```
 
-Inside the conductor session, paste:
-```
-Lee ~/Thesis2/agent-farm/prompts/conductor.md y operá como conductor.
-```
+The conductor reads `prompts/conductor.md` to load its operating instructions
+and runs a read-only boot diagnostic before doing anything. It does not spawn
+any agent until the operator explicitly approves.
 
-### Autoyes modes (set via env var at launch)
+### Permission modes
 
-| `AGENT_FARM_AUTOYES=` | Behavior |
+The conductor's permission posture is set with `AGENT_FARM_AUTOYES` at launch:
+
+| `AGENT_FARM_AUTOYES=` | Behaviour |
 |---|---|
-| `1` (default) | `--dangerously-skip-permissions` — zero prompts anywhere |
-| `accept` | `--permission-mode acceptEdits` — auto on edits + safe bash; prompts on `rm`, `push`, etc |
-| `0` | no flag — every tool prompt asked |
+| `1` (default) | bypass all prompts (use only with a trusted plan store and scoped agents) |
+| `accept` | auto-approve edits and safe shell commands, prompt on risky operations |
+| `0` | prompt on every tool call |
 
-To change after launch:
-`tmux kill-window -t agent-farm:conductor && AGENT_FARM_AUTOYES=accept bash launch-conductor.sh`.
+Headless agents declare their own permission scope in their YAML and are
+independent of this setting.
 
-Headless agents (`deploy-keeper`, `embeddings-runner`) are independent of this
-— they always launch with `--dangerously-skip-permissions` per their yaml
-`permissions: bypassPermissions`. Only the conductor's mode (which subagents
-inherit) is configurable here.
+## Slash commands
 
-## Daily use
-
-### From the conductor session (natural language)
-
-Inside the conductor tmux window, just talk:
-
-- *"spawn deploy-keeper"* → conductor calls `spawn.sh deploy-keeper`
-- *"smoke test the docs"* → conductor uses the `Agent` tool with the docs prompt
-- *"what's running?"* → conductor runs `status.sh`
-- *"kill the bioinfo task"* → conductor finds task_id and runs `kill.sh`
-
-### Slash commands (also work from any session)
-
-Install the slash commands to `~/.claude/commands/`:
+The orchestration commands can be installed into a local command directory and
+then invoked from any session:
 
 ```bash
-bash ~/Thesis2/agent-farm/commands/install.sh
+bash commands/install.sh
 ```
 
-Then use:
+| Command | Purpose |
+|---|---|
+| `/agent-farm-conductor` | load the conductor identity (run first) |
+| `/agent-farm-agents` | list the registered agent types |
+| `/agent-farm-spawn <agent> [spec]` | spawn an agent |
+| `/agent-farm-status [task_id]` | show live tasks (or detail / recent history) |
+| `/agent-farm-kill <task_id>` | cancel a task and clean up |
+| `/agent-farm-cleanup` | garbage-collect stale tmux sessions and worktrees |
+| `/agent-farm-plan [--next]` | report plan progress and the next pickable slice |
 
-```
-/agent-farm-conductor                # load conductor identity (run first)
-/agent-farm-agents                   # list agent types
-/agent-farm-spawn <agent> [spec]     # spawn (headless via shell, subagent via Agent tool)
-/agent-farm-status [task_id|--all]   # tabla of live (or detail / 24h history)
-/agent-farm-kill <task_id>           # cancel + cleanup
-/agent-farm-cleanup                  # GC stale tmux/worktrees
-/agent-farm-plan [`--phase` PH|`--next`]  # plan progress, next pickable slice
-```
-
-### Plan tracking
-
-The agent-farm is plan-aware. The canonical plan store lives at
-`plans/<loop>/PLAN.md` (one Markdown file per loop, each `### <title>`
-slice carrying a yaml frontmatter block with `id`, `phase`, `loop`,
-`status`, `deps`, `priority`, etc; see `plans/README.md`).
-`scripts/plan-progress.sh` walks every loop's plan, joins with the
-sqlite executor task history (via the `spawn_args.slice` convention),
-and reports which slices are pickable, in flight, blocked, or done.
-`--next` picks the highest-priority pickable slice across all loops.
-
-Convention: every `executor` spawn MUST include `slice` and `phase` in
-spawn_args (the executor prompt enforces this). Example:
+The same operations are available directly from the shell, for scripting:
 
 ```bash
-/agent-farm-spawn executor '{"slice":"FARM-2.7","phase":"F-FARM-2","notes":"refactor plan_parser to read plans/<loop>/PLAN.md"}'
+bash scripts/spawn.sh <agent>
+bash scripts/status.sh
+bash scripts/kill.sh <task_id>
+bash scripts/cleanup.sh --apply
 ```
 
-### Direct shell (when scripting / automation)
+## Status and scope
 
-```bash
-bash ~/Thesis2/agent-farm/scripts/spawn.sh deploy-keeper
-bash ~/Thesis2/agent-farm/scripts/status.sh
-bash ~/Thesis2/agent-farm/scripts/kill.sh <task_id>
-bash ~/Thesis2/agent-farm/scripts/cleanup.sh --apply
-```
+The plan store, scheduler, sqlite state model, worktree-isolated execution, and
+PR-based delivery are in active use. A read-only FastAPI sidecar
+(`apps/farm-api/`) exposes the state database for tooling. A fuller
+dependency-graph scheduler (resource-aware and node-aware leasing) is designed
+but not yet implemented; its rationale lives in `docs/decisions/` and its plan in
+`plans/dag-scheduler/`.
 
 ## See also
 
-- `docs/features/` (one markdown page per first-class capability, auto-indexed by `docs/features/README.md`)
-- `docs/token-savings.md` — concrete cost analysis, daily budget table,
-  the 5 levers that keep this cheap
-- `prompts/conductor.md` — conductor system prompt (read first if you're
-  orchestrating manually)
-- `agents/_template.yaml` — copy this to add a new agent type
-
-## Quick reference card
-
-```
-SPAWN:     /agent-farm-spawn <agent> [spec]   OR    bash scripts/spawn.sh <agent>
-STATUS:    /agent-farm-status                  OR    bash scripts/status.sh
-KILL:      /agent-farm-kill <task_id>          OR    bash scripts/kill.sh <id>
-CLEANUP:   /agent-farm-cleanup                 OR    bash scripts/cleanup.sh --apply
-AGENTS:    /agent-farm-agents                  OR    ls agents/*.yaml
-ATTACH:    tmux attach -t agent-farm
-SUPERVISOR LOG: tmux attach -t agent-farm → Ctrl-b w → pick supervisor window
-```
+- `plans/README.md`: the plan slice schema specification
+- `prompts/conductor.md`: the conductor system prompt (read first if you operate
+  the system manually)
+- `agents/_template.yaml`: copy this to add a new agent type
+- `docs/token-savings.md`: cost analysis and the levers that keep the system cheap
