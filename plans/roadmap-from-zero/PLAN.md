@@ -28,7 +28,7 @@ Lever menu (expected gain, source):
 id: R0.1
 phase: F0
 loop: roadmap-from-zero
-status: pending
+status: done
 deps: []
 acceptance: |-
   Eval set generated ON-PLATFORM via generate_evaluation_set (job-backed, NOT job_id=None);
@@ -90,22 +90,28 @@ tags: [condprobmod, propagation, hierarchy, cafa5-lever]
 The single biggest external lever in the ProtBoost ablation (+0.04). Hard label propagation
 was already shown negligible for us; this is the SOFT, hierarchy-aware variant.
 
-### R3.1 — Meta-stacking over evidence arms (GCN / ADR-D43)
+### R3.1 — Meta-stacking over evidence arms (GCN / ADR-D43) [= F-RERANK-UNIVERSAL]
 
 ```yaml
 id: R3.1
 phase: F3
 loop: roadmap-from-zero
-status: pending
+status: deferred
+superseded_by: F-RERANK-UNIVERSAL
 deps: [R1.1, R2.1]
 acceptance: |-
-  Stacked combiner over the evidence arms (learned-KNN + multi-PLM classifier + sparse + assoc
-  + structure/ProstT5), exploiting the GO graph structure (GCN-style stacking per ProtBoost);
-  realises the meta-reranker (ADR-D43): stacked evidence-scorer PORTS + shallow per-category COMBINER;
-  ablation delta vs the F1+F2 stack on the clean frame.
+  FUSED into farm-platform F-RERANK-UNIVERSAL (the same objective: the single pooled,
+  aspect-conditioned, IA-aligned reranker = ADR-D43 meta-reranker). The executable
+  decomposition lives there as F-RERANK-UNIVERSAL.1..6 (registry/IA bridge -> pooled
+  multi-manifest view -> (protein,aspect) staging + VALID/TEST windows -> IA-weighted
+  LambdaMART + leakage-audited negatives + seeded bounded-K -> full training + calibration
+  + DAG correction -> selective-deploy measured per category with paired-bootstrap CIs).
+  This roadmap milestone is COMPLETE when F-RERANK-UNIVERSAL.6 lands. The roadmap arms it
+  must pool over (learned-KNN encoder = R1.1, sparse k-WTA index, CondProbMod = R2.1) are
+  fed in as sources at F-RERANK-UNIVERSAL.2/.4. Do NOT execute this entry directly.
 estimated_hours: 24
 priority: P2
-tags: [meta-reranker, gcn, stacking, adr-d43]
+tags: [meta-reranker, gcn, stacking, adr-d43, fused]
 ```
 
 ### R4.1 — New evidence features: literature TF-IDF + PPI graph
@@ -133,7 +139,7 @@ id: R5.1
 phase: F5
 loop: roadmap-from-zero
 status: pending
-deps: [R1.1, R2.1, R3.1, R4.1]
+deps: [R1.1, R2.1, F-RERANK-UNIVERSAL.6, R4.1]
 acceptance: |-
   Final ensemble assembled; the official LAFA/CAFA f_micro_w produced END-TO-END on-platform
   with full provenance (reproducible, no external artifact); leaderboard position established
