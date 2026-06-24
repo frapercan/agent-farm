@@ -11,6 +11,8 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 - **bioinfo-quick**: nothing pickable (blocked deps or all done / requires_human)
 
+- **crossobo-native-delta**: nothing pickable (blocked deps or all done / requires_human)
+
 - **dag-scheduler**: `F-SCHED.1` (P0) · `F-SCHED.2` (P0) · `F-SCHED.3` (P1)
 - **doc-writer**: nothing pickable (blocked deps or all done / requires_human)
 
