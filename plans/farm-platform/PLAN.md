@@ -3256,14 +3256,14 @@ note: "2026-06-06. The user's long-term 'tener todo calculado sobre 226, benchma
 
 **Goal**: have the entire v226 benchmark computed and reportable as a single declared, hash-addressed, query-checkable closed set.
 
-### F-RERANK-UNIVERSAL — one pooled, aspect-conditioned reranker (supersedes per-cell phase3a)
+### F-RERANK-UNIVERSAL — one pooled, aspect-conditioned reranker (supersedes per-cell phase3a) [= roadmap R3.1 / ADR-D43]
 
 ```yaml
 id: F-RERANK-UNIVERSAL
 phase: F-RERANK
 loop: farm-platform
 status: pending
-deps: [F-EVAL-PROTOCOL.b, F-BAND-REGISTRY]
+deps: [F-EVAL-PROTOCOL.b, F-BAND-REGISTRY, R1.1, R2.1]
 acceptance: |-
   ONE universal reranker trained on the POOLED candidate pairs across PLM and K, with (PLM-id, K-context, neighborhood stats: rank/distance/local-density/vote-count) as FEATURES, aspect-conditioned (aspect feature or per-aspect head); replaces the up-to-216 per-cell phase3a models with a single artifact (decouples evaluation-grid coverage from model granularity)
   Objective aligned to the metric: LightGBM LambdaMART (objective=lambdarank) grouped per (protein, aspect) with IA-weighted gains, so training optimizes the IA-weighted f_micro_w directly (not a pointwise binary proxy); per-aspect score calibration fit on VALID; post-hoc true-path / hierarchical-consistency correction on the GO DAG
@@ -3276,7 +3276,7 @@ estimated_hours: 28
 priority: P0
 tags: [reranker, universal, lambdarank, ia, lafa, thesis, performance]
 requires_human: false
-note: "2026-06-06 design with user. THE FINAL THESIS OBJECTIVE: a single pooled, aspect-conditioned, IA-aligned reranker, justified by a complete benchmark + VALID/TEST split + per-category CIs + LAFA check + living docs. Biggest score lever is NOT model capacity but (a) candidate recall and (b) objective alignment (LambdaMART with IA-weighted gains), per the complexity/score tradeoff discussion; neural rerankers were explored and did not surpass GBDT. The 'infinite random K stream' idea is adopted as a SEEDED bounded training distribution, not the inference policy. CRITICAL framing correction (user): do NOT assume per-category outcomes; once IA-aligned the reranker may improve any category, including PK and CC/BP, so every category is measured with CIs and the selective-deploy is an OUTPUT, not an input. Supersedes the per-cell phase3a sweep."
+note: "2026-06-06 design with user. THE FINAL THESIS OBJECTIVE: a single pooled, aspect-conditioned, IA-aligned reranker, justified by a complete benchmark + VALID/TEST split + per-category CIs + LAFA check + living docs. Biggest score lever is NOT model capacity but (a) candidate recall and (b) objective alignment (LambdaMART with IA-weighted gains), per the complexity/score tradeoff discussion; neural rerankers were explored and did not surpass GBDT. The 'infinite random K stream' idea is adopted as a SEEDED bounded training distribution, not the inference policy. CRITICAL framing correction (user): do NOT assume per-category outcomes; once IA-aligned the reranker may improve any category, including PK and CC/BP, so every category is measured with CIs and the selective-deploy is an OUTPUT, not an input. Supersedes the per-cell phase3a sweep. FUSION (2026-06-24): this IS roadmap-from-zero R3.1 (ADR-D43 meta-reranker); R3.1 is now status=deferred/superseded_by this slice, and roadmap R5.1 depends on F-RERANK-UNIVERSAL.6 (not R3.1). The roadmap evidence arms are pooled in as sources: the learned k-WTA encoder + sparse index (R1.1) and CondProbMod/soft-propagation outputs (R2.1) enter at .2 (pooled multi-manifest view) and .4/.5 (training over the arms); hence deps now include R1.1, R2.1."
 ```
 
 **Goal**: replace the per-cell reranker grid with a single universal, aspect-conditioned, pooled reranker (PLM/K as features, K-augmented, balanced-sampled, leakage-audited) that is both simpler to ship and stronger, as the main lever toward LAFA #1.
