@@ -18,6 +18,8 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 - **farm-platform**: `F-RERANK-UNIVERSAL` (P0) · `F-RERANK-UNIVERSAL.1` (P0) · `F-RERANK-UNIVERSAL.5d` (P0)
 - **lafa-integrate**: nothing pickable (blocked deps or all done / requires_human)
 
+- **target-selection-native**: nothing pickable (blocked deps or all done / requires_human)
+
 - **thesis-writer**: nothing pickable (blocked deps or all done / requires_human)
 
 
