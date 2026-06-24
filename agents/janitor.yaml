@@ -6,7 +6,7 @@
 name: janitor
 kind: subagent
 persistent: false
-model: fable-5
+model: opus
 
 permissions: acceptEdits
 

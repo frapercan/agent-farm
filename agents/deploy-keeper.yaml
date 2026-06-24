@@ -9,7 +9,7 @@
 name: deploy-keeper
 kind: headless
 persistent: true
-model: fable-5             # nominal model; supervisor never spawns it
+model: opus             # nominal model; supervisor never spawns it
 permissions: bypassPermissions  # trusted; redeploys + ngrok mgmt require shell
 
 worktree:
