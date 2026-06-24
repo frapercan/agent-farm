@@ -6,7 +6,7 @@
 name: frontend-designer
 kind: subagent
 persistent: false
-model: fable-5              # creative + correctness on visual stuff
+model: opus              # creative + correctness on visual stuff
 
 permissions: acceptEdits     # writes to worktree only
 

@@ -9,7 +9,7 @@
 name: playwright-platform
 kind: subagent
 persistent: false
-model: fable-5             # mostly mechanical: run npx playwright, read JSON report
+model: opus             # mostly mechanical: run npx playwright, read JSON report
 
 permissions: acceptEdits     # may npm install playwright deps
 

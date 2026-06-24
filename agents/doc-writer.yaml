@@ -3,7 +3,7 @@
 name: doc-writer
 kind: subagent
 persistent: false
-model: fable-5            # writing quality matters
+model: opus            # writing quality matters
 
 permissions: acceptEdits
 

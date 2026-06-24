@@ -10,7 +10,7 @@ persistent: false            # only meaningful for kind=headless
                              # true  → service loop (re-tick after each cycle)
                              # false → one-shot batch job, exit on completion
 
-model: fable-5            # haiku-4.5 | sonnet-4.6 | opus-4.7
+model: opus            # haiku-4.5 | sonnet-4.6 | opus-4.7
                              # haiku for mechanical work, sonnet for judgment, opus for hard
                              # Cost ratio (input): haiku $1, sonnet $3, opus $15 per Mtok.
 

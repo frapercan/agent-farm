@@ -8,7 +8,7 @@
 name: bioinfo-quick
 kind: subagent
 persistent: false
-model: fable-5            # judgment: which experiment is informative
+model: opus            # judgment: which experiment is informative
 
 permissions: acceptEdits     # may edit lab configs, scripts; no destructive ops
 

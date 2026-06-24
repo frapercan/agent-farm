@@ -10,7 +10,7 @@
 name: executor
 kind: subagent
 persistent: false
-model: fable-5              # creative + correctness; this agent OPENS PRs
+model: opus              # creative + correctness; this agent OPENS PRs
 
 permissions: acceptEdits     # writes only inside ephemeral worktree
 
