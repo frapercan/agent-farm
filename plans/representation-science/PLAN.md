@@ -39,6 +39,21 @@ giant/multidomain proteins via SDRs would be high-impact.
 - **cafaeval NK/LK dense-kernel bug** (sparse 250-10000x faster, identical Fmax) -> fix in flight,
   RS.7; cuts eval ~23min->~2min.
 
+## A (keystone real-frame validation) RESULTS — 2026-06-25, MLflow exp 30
+- The R0.1 frame did NOT exist (all 14 eval sets were orphans, wrong OBO). A BUILT it: eval_set
+  `6e41eb5b`, job `81e71903`, pivot 2025-07-22, delta 7575. THIS is the canonical clean frame now.
+- Champion mean-learned beats dense NK/LK (Δ NK +0.08/+0.06/+0.14, LK +0.13/+0.09/+0.12), tie PK -> win
+  CONFIRMED on the real reproducible frame.
+- **Reranker INERT here: reranked == raw-knn BIT-IDENTICAL** (both arms). Advantage is 100% the learned
+  retrieval code -> RS.6 (retrain) is essential, not optional.
+- **Length axis: FLAT, not growing** (mean-learned). The proxy's length-GROWTH was for chunk-learned
+  (still untested -> RS.4c).
+- **Identity axis (strategic, partly NEGATIVE): frame CANNOT probe twilight** (re-annotation of
+  homologs; 0 remote). Champion advantage lives in HIGH identity, vanishes/reverses in twilight.
+  -> the "beat homology where it fails" differentiator is UNCONFIRMED and needs a NEW low-identity
+  holdout frame (RS.8, pending user decision).
+- **chunk-learned BLOCKED**: apply_learned_encoder is mean-pool-only -> RS.4c plumbing in flight.
+
 ### RS.0 — Factorial substrate x aggregation proxy (truncation-clean)
 
 ```yaml
@@ -157,10 +172,12 @@ tags: [sdr, giants, multidomain, late-interaction, differentiator, case-study, t
 id: RS.4b
 phase: RS
 loop: representation-science
-status: in_progress
-deps: [RS.0]
+status: blocked
+deps: [RS.0, RS.4c]
 acceptance: |-
-  Promote chunk-learned from proxy to the real f_micro_w frame (R0.1 / LAFA FINAL_227_230): train the
+  BLOCKED on RS.4c (no platform op to ingest an attention-pool-over-chunks encoder; apply_learned_encoder
+  is mean-pool-only). Once RS.4c materialises the chunk-learned EmbeddingConfig, run KNN+score on the
+  clean frame (eval_set 6e41eb5b). Promote chunk-learned from proxy to the real f_micro_w frame: train the
   chunk attention-pool encoder (sdr_pool, OOM-guarded) on ankh-base chunk states (config 6542db1e),
   encode ref+query, KNN, and score f_micro_w vs {dense, champion mean+reranker, learned-mean} by the
   THREE axes (NK/LK/PK x aspect x length x neighbor-identity) with paired-bootstrap CIs. VERDICT: does
@@ -230,4 +247,47 @@ acceptance: |-
 estimated_hours: 4
 priority: P0
 tags: [cafaeval, sparse, perf, eval, infra]
+```
+
+### RS.4c — Plumb the attention-pool-over-chunks encoder op (unblocks RS.4b)
+
+```yaml
+id: RS.4c
+phase: RS
+loop: representation-science
+status: in_progress
+deps: []
+acceptance: |-
+  Experiment A revealed apply_learned_encoder (#672) is hardwired to topk_real(Linear(mean_pool(chunks)))
+  = mean-pool only, so the chunk-learned AttnPoolEncoder (sdr_pool, additive single-head attention over
+  per-chunk units) cannot be ingested. Add pooling=attention support (extend apply_learned_encoder or a
+  sibling op) that applies a saved attention-pool artifact over the per-chunk vectors of source config
+  6542db1e (739554 chunks, materialised), top-k, and ingests as a NEW learned-code EmbeddingConfig. Save
+  the artifact to storage/learned_encoders/ankh_base_chunk_attnpool.pt. Materialise codes over the 527k
+  ref set via the platform path. Report the new EmbeddingConfig id. PR (no auto-merge: new embedding op).
+estimated_hours: 6
+priority: P1
+tags: [plumbing, attention-pool, chunk, embedding-op, unblocker]
+```
+
+### RS.8 — Low-identity / remote-homology eval frame (test the twilight differentiator) [USER DECISION]
+
+```yaml
+id: RS.8
+phase: RS
+loop: representation-science
+status: pending
+deps: []
+acceptance: |-
+  STRATEGIC, pending user go. Experiment A proved the LAFA-delta frame CANNOT probe the twilight zone
+  (it is re-annotation of already-homologous sequences: 74% high-id, 0 remote) and the learned encoder's
+  advantage lives in HIGH identity, vanishing/reversing in twilight. The project's headline differentiator
+  ("beat homology where it fails") is therefore UNCONFIRMED and untestable on the current frame. To test
+  it, build a deliberately LOW-IDENTITY / remote-homology holdout: queries whose best experimental neighbor
+  is <30% identity (MMseqs2/CD-HIT split), evaluate all arms by f_micro_w on that regime. ONLY then can we
+  claim (or refute) that the learned/sparse representation recovers function where homology fails. This is
+  a new eval-frame design decision -> do NOT execute without explicit user authorization.
+estimated_hours: 12
+priority: P1
+tags: [twilight, remote-homology, eval-frame, differentiator, user-decision]
 ```
