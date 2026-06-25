@@ -25,13 +25,27 @@ giant/multidomain proteins via SDRs would be high-impact.
   `storage/fullgo_models/per_residue_v227/*.npy`, learned `d8979601`, frozen v227 bundle, and the
   lab correlation harnesses (`run_sdr_*`, `src/protea_reranker_lab/sdr.py`).
 
+## RESULTS / STATE (2026-06-25 session) — see memory project_validation_findings_2026_06_25
+- **Learned encoder VALIDATED on the real f_micro_w frame** (LAFA FINAL_227_230): learned-mean
+  (`d8979601`) KNN-only BEATS the champion (mean+reranker) in NK/LK by +0.05..+0.13 (NK MFO 0.507 vs
+  0.398). The +40% lever is real on f_micro_w, not just proxy. **PK = the wall** (no arm helps).
+- **Proxy factorial (RS.0): chunk·learned > learned-mean**, gap grows with length (+0.178 Resnik long);
+  residue·learned ~= chunk·learned. The strongest hypothesis = learned attention-pool over CHUNKS
+  (off mean). Real-frame f_micro_w for chunk·learned is the active gate (RS.4 / experiment A).
+- **Backbone settled** (project_backbone_choice): dev substrate = ankh-base; small ESM2 ruled out;
+  family>size. No re-embedding needed for the optimal direction (chunk corpus `6542db1e` cached).
+- **Reranker trio is STALE** (schema 7fcecf26 vs live b2a5cd46/73-feat) -> ~no-op; its contribution to
+  the champion was minimal -> see RS.6.
+- **cafaeval NK/LK dense-kernel bug** (sparse 250-10000x faster, identical Fmax) -> fix in flight,
+  RS.7; cuts eval ~23min->~2min.
+
 ### RS.0 — Factorial substrate x aggregation proxy (truncation-clean)
 
 ```yaml
 id: RS.0
 phase: RS
 loop: representation-science
-status: in_progress
+status: done
 deps: []
 acceptance: |-
   Factorial {substrate: mean,chunk,residue} x {aggregation: naive-bundle, learned-attention-pool}
@@ -135,4 +149,85 @@ acceptance: |-
 estimated_hours: 28
 priority: P2
 tags: [sdr, giants, multidomain, late-interaction, differentiator, case-study, thesis]
+```
+
+### RS.4b — chunk-learned real-frame validation (the active gate, experiment A)
+
+```yaml
+id: RS.4b
+phase: RS
+loop: representation-science
+status: in_progress
+deps: [RS.0]
+acceptance: |-
+  Promote chunk-learned from proxy to the real f_micro_w frame (R0.1 / LAFA FINAL_227_230): train the
+  chunk attention-pool encoder (sdr_pool, OOM-guarded) on ankh-base chunk states (config 6542db1e),
+  encode ref+query, KNN, and score f_micro_w vs {dense, champion mean+reranker, learned-mean} by the
+  THREE axes (NK/LK/PK x aspect x length x neighbor-identity) with paired-bootstrap CIs. VERDICT: does
+  chunk-learned's proxy advantage (+0.18, concentrated in long) translate to f_micro_w, and where
+  (long bucket / twilight-zone)? Lock chunk-learned as the head iff it beats learned-mean on the real
+  metric. NO re-embedding (chunk cached).
+estimated_hours: 8
+priority: P1
+tags: [chunk-learned, real-frame, f_micro_w, validation, gate]
+```
+
+### RS.5 — Post-PLM alignment head scaled on UniRef cluster reps (data-scaling curve)
+
+```yaml
+id: RS.5
+phase: RS
+loop: representation-science
+status: pending
+deps: [RS.4b]
+acceptance: |-
+  Scale the learned post-PLM alignment head (the validated lever) beyond the 527k benchmark, on a
+  SUBSET of UniRef cluster representatives, PLM FROZEN (no re-embedding the PLM; only the tiny head
+  trains; cheap forward over reps). First step = a cheap DATA-SCALING CURVE on the GO-correlation proxy
+  ({527k -> +reps}) to find where returns flatten (do NOT train on all UniRef). Optionally add a
+  self-supervised cluster-membership contrastive term for coverage. Ship only if the scaled head beats
+  the 527k-trained head on the real frame. NOT a PLM-from-scratch (that is a compute wall, ruled out).
+estimated_hours: 16
+priority: P2
+tags: [encoder, scaling, uniref, post-plm, contrastive]
+```
+
+### RS.6 — Retrain the reranker on the current schema, over the learned-encoder candidates
+
+```yaml
+id: RS.6
+phase: RS
+loop: representation-science
+status: pending
+deps: [RS.4b]
+acceptance: |-
+  The production reranker trio (68f3232c/198baf99/f0669e41) is STALE: feature_schema_sha 7fcecf26 vs
+  live b2a5cd46 (73 features), trained 2026-06-21, empty metrics; it fires only on its old families
+  (blind to classifier/interpro/association/self_prior/plm_id/k_context) -> ~no-op, ZERO lift in PK.
+  Retrain the reranker on the CURRENT schema (all 73 features) and the current frame, and CRUCIALLY
+  over the LEARNED-ENCODER candidates (not raw-mean KNN) so it composes on top of the validated ~0.50.
+  Acceptance: fresh reranker beats raw KNN per category on the real frame, esp. attacks PK (the wall);
+  report by the three axes with CIs. Re-frames the 0.3745 champion (its reranker contribution was ~nil).
+estimated_hours: 16
+priority: P1
+tags: [reranker, retrain, schema, pk, compose]
+```
+
+### RS.7 — cafaeval NK/LK sparse-kernel fix (eval perf, ~10x)
+
+```yaml
+id: RS.7
+phase: RS
+loop: representation-science
+status: in_progress
+deps: []
+acceptance: |-
+  Production run_cafa_evaluation runs the SPARSE kernel for PK (10s) but the DENSE kernel for NK/LK
+  (602s/408s). A/B proved sparse is 250-10000x faster with IDENTICAL Fmax. Make NK/LK use sparse too
+  (root cause: CAFAEVAL_SPARSE not reaching the NK/LK subprocess in _invoke_cafaeval_signal_safe, or
+  the NK/LK use_sparse branch unwired). PERF-ONLY: Fmax AND f_micro_w must stay bit-identical. Cuts a
+  full eval from ~23min to ~2min -> 10x faster experimentation loop. Fix in flight (executor 2026-06-25).
+estimated_hours: 4
+priority: P0
+tags: [cafaeval, sparse, perf, eval, infra]
 ```
