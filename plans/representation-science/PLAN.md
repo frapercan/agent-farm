@@ -52,7 +52,18 @@ giant/multidomain proteins via SDRs would be high-impact.
   homologs; 0 remote). Champion advantage lives in HIGH identity, vanishes/reverses in twilight.
   -> the "beat homology where it fails" differentiator is UNCONFIRMED and needs a NEW low-identity
   holdout frame (RS.8, pending user decision).
-- **chunk-learned BLOCKED**: apply_learned_encoder is mean-pool-only -> RS.4c plumbing in flight.
+- **chunk-learned RESOLVED (RS.4c done) + TESTED (RS.4b done), MLflow exp 31:** plumbing built
+  (attention-pool op #688 + codes config `f4df03fe`); on the real frame **chunk-learned TIES
+  mean-learned** (4/9 cells each, |Δ|<=0.008, NO significant NK/LK win). The proxy's +0.18 did NOT
+  translate; length-growth IS directionally confirmed (sig LK/MFO P=0.991). DECISION: do NOT lock
+  chunk-learned; mean-learned stays champion; chunk-learned is at most a length-conditioned arm for
+  LONG proteins. CHAMPION number = **0.4937** (the 0.5074 was stale). Lesson: the GO-corr proxy
+  OVERSELLS -> proxy-gated encoder refinements (RS.1->RS.3) are now LOW-confidence.
+- **NEXT LEVER (recommended): RS.6** — retrain the INERT reranker over the learned-encoder candidates
+  on the current 73-feat schema (real, non-proxy score lever; reranker proven inert on the clean
+  frame). RS.8 (low-identity frame for twilight) and RS.3 (aspect) await user steer.
+- cafaeval propagation FIX is permanent: cafaeval main `80d705a` (#21) + PROTEA poetry.lock bump
+  (#689 merged) -> redeploys pull the correct cafaeval automatically.
 
 ### RS.0 — Factorial substrate x aggregation proxy (truncation-clean)
 
@@ -172,7 +183,7 @@ tags: [sdr, giants, multidomain, late-interaction, differentiator, case-study, t
 id: RS.4b
 phase: RS
 loop: representation-science
-status: blocked
+status: done
 deps: [RS.0, RS.4c]
 acceptance: |-
   BLOCKED on RS.4c (no platform op to ingest an attention-pool-over-chunks encoder; apply_learned_encoder
@@ -255,7 +266,7 @@ tags: [cafaeval, sparse, perf, eval, infra]
 id: RS.4c
 phase: RS
 loop: representation-science
-status: in_progress
+status: done
 deps: []
 acceptance: |-
   Experiment A revealed apply_learned_encoder (#672) is hardwired to topk_real(Linear(mean_pool(chunks)))
