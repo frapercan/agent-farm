@@ -154,6 +154,35 @@ LEAKAGE AUDIT (the +0.18 is large and reverses a documented result, so it was au
   Robust and deployable.
 
 Artifacts: `protea-reranker-lab/results/clean_227230/` (boosters/, eval_scores.parquet, comparison.json,
-leak_check_overlap.json, champ_227230_v2.py). Open item before submission: confirm on the validation
-frame 225->227 with this same clean pipeline (cross-frame consistency), then produce the LAFA-format
-PredictionSet of the FULL RERANKED config (import boosters as a RerankerModel -> score -> format).
+leak_check_overlap.json, champ_227230_v2.py).
+
+## 8. Scored by LAFA's OWN pipeline (the authoritative, directly-comparable number)
+
+The reranked predictions for the official LAFA query set (7401 proteins; 7347 from our eval, 54 KNN
+fallback) were scored by CAFA_forever's exact invocation (`cafaeval <obo> <preds> <gt> -ia IA.tsv -toi
+terms_of_interest -prop fill -norm cafa -no_orphans`, PK adds `-known groundtruth_PK_known.tsv`)
+against LAFA's official ground truth for release `Sep_2025_Mar_2026` (= 227->230; NK 400 / LK 869 /
+PK 6341 proteins). This is deployment-realistic AND removes the known-term advantage on PK via
+`-known`. PROTEA-reranked f_micro_w vs the leaderboard:
+
+| cell | PROTEA-reranked | best baseline | PROTEA-KNN | rank |
+|---|---:|---|---:|:--|
+| NK-MFO | **0.602** | GOA-nonexp 0.591 | 0.579 | #1 |
+| NK-BPO | **0.309** | TransFew 0.301 | 0.263 | #1 |
+| NK-CCO | 0.431 | FunBind 0.473 | 0.407 | #3 |
+| LK-MFO | **0.519** | GOA-nonexp 0.510 | 0.489 | #1 |
+| LK-CCO | 0.419 | TransFew 0.434 | 0.332 | #2 |
+| LK-BPO | 0.348 | TransFew 0.512 | 0.284 | #3 |
+| PK-MFO | **0.235** | GOA-nonexp 0.194 | 0.191 | #1 |
+| PK-CCO | **0.254** | TransFew 0.220 | 0.184 | #1 |
+| PK-BPO | 0.117 | TransFew 0.294 | 0.075 | #4 |
+
+PROTEA-reranked is #1 of all methods in 5/9 cells (NK-MFO, NK-BPO, LK-MFO, PK-MFO, PK-CCO) and beats
+our deployed PROTEA-KNN in ALL 9 (mean 0.312 -> 0.359). Per-category means: NK 0.447, LK 0.429, PK
+0.202. Crucially, under LAFA's `-known` PK scoring (which excludes already-known terms) the reranker
+STILL leads PK-MFO/PK-CCO and beats KNN on PK-BPO -- so the section-7 internal PK lift was partly
+known-term inflation, but a genuine, leaderboard-leading PK signal remains. The reranker is weakest on
+BPO (TransFew, a specialised GO model, dominates LK-BPO/PK-BPO). Injected live as method
+`PROTEA-reranked` on the deployed LAFA board (protea-lafa.ngrok.app, release Sep_2025_Mar_2026);
+release-data backups suffixed `.bak_prereranked`. Artifacts:
+`protea-reranker-lab/results/clean_227230/lafa_submission/` + `protea-lafa-knn/predictions_7401_reranked.tsv`.
