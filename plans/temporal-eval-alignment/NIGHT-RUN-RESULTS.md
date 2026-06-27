@@ -78,3 +78,39 @@ A per-category combiner (ADR-D43) trained on a FRESH 73-feat export over the cle
 
 Artifacts: lab PR #113 (C1+C2, `results/clean_a4/`), MLflow exps `reranker-clean-A4-train225`;
 session memory `project_temporal_eval_run_2026_06_26`.
+
+## 6. TEST 227->230 champion (THE LAFA NUMBER) -- delivered 2026-06-27
+
+The deployment-realistic <=227 export completed (job `d6d9fc55`, dataset
+`clean-learned-train227-test230`, train 14 cuts 160->227, test 230, eval pair `v227-v230`, learned
+encoder `d8979601`, k=30, alignments+self_prior ON, association+classifier OFF; schema v2
+`775611822dd9`; 471,798 eval rows, 10,034 positives). Published to `s3://protea/datasets/`. Champion
+= raw-KNN score (`1 - cosine distance`), GT = eval label>0, cafaeval(prop=fill, norm=cafa,
+no_orphans, max_terms=500, th_step=0.001), OBO+IA = v227 LAFA-aligned (lafa_t0_Sep_2025). Scorer
+`scratchpad/champ_227230_v2.py` (canonical, mirrors `farm_exp_15_knn_226_227.py`).
+
+POOLED-per-aspect (one threshold per namespace = the LAFA deployment number = headline):
+
+| aspect | f_micro_w | fmax (unweighted) | n cand | pos | prot |
+|---|---:|---:|---:|---:|---:|
+| MFO | **0.357** | 0.401 | 31,113 | 2,089 | 1,574 |
+| BPO | **0.160** | 0.351 | 387,084 | 5,047 | 5,278 |
+| CCO | **0.311** | 0.558 | 53,601 | 2,898 | 2,052 |
+| **mean** | **0.276** | | | | |
+
+Per-cell f_micro_w (category-specific threshold, diagnostic):
+
+| | MFO | BPO | CCO |
+|---|---:|---:|---:|
+| NK | **0.555** | 0.362 | 0.428 |
+| LK | 0.442 | 0.376 | 0.391 |
+| PK | 0.302 | 0.140 | 0.293 |
+
+per-cell mean = **0.365**.
+
+Reading: NK-MFO 0.555 holds the #1-class signal on the REAL test frame (matches/exceeds the
+validation-frame champion ~0.50). The pooled mean (0.276) sits below the per-cell mean (0.365)
+because pooling forces one threshold and the PK mass -- especially PK-BPO (0.140, 4,455 proteins,
+the volume-dominant cell) -- drags the shared-threshold Fmax down. This is the same PK precision wall
+seen on validation, now confirmed on the deployment frame. The next decision (reranker vs raw-KNN for
+the LAFA submission config) is in flight.
