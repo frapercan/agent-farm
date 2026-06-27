@@ -111,6 +111,49 @@ per-cell mean = **0.365**.
 Reading: NK-MFO 0.555 holds the #1-class signal on the REAL test frame (matches/exceeds the
 validation-frame champion ~0.50). The pooled mean (0.276) sits below the per-cell mean (0.365)
 because pooling forces one threshold and the PK mass -- especially PK-BPO (0.140, 4,455 proteins,
-the volume-dominant cell) -- drags the shared-threshold Fmax down. This is the same PK precision wall
-seen on validation, now confirmed on the deployment frame. The next decision (reranker vs raw-KNN for
-the LAFA submission config) is in flight.
+the volume-dominant cell) -- drags the shared-threshold Fmax down.
+
+## 7. Reranker BEATS champion on 227->230 -- this REVERSES the C1/C2 PK-wall conclusion
+
+A per-category LightGBM lambdarank reranker (one model per NK/LK/PK, 64 real features; the
+zero-filled association_*/classifier_* columns excluded), trained on the 14 train cuts v160..v227 of
+the SAME clean export (v225-v227 holdout for early stopping), re-scored the 227->230 eval candidates.
+Compared to the raw-KNN champion with the identical cafaeval harness:
+
+POOLED-per-aspect f_micro_w (the LAFA deployment number):
+
+| aspect | champion | reranked | gate (D43) | d_reranked |
+|---|---:|---:|---:|---:|
+| MFO | 0.357 | **0.519** | 0.317 | +0.162 |
+| BPO | 0.160 | **0.363** | 0.142 | +0.202 |
+| CCO | 0.311 | **0.495** | 0.308 | +0.184 |
+| **mean** | **0.276** | **0.459** | 0.256 | **+0.183** |
+
+Per-cell mean: champion 0.365 -> reranked **0.501** (+0.135); the reranker lifts EVERY cell incl PK
+(pk-bpo 0.140->0.343, pk-cco 0.293->0.489, pk-mfo 0.302->0.471). The ADR-D43 GATE (reranker NK/LK +
+raw-KNN PK) is the WORST pooled option (0.256, below champion): mixing reranker scores with 1-distance
+breaks the single shared threshold. So the LAFA submission config = FULL RERANKED (all categories).
+
+This CONTRADICTS section 4 (C1/C2: "PK regresses, raw-KNN champion wins pooled"). The contradiction
+is explained: C1/C2 ran on a stale schema / dense substrate / gate-only pooled comparison; this is the
+first clean run on the learned-champion encoder + schema v2 `775611822dd9`. Section 4's pessimism was
+the artifact; the PK wall is NOT intrinsic.
+
+LEAKAGE AUDIT (the +0.18 is large and reverses a documented result, so it was audited hard):
+- Eval pair v227-v230 is NOT among the 14 train pairs (no snapshot leak).
+- No single feature separates the label at leakage level (all per-category AUC in 0.46..0.66; the
+  anc2vec_query_known_*/lineage_*_of_known features are correctly EMPTY for NK -- no prior annotations
+  -- and only modestly predictive for PK, t0-derived).
+- Positive (protein,go) pair overlap train<->eval = 7.4% (NK 2.1 / LK 11 / PK 7.6). Removing ALL 741
+  train-seen eval-positive pairs leaves the lift essentially unchanged: +0.183 -> +0.179. So pair
+  overlap does NOT drive it.
+- 92% of eval proteins recur in train (expected for PK), but the reranker has no protein-identity
+  feature, so it cannot memorise per protein.
+- Conclusion: the lift is genuine = better within-cell ranking (+0.135 per-cell) PLUS cross-category
+  calibration that 1-distance lacks (the pooled/LAFA metric rewards a globally comparable score).
+  Robust and deployable.
+
+Artifacts: `protea-reranker-lab/results/clean_227230/` (boosters/, eval_scores.parquet, comparison.json,
+leak_check_overlap.json, champ_227230_v2.py). Open item before submission: confirm on the validation
+frame 225->227 with this same clean pipeline (cross-frame consistency), then produce the LAFA-format
+PredictionSet of the FULL RERANKED config (import boosters as a RerankerModel -> score -> format).
