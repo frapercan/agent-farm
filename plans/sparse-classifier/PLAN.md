@@ -18,19 +18,32 @@ Standing rule: a small smoke run BEFORE every heavy operation.
   NO re-embed; consistent with the retrieval arm.
 - Ablation (later): vs dense ankh-base mean; vs the 6-PLM concat.
 
-### GO-term tower (output head) — fuse 3 COMPLEMENTARY sources, then sparsify
-The sources are complementary (different facets), not alternatives:
+### GO-term tower (output head) — fuse CURRENT functional sources, then sparsify
+DECISION (user, 2026-06-27): DROP the frozen anc2vec-2020. Two reasons: (1)
+COVERAGE — it only has terms existing Oct-2020; any term created 2020->2025 has
+no vector, and the 227->230 eval can annotate exactly those newer terms = blind
+where it matters; (2) it is stale + structural-only. No 2020 artifact in a 2025
+eval. Sources (all CURRENT, functional), complementary not alternatives:
 - **Text (a)**: BioBERT (`dmis-lab/biobert-base-cased-v1.1`, cached) over
-  `name + ". " + def` from the OBO. 768-dim, mean-pooled, GPU, no network.
-  100% term coverage (48,165 defs in go-basic). = functional MEANING.
-- **Co-annotation (b)**: term-term PPMI from the t0 (v227) annotation corpus ->
-  truncated SVD (k~256). = how terms are USED TOGETHER. Built from the
-  cooccurrence CSR infra (PROTEA_ASSOCIATION_CSR path), t0-only (leakage-clean).
-- **Structure (c0)**: anc2vec (DAG ancestors). Keep as ONE component (structure
-  is useful, just not sufficient alone).
+  `name + ". " + def` from the CURRENT OBO (v227/Sep-2025). 768-dim, mean-pooled,
+  GPU, no network. 100% term coverage. = functional MEANING. SMOKE confirmed it
+  separates related>unrelated, but raw BioBERT is anisotropic (cos compressed
+  ~0.9) -> WHITEN (mean-center + norm) before k-WTA to de-anisotropize.
+- **Co-annotation (b)**: term-term PPMI from the t0 (v227) corpus -> truncated
+  SVD (k~256). = how terms are USED TOGETHER. t0-only (leakage-clean).
+- **Structure (optional, FRESH)**: if wanted, ancestor-closure / node2vec on the
+  CURRENT OBO graph (NOT the 2020 npz). Add only if it measurably helps.
 - **Fuse**: L2-normalize each block, concat -> optional learned projection.
 - **Sparsify (c)**: k-WTA (top-k active dims) -> sparse functional GO codes.
-  The thesis form (sparse.pdf). This is the novel contribution.
+
+### SPARSE EVERYWHERE (user directive)
+Every representation is k-WTA sparse, end-to-end:
+- protein tower = d8979601 (already k-WTA top-128/2048);
+- each GO source (BioBERT text, co-annotation SVD) individually k-WTA'd;
+- fused GO code sparse;
+- the MATCHING is sparse-intersection (active-dim overlap, SDR/Tanimoto style),
+  NOT a dense dot product.
+The only dense step is raw BioBERT/SVD BEFORE the k-WTA. The thesis form.
 
 ### Classifier (two-tower retrieval-style)
 - score(protein, term) = sim(g(protein_code), GO_code(term)) in a shared sparse
