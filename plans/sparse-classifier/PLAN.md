@@ -79,6 +79,24 @@ The only dense step is raw BioBERT/SVD BEFORE the k-WTA. The thesis form.
   lose cells (LK-CCO/LK-BPO/PK-BPO/NK-CCO). Inject into the live board if it
   gains #1 without regression.
 
+## P5-P7 — PLATFORM PRODUCTIZATION (user directive: run complete on the platform)
+After the ablation picks the best sparse classifier and P3/P4 validate it on the temporal frame,
+INTEGRATE it natively into PROTEA and run the whole pipeline ON THE PLATFORM (not offline). GATED:
+only integrate if the sparse generator wins temporal recall (P3) and offline LAFA score (P4) vs the
+current M2 anc2vec classifier; never ship a worse generator.
+- **P5 integrate**: new serve classifier class in PROTEA that loads the two-tower head ckpts +
+  go_sparse_codes + d8979601 protein codes and emits per-protein top-100 candidates+scores; wire into
+  the export's classifier port (apply_classifier / _mark_classifier_candidates -> add candidates) and
+  the predict path. PR base develop. Smoke: a 1-pair export must produce classifier-added candidates
+  with the new generator. Redeploy (standing auth, keep online, in a gap). Register artifacts in the
+  artifact store (NFR-REPRO: ckpts + go_sparse_codes versioned, not /tmp).
+- **P6 full platform export**: dispatch export_research_dataset on the platform with the NEW classifier
+  + compute_association (CSR) + self_prior, learned encoder d8979601, train [160..227] test [230],
+  k=30 -> the real platform dataset. Smoke a small band first (train [225,227]) per the standing rule.
+- **P7 platform reranker + eval**: retrain the per-category reranker on the new export; score the 9
+  LAFA cells via the platform/cafaeval; inject into the live board; update thesis/docs. Everything
+  platform-native + reproducible.
+
 ## Aspect/category consistency (folded in)
 - Keep the per-CATEGORY reranker (NK/LK/PK); per-aspect models REGRESS (CCO data
   starvation, verified). Add aspect as a FEATURE + DAG-consistent post-processing
