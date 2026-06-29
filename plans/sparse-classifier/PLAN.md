@@ -107,6 +107,55 @@ All under `~/Thesis2/repositories/protea-reranker-lab/results/sparse_classifier/
 go_text_emb.npz, go_cooc_svd.npz, go_sparse_codes.npz, booster/encoder ckpts,
 smoke logs, comparison_9cell.json, SUMMARY.md.
 
+## B - Per-cut temporal classifier codes (user directive 2026-06-29)
+
+Decision (user): full-rigor temporal classifier so it scales in time with maximum
+precision. Today the classifier GO codes are a single fixed artifact (t0=v227) reused
+for every training cut = co-annotation leakage into earlier pairs. Fix it by making
+the GO co-annotation codes PER-CUT, mirroring how the `association` feature already
+threads a per-cut t0 end to end.
+
+### Principled basis (frozen method + per-cut data)
+The learned weights (the `d8979601` encoder used as the protein tower AND the
+two-tower head) are "the method", FROZEN and t0-independent by the SAME convention
+already accepted for the encoder (it is trained on v227 and applied to every cut).
+The only genuinely t0-varying input is the co-annotation, which we rebuild per cut,
+exactly like `association` reads `term_cooccurrence` keyed by the cut's t0 set.
+So B = per-cut co-annotation GO codes + frozen head. (Per-cut HEAD retraining = a
+further refinement "B2"; not needed for consistency with the encoder convention;
+documented as a thesis footnote.)
+
+### What is already supported
+- `TwoTowerSparseClassifier(go_codes_path=...)` already accepts an explicit per-call
+  codes path (the hard architectural piece is done).
+- The codes builder is `f(annotation_set_id) -> go_sparse_codes.npz`; BioBERT text
+  block is t0-independent and reused.
+- `association` already resolves a per-cut `t0_annotation_set_id` and reads
+  `term_cooccurrence WHERE annotation_set_id = cut_t0` (the template to mirror).
+
+### Steps
+1. `build_go_cooccurrence` for v225 (the only missing t0 of the 15 needed:
+   160,165,170,175,180,185,190,195,200,205,211,215,220,225,227; 225 had 0 rows,
+   which also left the v225-v227 association at 0). On `protea.jobs`.
+2. Build 15 per-cut `go_sparse_codes` artifacts (one per t0 annotation_set), reusing
+   `go_text_emb.npz`. Durable under `storage/two_tower_sparse/per_cut/`.
+3. PROTEA PR (base develop): thread the per-cut t0 -> classifier GO-codes selection in
+   the EXPORT path only (`ClassifierUnionSpec` -> `_union_classifier_candidates` ->
+   `predict_proteins_cached`); add the codes identity to the classifier cache key;
+   relax the explicit "classifier is t0-independent" contract. The LIVE predict path
+   keeps the single latest artifact (production unchanged). Backward-compatible when
+   the per-cut dir is unset. Local CI green before merge.
+4. Re-export B with per-cut codes -> reranker with temporally honest features.
+
+### Nested validation/refit protocol (D40 rolling-origin)
+- Fase 1 SELECTION: train on snapshot_pairs v160-v165..v220-v225; HOLD OUT v225-v227
+  as VALIDATION (with t0=v225 codes -> leakage-clean); pick hyperparams + levers
+  (pminmax LK-bpo, per-category pool, thresholds).
+- Fase 2 FINAL: with the selected config, REFIT on ALL pairs INCLUDING v225-v227
+  (using each pair's own per-cut codes), then TEST only on eval.parquet (v227-v230,
+  t0=v227 codes = the correct latest info). The 227-230 target is never tuned on.
+- This mirrors production: predict v230 from everything known up to v227.
+
 ## Environment
 - BioBERT cached: `dmis-lab/biobert-base-cased-v1.1`; transformers 4.48.1; GPU
   RTX 3060 11.5GB; OBO `protea-lafa-knn/lafa_t0_Sep_2025/go-basic.obo`; anc2vec
