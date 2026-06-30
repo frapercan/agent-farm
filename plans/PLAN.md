@@ -11,6 +11,8 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 - **bioinfo-quick**: nothing pickable (blocked deps or all done / requires_human)
 
+- **bp-structural-lever**: nothing pickable (blocked deps or all done / requires_human)
+
 - **crossobo-native-delta**: nothing pickable (blocked deps or all done / requires_human)
 
 - **dag-scheduler**: `F-SCHED.1` (P0) · `F-SCHED.2` (P0) · `F-SCHED.3` (P1)
@@ -22,7 +24,11 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 - **representation-science**: `RS.1` (P1) · `RS.2` (P1) · `RS.6` (P1)
 - **roadmap-from-zero**: `R1.1` (P1) · `R2.1` (P1) · `R4.1` (P2)
+- **sparse-classifier**: nothing pickable (blocked deps or all done / requires_human)
+
 - **target-selection-native**: nothing pickable (blocked deps or all done / requires_human)
+
+- **temporal-eval-alignment**: nothing pickable (blocked deps or all done / requires_human)
 
 - **thesis-writer**: nothing pickable (blocked deps or all done / requires_human)
 
