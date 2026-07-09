@@ -82,19 +82,51 @@ Two results that reframe the field's intuition:
 
 PROTEA is first in seven of the nine cells. The two it is not are **LK-BPO and
 PK-BPO** (Biological Process, the harder proteins). This thesis characterises
-that wall instead of overclaiming past it. Every orthogonal lever has been
-tested and is RED for a *principled* reason:
+that wall instead of overclaiming past it. Nearly every orthogonal lever is RED
+for a *principled* reason, and the one that is not tells us what BP actually needs:
 
 | Lever | Result on the BP wall |
 |---|---|
 | homology / sequence | 0.52 separability (fails on the hard cases) |
-| literature / protein text | RED (base-rate leak) |
+| literature gate / honest prior | RED (base-rate leak) |
 | frequency prior | RED (evaporates out-of-sample) |
 | cross-encoder / joint-GCN | NEGATIVE |
+| GO-text label basis (BioBERT on GO definitions) | modest: seed-averaged LK-BPO +0.012, PK/NK ~0 |
 | **structure (AFDB/FoldSeek 3Di, real)** | **RED** (residual 0.545; structure conserves MOLECULAR FUNCTION not BIOLOGICAL PROCESS: a clean positive control finds the true functional neighbour 66.6% of the time for MF vs 20.7% for BP) |
+| **text-aligned representation (ProtST)** | **GREEN** (the first crack, see below) |
 
-So the wall is **evidence-bound, not architecture-bound**. `#1-in-7/9` is the
-achievable ceiling on the available evidence, with mechanistic cause.
+So the wall is **evidence-bound, not architecture-bound**: no amount of fusion
+machinery crosses it, only *new evidence* does. `#1-in-7/9` is the ceiling on the
+evidence the pipeline currently carries.
+
+### The first crack: function-description-aligned representation
+
+A board-faithful kNN GO-transfer confirm (2026-07-09) shows that **ProtST**, whose
+protein encoder is contrastively aligned to Swiss-Prot *function descriptions*,
+adds real signal exactly where the wall is. Isolated against the **same ESM-1b base**
+(so the delta is the text alignment, not the backbone): **nk-BPO +0.062** (the
+leakage-free anchor, those proteins had no function text at t0), **lk-BPO +0.072**
+(the wall itself), pk-BPO +0.037. The lift **survives on the hard-homology tail**
+(twilight, no-hit and remote neighbours: nk-BPO +0.053, lk-BPO +0.044), so it is
+orthogonal to homology rather than a proxy for it.
+
+**The lift is not a generic property of "text models".** A second text-aligned model
+with a different base, **ProTrek** (ESM2, trimodal, structure-inclusive), does *not*
+reproduce it: on BP it is flat to negative (lk-BPO -0.016) and clearly worse on MF,
+while beating the champion on all three **CCO** cells (+0.05/+0.07/+0.04, also
+surviving hard homology). Text alignment is therefore not monolithic: the *text
+source* decides the signal. Function descriptions buy BP; broader trimodal alignment
+buys localisation. The two are **complementary, not redundant** (equal-weight kNN
+combine of ProtST + ProTrek + the champion reaches 0.2650 against 0.2213 for the
+champion alone, +0.044 before any reranker).
+
+**What this does and does not change.** It does not change the sealed `#1-in-7/9`:
+the text signal is a validated *candidate lever*, not yet part of the measured
+pipeline. It changes the *claim*: the frontier is evidence-bound, and this thesis
+identifies the class of evidence that begins to cross it, namely a representation
+supervised on descriptions of function rather than on sequence alone. Whether the
+crack becomes a breach is answered on the regenerated frame, with the text signals
+registered in the signal store, not by assertion here.
 
 **One principled micro-advance** (2026-07-08): the classifier's *label
 representation* is the frozen-2020 anc2vec (rudimentary DAG-ancestry). Replacing
@@ -112,8 +144,17 @@ holds), and (b) it is a clean, honest characterisation of *where* a modern label
 representation can and cannot help. The sparse functional codes were tested and
 rejected as a label basis (worse than anc2vec).
 
-**Evidence:** `project_structural_gate_bp_wall_2026_07_07`,
-`project_gotext_label_basis_bp_lever_2026_07_08`.
+**The two text results are the same physics, seen from both ends.** On the *label*
+side, term-text sees BP where DAG ancestry does not (+0.012 on LK-BPO). On the
+*protein* side, function-description alignment sees BP where sequence and structure
+do not (+0.072 on LK-BPO). Biological process is a process: it is written down in
+prose, it is not written in the fold, and it is only weakly written in the ontology's
+ancestry. That is the mechanism behind the wall, and behind its first crack.
+
+**Evidence:** `project_structural_gate_bp_wall_2026_07_07` (the wall),
+`project_gotext_label_basis_bp_lever_2026_07_08` (label side),
+`project_text_evidence_scorer_2026_07_08` (protein side; receipts in
+`storage/text_scorer/*_result.json`, writeup `storage/text_scorer/WRITEUP.md`).
 
 ---
 
