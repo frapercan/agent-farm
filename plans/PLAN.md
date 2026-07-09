@@ -30,6 +30,8 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 - **temporal-eval-alignment**: nothing pickable (blocked deps or all done / requires_human)
 
+- **thesis-clean-iteration**: nothing pickable (blocked deps or all done / requires_human)
+
 - **thesis-writer**: nothing pickable (blocked deps or all done / requires_human)
 
 
