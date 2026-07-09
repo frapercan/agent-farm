@@ -29,13 +29,41 @@ unit**, and a **version**. Five classes plus one absent:
 | Class | Families | Source / producer | Cacheable unit | Today | Target |
 |---|---|---|---|---|---|
 | **A. PLM representation** | embeddings, emb_pca | 8 PLM backends (mean/chunk pool) | (protein, plm_config) | `SequenceEmbedding` cached | keep |
-| **A'. Learned representation** | d8979601 k-WTA; (ProtST text; future) | learned head on a base embedding | (protein, encoder_config) | `SequenceEmbedding` | keep + extend |
+| **A'. Learned representation** | d8979601 k-WTA; protst-learned (future) | learned head on a base embedding | (protein, encoder_config) | `SequenceEmbedding` | keep + extend |
+| **A''. Text-aligned representation** | protst_text, protrek_text | text-supervised PLM (ESM + PubMedBERT) via ProtDescribe / trimodal contrastive | (protein, text_model_config) | absent | -> SignalValue (halfvec), **VALIDATED 07-09** |
 | **B. Full-vocab classifier** | classifier_score | `classifier_producer.py` (6-PLM concat -> ProjHead -> GO code) | (protein) -> vocab-score vector | JSONB blob (D45) | -> SignalValue |
 | **C. Homology / neighbourhood** | knn, knn_distance, knn_vote, alignment_nw/sw, taxonomy_* | `knn_search.py` + NW/SW + NCBI taxonomy (query vs t0 reference) | (query, k, ref_snapshot) neighbour list; (query,neighbour) pairwise | on-the-fly | -> cache neighbour list + pairwise |
 | **D. Prior-knowledge / association** | association_total/cross, self_prior, anc2vec_query | GO co-occurrence at t0; the protein's own t0 GO | global(t0_snapshot) matrix + (protein, snapshot) | JSONB blob (D45) | -> SignalValue + cached global matrix |
 | **E. Domain** | interpro | InterProScan + InterPro2GO | (protein) | partial | -> SignalValue |
 | **Context** | go_context (freq/IA), anc2vec/gotext basis, lineage | OBO + IA + term basis | global(OBO_snapshot) + per-GO | npz / on-the-fly | -> cache per snapshot |
 | **F. [absent] Structure** | AFDB / FoldSeek 3Di | tested RED (structure conserves MF not BP) | -- | -- | out of scope |
+
+### 2.1 Registered text-aligned signals (validated 2026-07-09)
+
+Class A'' is not hypothetical. Two text-aligned PLMs were validated board-faithful
+as orthogonal signals for GO transfer (kNN GO-vote, `f_micro_w`, 9-cell, query
+7401 -> reference 15000, 3-axis stratified; receipts in
+`storage/text_scorer/*_result.json`, writeup `storage/text_scorer/WRITEUP.md`).
+They enter the store as two `SignalConfig`s, cached per-protein like embeddings:
+
+| `SignalConfig.name` | base / source | dim | validated role | cutoff |
+|---|---|---|---|---|
+| `protst_text` | ProtST (ESM-1b + PubMedBERT, ProtDescribe function text), Apache-2.0 | 512 | **BP-wall lever + MF**: isolated text contribution (vs same ESM-1b base) +0.062 nk-BP (leakage-free), +0.072 lk-BP (the wall); survives hard-homology tail | model pub < t0=v227 |
+| `protrek_text` | ProTrek (ESM2 + PubMedBERT, trimodal), MIT | 1024 | **CCO lever**: beats champion on all 3 CCO cells (+0.05/+0.07/+0.04), survives hard homology; does NOT reproduce BP (that lift is ProtST-specific) | model pub < t0=v227 |
+
+Key facts the store must record in `SignalConfig.source`:
+- **Provenance**: `{model, base_plm, text_encoder, training_text_source, license,
+  pub_date}` so the leakage argument (model published before t0, NK proteins had no
+  function text) is explicit and auditable, not tribal knowledge.
+- **The two are complementary, not redundant**: equal-weight kNN combine
+  `protst_text + protrek_text + d8979601` = 0.2650 vs champion-alone 0.2213
+  (+0.044 raw, pre-reranker). So BOTH are registered, ProtST for BP/MF, ProTrek for CCO.
+- **Storage**: per-protein dense `halfvec` (like embeddings), keyed
+  `(protein, text_model_config, snapshot)`. The **text->GO EvidenceScorer** is a
+  *consumer* (kNN GO-vote over the cached vectors), not a stored value -- the store
+  holds the representation, the reranker/scorer fuses it.
+- **Learned-head extension** (class A', principle in section 4): a learned k-WTA head
+  on `protst_text` is a future `SignalConfig` (`protst_learned`), never raw-vs-raw.
 
 Three storage regimes fall out:
 - **Per-protein** (classifier, self_prior, anc2vec_query, interpro, emb_pca, learned
@@ -103,9 +131,13 @@ reranker level -- two learning layers with the signal store between them.
    `feature_schema_sha` covering ALL signals.
 4. **Re-run** every experiment board-faithful from that matrix -> every thesis number
    regenerated, one metric (f_micro_w), one frame (227->230), reproducible.
-5. **New signals** (text->GO EvidenceScorer, future candidates) are added by
-   registering one more `SignalConfig` + caching its values -- they slot into the
-   dataset assembly automatically, gated by the orthogonality + leakage protocol.
+5. **New signals** are added by registering one more `SignalConfig` + caching its
+   values -- they slot into the dataset assembly automatically, gated by the
+   orthogonality + leakage protocol. The **text-aligned signals** (`protst_text`,
+   `protrek_text`, section 2.1) are the first such candidates already through the
+   gate (validated 07-09); they are registered in this rerun, not bolted onto the
+   old pipeline -- their board number is regenerated in the single frame with
+   everything else.
 
 ## 6. Implementation sequence
 
@@ -114,6 +146,9 @@ reranker level -- two learning layers with the signal store between them.
 2. **Producers write to the cache**: refactor `classifier_producer`, association,
    self_prior, interpro, anc2vec/gotext to `compute-or-load` against the store
    (exact embedding-cache pattern); the on-the-fly path becomes a cache-miss filler.
+   The **text producers** (`protst_text`, `protrek_text`; prototype extractors at
+   `storage/text_scorer/extract_protst_both.py` + `extract_protrek.py`) become
+   on-platform ops writing `halfvec` into the store like any PLM backend.
 3. **Dataset assembly reads from the store** (replace the blob + on-the-fly join);
    one `feature_schema_sha` over all signal_configs -> D45 closed.
 4. **Backfill** the current signals for the 227/230 snapshots into the store.
