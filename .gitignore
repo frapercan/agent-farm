@@ -40,3 +40,13 @@ infra/terraform/github/.terraform/
 infra/terraform/github/terraform.tfstate
 infra/terraform/github/terraform.tfstate.backup
 infra/terraform/github/.terraform.lock.hcl
+
+# Runtime state written by the watchdog and deploy-keeper. Versioning it would make
+# every agent's local run appear as a change; leaving it untracked buried the files
+# that did need a decision.
+results/
+state/deploy-keeper-triggers/
+state/deploy_keeper_*_count
+state/stack-owner.json
+state/stack-owner.json.lock
+state/thesis_pdf_published.sha
