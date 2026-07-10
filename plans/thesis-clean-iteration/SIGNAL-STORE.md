@@ -14,9 +14,12 @@ Today:
   computed once and reused). This is the model to imitate.
 - **Signals/features are NOT.** They are computed on the fly during
   `export_research_dataset` (KNN + feature generation), and some live per-prediction
-  in `GOPrediction.features` (a JSONB blob) **outside `feature_schema_sha`** -> the
-  **D45 seam**: their values can drift between train and serve with no fingerprint
-  catching it (the 0.3462 incident).
+  in `GOPrediction.features` (a JSONB blob). The **D45 seam** is that
+  `feature_schema_sha` fingerprints the **declared schema** (family names and their
+  column lists) and nothing else: not the values, not which producer wrote them, not
+  whether a producer ran at all. A family can therefore be exported entirely
+  zero-filled and the fingerprint will not move (see section 1.1 and the 0.3462
+  incident).
 - Consequence: numbers are not cheaply reproducible, provenance is implicit, and a
   new signal (e.g. a text->GO EvidenceScorer) has nowhere clean to live.
 
@@ -36,9 +39,12 @@ classifier_score  self_prior_score  association_cross
 association_total classifier_present association_present
 ```
 
-Each is a **scalar per (protein, GO) pair**, not a vector. Promoting the six to typed
-columns costs `6 x 8 B x 52.2M ~= 2.5 GB` and brings them inside `feature_schema_sha`,
-which is precisely what closes D45. The redundant blob then releases **~75 GB**.
+Each is a **scalar per (protein, GO) pair**, not a vector. They are **already inside**
+`feature_schema_sha` by name (`feature_schema.py` declares all six in `NUMERIC_FEATURES`
+and in the `classifier`, `self_prior` and `association` families). Promoting them to
+typed columns costs `6 x 8 B x 52.2M ~= 2.5 GB` and lets the redundant blob release
+**~75 GB**. That is a storage win, not the D45 fix; see step 0 for what actually closes
+the seam.
 
 **So the store is a ~72 GB refund on this table, not a disk cost.** Under the
 additive-only invariant the order is: add the six typed columns, backfill, verify
@@ -51,6 +57,37 @@ per-protein vocab vector, and even that would be 36 GB rather than the "tens of 
 earlier reading of this document imagined. Database total: 214 GB logical / 238 GB on
 disk; other large tables are `term_cooccurrence` 61 GB, `sequence_embedding` 26 GB,
 `protein_go_annotation` 23 GB.
+
+### 1.2 The seam, traced (2026-07-10, and it is not where this document said it was)
+
+Section 1.1 measured the blob. It did not explain the drift. Tracing it to the code and
+back to the data gives a different, sharper answer.
+
+1. `compute_feature_schema_sha(families, drop)` hashes `"<family>=<sorted columns>"`,
+   and `compute_schema_sha(columns)` hashes the sorted column names. The fingerprint
+   covers **names and family membership**. It cannot see a value, a producer, or whether
+   a producer ran.
+2. `protea/core/_leaf_record_builder.py::_reranker_default_fields()` returns all six as
+   `0.0`, and says so in its own docstring: the classifier and association columns *stay
+   zero until later lafa-integrate slices wire their producers. A well-defined zero, not
+   NaN.* Only `self_prior_score` is overwritten, and only under the `compute_self_prior`
+   payload flag.
+3. The sealed run recorded the consequence: `results/clean_227230/comparison.json` reads
+   `feature_exclusions: "association_* and classifier_* (zero-filled in export)"`.
+4. The database is fine. Sampling 50,000 rows of `go_prediction.features` finds **0.0%**
+   zeros for `association_total` and **0.0%** for `classifier_score`. The predict path
+   writes real values; the export builds records from scratch and invents zeros.
+
+**So D45 is a producer seam.** Three declared families shipped semantically null and
+every fingerprint matched. What closes it:
+
+- **No silent default.** Emit `NaN` (LightGBM already reads it as missing) when no
+  producer ran, or refuse to write the row. A zero is a claim; missing is the truth.
+- **A degeneracy check at export.** A declared family that is constant across a shard
+  fails the job loudly instead of shipping.
+- **Provenance per family.** Which producer, at which version, over which snapshot. That
+  is `SignalConfig.source`, and it is why the store is the backend of explainability
+  rather than a disk optimisation.
 
 ## 2. Signal taxonomy by provenance
 
@@ -172,12 +209,38 @@ reranker level -- two learning layers with the signal store between them.
 
 ## 6. Implementation sequence
 
-0. **Close D45 first, and get paid for it.** Add the six blob-only scalars
-   (`classifier_score`, `self_prior_score`, `association_cross`, `association_total`,
-   `classifier_present`, `association_present`) as typed columns on `go_prediction`
-   (additive, ~2.5 GB), backfill them from the blob, verify the regenerated numbers
-   against the sealed ones, and only then propose dropping `features` (~75 GB back).
-   This is the cheapest, highest-value step and it needs no new tables.
+0. **Close D45. It is a PRODUCER seam, not a storage seam** (traced to code and data on
+   2026-07-10; the earlier text of this step was wrong and is corrected here).
+
+   The six signals are **already inside the fingerprint**: `feature_schema.py` lists them in
+   `NUMERIC_FEATURES` and in `FEATURE_FAMILIES` (`classifier`, `self_prior`, `association`),
+   and `compute_feature_schema_sha` hashes family names together with their column lists.
+   What the fingerprint cannot see is whether a producer ever ran. And one did not:
+   `protea/core/_leaf_record_builder.py::_reranker_default_fields()` returns
+   `classifier_*`, `association_*` and `self_prior_score` as a **well-defined `0.0`**, and
+   its own docstring says the classifier and association columns *"stay zero until later
+   lafa-integrate slices wire their producers"*. The sealed run recorded the consequence:
+   `comparison.json` reads `feature_exclusions: association_* and classifier_* (zero-filled
+   in export)`. Meanwhile the database is fine: sampling 50,000 rows of
+   `go_prediction.features` finds **0.0%** zeros for `association_total` and
+   `classifier_score`. The blob holds real values; the export invents zeros, and the sha
+   stays identical because the column names never changed.
+
+   So the fix is not a column type. It is three things:
+   - **No silent default.** Emit `NaN` (which LightGBM already reads as missing) when no
+     producer ran, or refuse to write the row. A zero is a claim; missing is the truth.
+   - **A degeneracy check at export.** If a declared feature family is constant across a
+     shard, the job fails loudly rather than shipping a semantically null column.
+   - **Provenance per family.** Record which producer, at which version, over which
+     snapshot, emitted each family alongside the dataset. That is exactly
+     `SignalConfig.source`, and it is why the store is the backend of explainability rather
+     than a disk optimisation.
+
+   The storage win is real and independent: `go_prediction` is 101 GB over 52.2M rows, its
+   `features` jsonb is ~75 GB, and **54 of its 60 keys merely duplicate typed columns on the
+   same row**. Promoting the six blob-only scalars to typed columns costs ~2.5 GB and lets
+   the redundant blob be dropped as a separate reviewed step (additive-only invariant).
+   Do that for the disk, not for D45.
 1. **Schema + migration**: `SignalConfig`, `SignalValue`, `SignalGlobalArtifact`
    (Alembic; halfvec for dense). ADR entry. Note the regimes: **per-pair scalars stay
    typed columns on `go_prediction`** (they are already keyed that way); `SignalValue`
