@@ -14,12 +14,43 @@ Today:
   computed once and reused). This is the model to imitate.
 - **Signals/features are NOT.** They are computed on the fly during
   `export_research_dataset` (KNN + feature generation), and some live per-prediction
-  in `GOPrediction.features` (a JSONB blob). Several signals
-  (`classifier_score`, `self_prior`, `association_*`, `IA`) sit in that blob
-  **outside `feature_schema_sha`** -> the **D45 seam**: their values can drift
-  between train and serve with no fingerprint catching it (the 0.3462 incident).
+  in `GOPrediction.features` (a JSONB blob) **outside `feature_schema_sha`** -> the
+  **D45 seam**: their values can drift between train and serve with no fingerprint
+  catching it (the 0.3462 incident).
 - Consequence: numbers are not cheaply reproducible, provenance is implicit, and a
   new signal (e.g. a text->GO EvidenceScorer) has nowhere clean to live.
+
+### 1.1 The seam, measured (2026-07-10, from the live DB and the producer code)
+
+Vague description was hiding a much better fact. `go_prediction` is **101 GB over
+52,235,220 rows**, and its rows are **already `(query protein, candidate GO)` pairs**
+(84.8 rows per protein: the classifier emits `top_n=100` filtered at `min_score=0.01`).
+The row carries ~50 **typed** columns plus two jsonb ones: `predictions_jsonb` (448 MB
+in total) and `features` (**~75 GB**, averaging 1546 bytes per row).
+
+`features` has 60 keys. **54 of them duplicate a typed column on the same row.** Only
+**six live nowhere else**, and they are exactly the D45 signals:
+
+```
+classifier_score  self_prior_score  association_cross
+association_total classifier_present association_present
+```
+
+Each is a **scalar per (protein, GO) pair**, not a vector. Promoting the six to typed
+columns costs `6 x 8 B x 52.2M ~= 2.5 GB` and brings them inside `feature_schema_sha`,
+which is precisely what closes D45. The redundant blob then releases **~75 GB**.
+
+**So the store is a ~72 GB refund on this table, not a disk cost.** Under the
+additive-only invariant the order is: add the six typed columns, backfill, verify
+against the sealed numbers, and only then, as a separate reviewed step, drop the blob.
+
+Numbers to not get wrong again: the classifier vocabulary is **29,461** GO terms (from
+`storage/fullgo_models/classifier_m2_anc2vec.pt`), not the 757,250 rows of `go_term`
+(that is all of GO including obsolete terms). Nobody ever proposed persisting a dense
+per-protein vocab vector, and even that would be 36 GB rather than the "tens of TB" an
+earlier reading of this document imagined. Database total: 214 GB logical / 238 GB on
+disk; other large tables are `term_cooccurrence` 61 GB, `sequence_embedding` 26 GB,
+`protein_go_annotation` 23 GB.
 
 ## 2. Signal taxonomy by provenance
 
@@ -31,7 +62,7 @@ unit**, and a **version**. Five classes plus one absent:
 | **A. PLM representation** | embeddings, emb_pca | 8 PLM backends (mean/chunk pool) | (protein, plm_config) | `SequenceEmbedding` cached | keep |
 | **A'. Learned representation** | d8979601 k-WTA; protst-learned (future) | learned head on a base embedding | (protein, encoder_config) | `SequenceEmbedding` | keep + extend |
 | **A''. Text-aligned representation** | protst_text, protrek_text | text-supervised PLM (ESM + PubMedBERT) via ProtDescribe / trimodal contrastive | (protein, text_model_config) | absent | -> SignalValue (halfvec), **VALIDATED 07-09** |
-| **B. Full-vocab classifier** | classifier_score | `classifier_producer.py` (6-PLM concat -> ProjHead -> GO code) | (protein) -> vocab-score vector | JSONB blob (D45) | -> SignalValue |
+| **B. Full-vocab classifier** | classifier_score | `classifier_producer.py` (6-PLM concat, in_dim 8320 -> hybrid head over a 29,461-term vocab) | **(protein, candidate GO) -> scalar** (the head scores the whole vocab in GPU memory, then `predict` keeps `top_n=100` above `min_score=0.01`; the dense vector is never persisted) | JSONB blob (D45) | -> typed column |
 | **C. Homology / neighbourhood** | knn, knn_distance, knn_vote, alignment_nw/sw, taxonomy_* | `knn_search.py` + NW/SW + NCBI taxonomy (query vs t0 reference) | (query, k, ref_snapshot) neighbour list; (query,neighbour) pairwise | on-the-fly | -> cache neighbour list + pairwise |
 | **D. Prior-knowledge / association** | association_total/cross, self_prior, anc2vec_query | GO co-occurrence at t0; the protein's own t0 GO | global(t0_snapshot) matrix + (protein, snapshot) | JSONB blob (D45) | -> SignalValue + cached global matrix |
 | **E. Domain** | interpro | InterProScan + InterPro2GO | (protein) | partial | -> SignalValue |
@@ -141,11 +172,20 @@ reranker level -- two learning layers with the signal store between them.
 
 ## 6. Implementation sequence
 
+0. **Close D45 first, and get paid for it.** Add the six blob-only scalars
+   (`classifier_score`, `self_prior_score`, `association_cross`, `association_total`,
+   `classifier_present`, `association_present`) as typed columns on `go_prediction`
+   (additive, ~2.5 GB), backfill them from the blob, verify the regenerated numbers
+   against the sealed ones, and only then propose dropping `features` (~75 GB back).
+   This is the cheapest, highest-value step and it needs no new tables.
 1. **Schema + migration**: `SignalConfig`, `SignalValue`, `SignalGlobalArtifact`
-   (Alembic; halfvec for dense). ADR entry.
+   (Alembic; halfvec for dense). ADR entry. Note the regimes: **per-pair scalars stay
+   typed columns on `go_prediction`** (they are already keyed that way); `SignalValue`
+   is for **per-protein dense** signals (learned codes, text embeddings, emb_pca) and
+   `SignalGlobalArtifact` for the global ones (association matrix, IA, term bases).
 2. **Producers write to the cache**: refactor `classifier_producer`, association,
-   self_prior, interpro, anc2vec/gotext to `compute-or-load` against the store
-   (exact embedding-cache pattern); the on-the-fly path becomes a cache-miss filler.
+   self_prior, interpro, anc2vec/gotext to `compute-or-load` (exact embedding-cache
+   pattern); the on-the-fly path becomes a cache-miss filler.
    The **text producers** (`protst_text`, `protrek_text`; prototype extractors at
    `storage/text_scorer/extract_protst_both.py` + `extract_protrek.py`) become
    on-platform ops writing `halfvec` into the store like any PLM backend.
