@@ -67,11 +67,20 @@ back to the data gives a different, sharper answer.
    and `compute_schema_sha(columns)` hashes the sorted column names. The fingerprint
    covers **names and family membership**. It cannot see a value, a producer, or whether
    a producer ran.
-2. `protea/core/_leaf_record_builder.py::_reranker_default_fields()` returns all six as
-   `0.0`, and says so in its own docstring: the classifier and association columns *stay
+2. `protea/core/_leaf_record_builder.py::_lafa_default_fields()` (line 342) returns all six
+   as `0.0`, and says so in its own docstring: the classifier and association columns *stay
    zero until later lafa-integrate slices wire their producers. A well-defined zero, not
    NaN.* Only `self_prior_score` is overwritten, and only under the `compute_self_prior`
    payload flag.
+   Two details in that same docstring sharpen the finding. First, it states the six are
+   emitted unconditionally so that `_assert_canonical_columns` **and the contracts
+   producer-coverage guard never fail the dump**: the guard whose job is to catch a missing
+   producer was appeased with a constant. Second, the neighbouring
+   `_reranker_default_fields()` (line 34) handles the KNN block **correctly**, writing `NaN`
+   for "no KNN evidence, a missing measurement" and `0` only for "zero neighbours voted, a
+   true absence", and explains the distinction in prose. **The right convention already lives
+   twenty lines above the violation**, so fixing D45 is applying the file's own rule, not
+   importing a new one.
 3. The sealed run recorded the consequence: `results/clean_227230/comparison.json` reads
    `feature_exclusions: "association_* and classifier_* (zero-filled in export)"`.
 4. The database is fine. Sampling 50,000 rows of `go_prediction.features` finds **0.0%**
@@ -216,7 +225,7 @@ reranker level -- two learning layers with the signal store between them.
    `NUMERIC_FEATURES` and in `FEATURE_FAMILIES` (`classifier`, `self_prior`, `association`),
    and `compute_feature_schema_sha` hashes family names together with their column lists.
    What the fingerprint cannot see is whether a producer ever ran. And one did not:
-   `protea/core/_leaf_record_builder.py::_reranker_default_fields()` returns
+   `protea/core/_leaf_record_builder.py::_lafa_default_fields()` returns
    `classifier_*`, `association_*` and `self_prior_score` as a **well-defined `0.0`**, and
    its own docstring says the classifier and association columns *"stay zero until later
    lafa-integrate slices wire their producers"*. The sealed run recorded the consequence:

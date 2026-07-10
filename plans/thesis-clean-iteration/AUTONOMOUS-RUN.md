@@ -69,7 +69,7 @@ redundant blob go and **return ~75 GB**, but they are a separate, storage-motiva
    live only in the jsonb: `classifier_score`, `self_prior_score`, `association_cross`,
    `association_total`, `classifier_present`, `association_present`. They are already
    declared in `feature_schema.py`, so the fingerprint already covers their names, yet
-   `_leaf_record_builder._reranker_default_fields()` exports the classifier and
+   `_leaf_record_builder._lafa_default_fields()` exports the classifier and
    association families as a constant `0.0` because their producers were never wired
    into the export path, and the sealed run's `comparison.json` records the consequence
    verbatim: `zero-filled in export`. The fix is a **failing** export (no silent default,
