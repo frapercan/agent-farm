@@ -1,0 +1,60 @@
+output_name,k,plm,config_id,job_id,status,row_count
+bench-v1-K10-v226-lineage-esm2_150m,10,esm2_150m,500a0c59-be09-424d-9d51-b7997629c95a,e80c3cfd-81ac-4bb7-8da4-77754d0ce625,queued,
+bench-v1-K5-v226-lineage-prostt5,5,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,,succeeded,24351779
+# re-dispatch 2026-05-20T19:20:59Z test_versions=[230] corrected
+bench-v1-K5-v226-lineage-esm2_150m,5,esm2_150m,500a0c59-be09-424d-9d51-b7997629c95a,eeb1a7a8-d3a8-4de6-9ea2-6dd95b5f1d4f
+bench-v1-K3-v226-lineage-esm2_150m,3,esm2_150m,500a0c59-be09-424d-9d51-b7997629c95a,6321d6b3-2d35-43e1-b241-1e1bb09e9c55
+bench-v1-K10-v226-lineage-esm2_650m,10,esm2_650m,c2e9dda3-e505-4170-b50d-435a451761ac,c999d8e4-fb61-4ed9-a5b5-28657f4785d6
+bench-v1-K5-v226-lineage-esm2_650m,5,esm2_650m,c2e9dda3-e505-4170-b50d-435a451761ac,0fd9e7c6-970e-4798-9415-a623ed6b6ce3
+bench-v1-K3-v226-lineage-esm2_650m,3,esm2_650m,c2e9dda3-e505-4170-b50d-435a451761ac,0421baf6-569b-449f-a87a-381710cda64e
+bench-v1-K10-v226-lineage-esm2_3b,10,esm2_3b,55e43f1c-1a3b-4b1d-88c0-26b433f5f673,51802341-a10b-4ef0-bd70-d8af38391b5d
+bench-v1-K5-v226-lineage-esm2_3b,5,esm2_3b,55e43f1c-1a3b-4b1d-88c0-26b433f5f673,cc299a86-20c4-4067-a1bb-2fdb22113ce3
+bench-v1-K3-v226-lineage-esm2_3b,3,esm2_3b,55e43f1c-1a3b-4b1d-88c0-26b433f5f673,a77a91a6-01be-4f54-93b0-90c75b66b8fa
+bench-v1-K10-v226-lineage-prot_t5,10,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,66298626-9016-4005-afc0-31c35398722e
+bench-v1-K5-v226-lineage-prot_t5,5,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,015248c6-2ee2-437e-b36f-9b9e591de0a5
+bench-v1-K3-v226-lineage-prot_t5,3,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,5ab328b8-49e0-4ba6-bf4c-e1504f891ab0
+bench-v1-K10-v226-lineage-prostt5,10,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,0b3723b2-7d91-4e4a-a7e5-4c7c05fbcbe6
+bench-v1-K3-v226-lineage-prostt5,3,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,c5a75148-ae39-4704-96b4-c8d659713b0c
+bench-v1-K10-v226-lineage-ankh_base,10,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,11a21c76-bba1-4996-ab14-86fdf3679df3
+bench-v1-K5-v226-lineage-ankh_base,5,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,14306be8-ca0b-4a91-b3aa-d28d514aa96a
+bench-v1-K3-v226-lineage-ankh_base,3,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,2176b0e8-bdd0-47fe-9677-6e705c98e834
+bench-v1-K10-v226-lineage-ankh_large,10,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,b08041df-0ecf-4151-9303-290069becd37
+bench-v1-K5-v226-lineage-ankh_large,5,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,11473417-f855-4ddc-ae14-cdc1ea462d99
+bench-v1-K3-v226-lineage-ankh_large,3,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,d6c274d0-4b05-4173-963b-becdffb6fefa
+bench-v1-K10-v226-lineage-esmc_600m,10,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,370333d7-aa12-47c1-abd7-ddbb4509b0f0
+bench-v1-K5-v226-lineage-esmc_600m,5,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,40c40ed0-3968-4b02-9981-d111703b5cda
+bench-v1-K3-v226-lineage-esmc_600m,3,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,8dae3737-e2a1-4f21-b545-4483caf75b9f
+# 2026-05-23 14:35Z resume after deploy-keeper redeploy @ develop 5e95be8+; protea-deploy worker live with PROTEA_PAIR_FEATURE_WORKERS=11 + PROTEA_ALIGN_CACHE_DIR + PROTEA_ANC2VEC_PATH; live job IDs from 01:22-01:25 UTC re-dispatch:
+bench-v1-K10-v226-lineage-ankh_base,10,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,dde83f92-ddf4-4886-9df4-22cff1fe0c31,succeeded,
+bench-v1-K10-v226-lineage-ankh_large,10,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,1229fa85-e983-4876-a4d2-fbcb58508f9a,succeeded,
+bench-v1-K10-v226-lineage-esmc_600m,10,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,d91c55c0-cb30-4062-b6d3-3b8d064d6113,cancelled,
+bench-v1-K10-v226-lineage-prostt5,10,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,8ed87c85-6212-448b-b527-7c7660891577,running,
+bench-v1-K10-v226-lineage-prot_t5,10,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,5509b147-4a16-4b47-94dd-a709b017c462,queued,
+bench-v1-K5-v226-lineage-ankh_base,5,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,1f0af406-2f8d-4ee9-88fc-3a0926cef9f1,queued,
+bench-v1-K5-v226-lineage-ankh_large,5,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,1652b3fd-2846-46a8-aecf-f975c6e80e08,queued,
+bench-v1-K5-v226-lineage-esm2_650m,5,esm2_650m,c2e9dda3-e505-4170-b50d-435a451761ac,258a1822-f01a-445b-bef2-4c8d7e969c8a,queued,
+bench-v1-K5-v226-lineage-esmc_600m,5,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,9e0ea644-b5f6-4c0f-8610-f2aa3825b4b1,queued,
+bench-v1-K5-v226-lineage-prot_t5,5,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,295961b5-9c96-450c-8157-01933e1a438c,queued,
+bench-v1-K3-v226-lineage-ankh_base,3,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,04cc73e8-7102-4754-ad5e-aee0036598d4,queued,
+bench-v1-K3-v226-lineage-ankh_large,3,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,c292ee46-5be8-4bc5-8096-12e72953bb6c,queued,
+bench-v1-K3-v226-lineage-esm2_150m,3,esm2_150m,500a0c59-be09-424d-9d51-b7997629c95a,bd8d42da-9537-46ff-bbcf-f440229247ca,queued,
+bench-v1-K3-v226-lineage-esm2_3b,3,esm2_3b,55e43f1c-1a3b-4b1d-88c0-26b433f5f673,b631db13-c0d0-47b1-b2ae-fe48b242a5d1,queued,
+bench-v1-K3-v226-lineage-esmc_600m,3,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,be143d17-b5a7-4b01-9e41-da2ffbf3833c,queued,
+bench-v1-K3-v226-lineage-prostt5,3,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,047dabe4-c67c-4f24-83b1-f7590697ae74,queued,
+bench-v1-K3-v226-lineage-prot_t5,3,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,e64391cf-a15a-40fa-afe2-1e290e88df14,queued,
+# 2026-05-23T17:13Z ghost cancel + re-dispatch (deploy-keeper paused after this turn)
+bench-v1-K10-v226-lineage-prostt5,10,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,4b0378db-0c52-41e2-99d9-cb3fa4e6ce42,queued,re-dispatch of 8ed87c85 killed by deploy-keeper redeploy 16:50
+# 2026-05-24T23:43Z executor-1779665491-0153 F-EXP-RESET pickup dispatch (13 missing cells, K=10 + remaining variants); JWT path because api_key snapshot drops role field (regression in auth/__init__.py:199-207). 11 cells already SUCCEEDED on develop; 13 dispatched here. apikey prefix 5kdKK-Oq promoted to operator in DB (no effect: still 403 via api_key path).
+bench-v1-K10-v226-lineage-prot_t5,10,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,6a351049-5a6c-4694-b7b6-6db60ed6361b,running,
+bench-v1-K5-v226-lineage-prot_t5,5,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,ed380883-4b70-4688-a9d7-2166b1e644e9,queued,
+bench-v1-K3-v226-lineage-prot_t5,3,prot_t5,084943c6-fec1-441d-bdc5-63b0268ada1b,c7c2218a-4ee1-434a-b9e5-140629ef81f2,queued,
+bench-v1-K10-v226-lineage-prostt5,10,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,6275e256-7c6f-442a-8e38-08b6ac631587,queued,
+bench-v1-K3-v226-lineage-prostt5,3,prostt5,c0ae5b69-d6dc-41cf-a711-1739d3d2e170,a1b900ab-d07a-41b4-8777-46c49661aeba,queued,
+bench-v1-K10-v226-lineage-esmc_600m,10,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,57815f0f-9df2-4785-92ca-7646ac4d21ca,queued,
+bench-v1-K5-v226-lineage-esmc_600m,5,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,c369327e-6e80-4326-901d-fd74ba66003d,queued,
+bench-v1-K3-v226-lineage-esmc_600m,3,esmc_600m,2bf1e753-022f-44b8-a131-9a90acb4024e,465bb0ed-09ac-487e-917c-7dc832caeaf6,queued,
+bench-v1-K5-v226-lineage-ankh_base,5,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,435f964f-2678-4018-8f3a-b87df957210f,queued,
+bench-v1-K3-v226-lineage-ankh_base,3,ankh_base,08234f06-ba76-4d7d-aaec-ae601096b4fa,2824b78e-0a3e-4302-b8f9-e0adfcaa97c8,queued,
+bench-v1-K3-v226-lineage-ankh_large,3,ankh_large,238f79b1-3068-4c6f-9013-5cc52b4f662b,410a103a-dbf8-4177-8e09-ab00aecc6656,queued,
+bench-v1-K3-v226-lineage-esm2_150m,3,esm2_150m,500a0c59-be09-424d-9d51-b7997629c95a,1e949e00-72f4-433f-b03c-ce91456b4730,queued,
+bench-v1-K3-v226-lineage-esm2_3b,3,esm2_3b,55e43f1c-1a3b-4b1d-88c0-26b433f5f673,a42aa8e4-4856-43b8-be52-d5654e4ba85f,queued,
