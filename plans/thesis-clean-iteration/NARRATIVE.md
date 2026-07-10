@@ -56,6 +56,85 @@ Proposed shape:
 A claim with no receipt does not get a page. A receipt with no operation to regenerate it
 is a promise, not a proof, and it stays in the appendix.
 
+## The interface, designed: a critical edition of a result
+
+Information architecture is not design. The current front door is a SaaS hero (gradient
+orbs, `blur-3xl`, a pulsing dot, `rounded-3xl`), which says *product*. The thesis says the
+opposite: that the number is bounded by evidence rather than by architecture. The page
+should say that before anyone reads a line.
+
+**The direction is a critical edition**: a central column carrying the argument, and an
+**apparatus in the margin** carrying receipts, provenance and caveats, the way an edited
+text carries its notes. Not a generic book. A scholarly one.
+
+**Colour encodes epistemic status, it does not decorate.** The existing tokens already
+document their contrast ratios, so they are kept and given meaning:
+
+| token | value | reserved for | contrast on paper |
+|---|---|---|---|
+| ink | `#0C0A09` | everything that is simply true | 18.9:1 |
+| **evidence blue** | `#1E40AF` | only what you can check: receipts, operations | 8.4:1 |
+| **frontier rose** | `#BE123C` | only the two cells we do not win, and our caveats | 6.0:1 |
+| muted | `#57534E` | marginalia | 7.1:1 |
+
+Rose is the colour of honesty here, not of error. Marginalia uses `muted`, never `subtle`
+(`#78716C` is 4.59:1, which passes for small text only barely and is the wrong side of
+comfortable at 13px).
+
+**Two typographic registers, because the reader must know which object they are holding.**
+A transitional serif for the book (Source Serif 4, drawn for screen reading), a mono for
+data (Source Code Pro, tabular lining figures: `GO:0006355` *is* a code and should look
+like one), and a sans (Source Sans 3) **only** inside `/instrument/*`. Changing typeface is
+how the reader knows they left the argument and entered the machine.
+
+Measure is set in `ch`, never `px`, with `hyphens: auto` for German, or the column breaks
+in `de`. Tabular numerals so the grid does not reflow between locales.
+
+**The hero is the nine-cell grid, typeset as a table, not charted.**
+
+```
+              MF        BP        CC
+   NK       0.648     0.331     0.481
+   LK       0.559    ·0.354·    0.467
+   PK       0.230    ·0.141·    0.273
+```
+
+Seven cells in ink. The two BP cells we do not win are set in frontier rose inside a
+hairline bracket, under a line of small italic: *first in seven of nine; the two we are
+not, we explain*. Opening with what we lose is the one risk this design takes. A product
+hero would never. A thesis must, because an honest frontier is the most characteristic
+thing in this subject's world. The only motion is the three rows arriving in order, NK then
+LK then PK, over about six hundred milliseconds, and `prefers-reduced-motion` removes it.
+
+**The signature: a footnote you pull.** A claim carries a superscript marker.
+
+> ... first in seven of nine cells.^R
+
+Activating the marker expands the margin note **in place** into the apparatus: the receipt
+filename and its sha, the script that produced it, and the `POST /jobs` payload in mono. The
+action reads **Regenerate this number**, in evidence blue, as a text link with a hairline
+underline. Filled buttons belong to the instrument. Once dispatched, the note becomes a live
+stamp (queued, running, sha) and, when the receipt lands, the marker gains a small `=` if the
+number reproduces or a rose `≠` if it diverges. **The footnote is the reproduction.** That is
+requirement FR-1 answered in the register of scholarship rather than of a dashboard.
+
+Caveats use the same mechanism with an open block by default, anchored inside the claim
+sentence itself, because rule 5 says we state them first.
+
+**Evidence tables**: horizontal hairlines only, no zebra, no vertical rules; decimal-aligned
+tabular figures; a frame stamp (`f_micro_w · v227 to v230`) on the caption line of every
+table. A table without a frame stamp is a bug, not a style choice.
+
+**How a score is made** is the one page where numbering is earned, because the steps are a
+real pipeline order: retrieval, candidate, evidence, fusion, probability. The gain
+decomposition (sixteen of sixty-four features carry ninety five percent) is drawn with the
+same hairlines as the tables, and the honest wrinkle, a base-rate prior as the single largest
+driver, gets a rose margin note rather than a silence.
+
+**What is removed**: the orbs, the blur, the pulsing dot, the rounded hero, the grid
+background. And one thing more, in Chanel's spirit: no logo lockup on the book pages. The
+argument opens the page.
+
 ## The reference documentation
 
 Sphinx already has the right skeleton (`abstract`, `introduction`, `results`, `insights`,
