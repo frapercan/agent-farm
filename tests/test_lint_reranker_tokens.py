@@ -41,13 +41,13 @@ linter = _load_module()
 
 
 class TestAllowlist:
-    def test_allowlist_has_exactly_nine_tokens(self) -> None:
-        assert len(linter.GOA_ALLOWLIST) == 9
+    def test_allowlist_has_exactly_ten_tokens(self) -> None:
+        assert len(linter.GOA_ALLOWLIST) == 10
 
     def test_allowlist_exact_membership(self) -> None:
         expected = {
             "v160", "v200", "v210", "v215", "v220",
-            "v226", "v227", "v229", "v230",
+            "v225", "v226", "v227", "v229", "v230",
         }
         assert set(linter.GOA_ALLOWLIST) == expected
 
