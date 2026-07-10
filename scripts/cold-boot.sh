@@ -12,8 +12,10 @@
 # `install_gpu_torch.sh` re-downloaded cu128. Minutes and gigabytes, every time,
 # for nothing. Now:
 #
-#   * FAST PATH: if containers are healthy, the API answers and ngrok is up,
-#     this exits in ~2s having changed nothing.
+#   * FAST PATH: if containers are healthy, the API (:8000) and the frontend
+#     (:3000) both answer and ngrok is up, this exits in ~2s having changed
+#     nothing. Probe both halves: the public tunnel serves the frontend, so an
+#     API-only probe reports green while protea.ngrok.app returns 502.
 #   * DEPS ARE REUSED: `poetry install` runs only when poetry.lock actually
 #     changed (sha stamped in the venv) or the venv is broken. The GPU torch
 #     override runs only when torch is not already CUDA-enabled.
