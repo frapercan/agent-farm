@@ -58,17 +58,26 @@ parallel because one is DB/CPU bound and the other is GPU bound.
 ### Track B (priority): the signal-store foundation
 
 Per `SIGNAL-STORE.md`, one PR per step, each independently revertible. Step 0 was
-added once the seam was measured (section 1.1 there): it closes D45 with six additive
-columns and no new tables, and it **returns ~75 GB** rather than consuming disk.
+rewritten on 2026-07-10 once the seam was traced to code and data: **D45 is a producer
+seam, not a storage seam.** The fingerprint pins family names, and the export path fills
+three declared families with a well-defined `0.0` because their producers were never
+wired into it. Closing it means no silent default, a degeneracy check at export, and
+provenance per family. The six additive columns remain worth doing, because they let the
+redundant blob go and **return ~75 GB**, but they are a separate, storage-motivated step.
 
-0. **Close D45 and get paid for it.** `go_prediction` is 101 GB over 52.2M rows whose
-   `features` jsonb (~75 GB) has 60 keys, of which 54 merely duplicate typed columns on
-   the same row. Only six live nowhere else, and those six *are* the seam:
-   `classifier_score`, `self_prior_score`, `association_cross`, `association_total`,
-   `classifier_present`, `association_present`. Add them as typed columns (~2.5 GB),
-   backfill from the blob, bring them inside `feature_schema_sha`, verify the
-   regenerated numbers, and only then propose dropping the blob as a separate reviewed
-   step. **Representations are not features:** dense vectors and learned codes are
+0. **Close D45 (the producer seam), and separately get paid for the blob.** Six scalars
+   live only in the jsonb: `classifier_score`, `self_prior_score`, `association_cross`,
+   `association_total`, `classifier_present`, `association_present`. They are already
+   declared in `feature_schema.py`, so the fingerprint already covers their names, yet
+   `_leaf_record_builder._reranker_default_fields()` exports the classifier and
+   association families as a constant `0.0` because their producers were never wired
+   into the export path, and the sealed run's `comparison.json` records the consequence
+   verbatim: `zero-filled in export`. The fix is a **failing** export (no silent default,
+   a degeneracy check, provenance per family), not a column type. Independently:
+   `go_prediction` is 101 GB over 52.2M rows whose `features` jsonb (~75 GB) has 60 keys,
+   of which 54 merely duplicate typed columns on the same row, so promoting the six
+   (~2.5 GB) lets the blob be dropped as a separate reviewed step, verified against the
+   sealed numbers first. **Representations are not features:** dense vectors and learned codes are
    embeddings and belong in `SequenceEmbedding` keyed by `embedding_config`; ProtST and
    ProTrek therefore need no new table, they are two more embedding configs.
 1. Pre-flight: fresh `pg_dump` plus restore verification. **Done 2026-07-10.**
