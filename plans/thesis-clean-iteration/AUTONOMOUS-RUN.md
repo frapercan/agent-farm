@@ -124,13 +124,20 @@ A full-pipeline confirmation of the winner runs after Track B step 6.
 
 - **Pillar 4: done** (merged). The frontier stays evidence-bound and the thesis now
   names the first crack, function-description-aligned representation.
-- **Pillar 1 must be revised.** It lists Domain / InterPro as one of five validated,
-  non-redundant evidence classes. But `interpro_go_mapping` and `interpro_annotation`
-  both hold **zero rows**, no job with an interpro operation has ever run, and the
-  50 GB toolchain has produced nothing. The nine `interpro_*` features score 0.00% gain
-  in the sealed boosters **because they are empty, not because they are useless**. The
-  claim is unsupported: either populate InterPro and measure it, or retire class E to
-  future work and say so. Do not leave it asserted.
+- **Pillar 1 needs a nuance, not a retraction.** InterPro enters the system by two
+  different doors and only one of them works, which an earlier reading of this document
+  got wrong. As **reranker features** it is absent: `interpro_go_mapping` and
+  `interpro_annotation` both hold zero rows, so the nine `interpro_*` columns score
+  0.00% gain in the sealed boosters *because they are empty*. As a **post-hoc
+  InterPro2GO noisy-OR graft** it is real, validated and decisive: built from
+  `interpro2go.txt` plus a small `protein2ipr.json` (7,326 of 7,401 queries carry an
+  IPR, 6,121 map to GO, 8.24 BP terms per protein), with the blend weight tuned per
+  (category, aspect) on the v225-v227 validation and applied to test. It contributes
+  **+0.0179** and is what secures seven of nine cells (`0.3884` without it). Class E is
+  therefore supported, but the thesis must say *how* it enters: as a graft, not as
+  features, and it is **not yet wired to serve**. Two honest jobs follow: feed InterPro
+  to the reranker as features and measure it, and close the serve gap. Note the 50 GB
+  InterProScan install is unrelated to the graft, which reads two small files.
 - Write the three missing sections: the learned k-WTA retrieval encoder, the
   representation-science ablation (its writeup does not exist either, see below), the
   structural GATE.
