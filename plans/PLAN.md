@@ -24,6 +24,8 @@ _Edit per-loop PLAN.md files; rerun `python plans/render.py`._
 
 - **representation-science**: `RS.1` (P1) · `RS.2` (P1) · `RS.6` (P1)
 - **roadmap-from-zero**: `R1.1` (P1) · `R2.1` (P1) · `R4.1` (P2)
+- **serve-offline-reconcile**: nothing pickable (blocked deps or all done / requires_human)
+
 - **sparse-classifier**: nothing pickable (blocked deps or all done / requires_human)
 
 - **target-selection-native**: nothing pickable (blocked deps or all done / requires_human)
