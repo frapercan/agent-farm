@@ -12,8 +12,10 @@
 # `install_gpu_torch.sh` re-downloaded cu128. Minutes and gigabytes, every time,
 # for nothing. Now:
 #
-#   * FAST PATH: if containers are healthy, the API answers and ngrok is up,
-#     this exits in ~2s having changed nothing.
+#   * FAST PATH: if containers are healthy, the API (:8000) and the frontend
+#     (:3000) both answer and ngrok is up, this exits in ~2s having changed
+#     nothing. Probe both halves: the public tunnel serves the frontend, so an
+#     API-only probe reports green while protea.ngrok.app returns 502.
 #   * DEPS ARE REUSED: `poetry install` runs only when poetry.lock actually
 #     changed (sha stamped in the venv) or the venv is broken. The GPU torch
 #     override runs only when torch is not already CUDA-enabled.
@@ -66,6 +68,10 @@ containers_healthy() {
   done
 }
 api_up()   { curl -fsS --max-time 4 http://localhost:8000/health >/dev/null 2>&1; }
+# The public protea.ngrok.app tunnel points at the FRONTEND (:3000), not the API, so
+# an API-only probe reports green while the public URL serves 502. Accept any HTTP
+# response (the app answers 307): we are probing liveness, not a status code.
+frontend_up() { curl -s -o /dev/null --max-time 4 http://localhost:3000 2>/dev/null; }
 ngrok_up() { curl -fsS --max-time 4 http://localhost:4040/api/tunnels >/dev/null 2>&1; }
 torch_is_cuda() {
   [[ -x "$DEPLOY/.venv/bin/python" ]] || return 1
@@ -98,6 +104,7 @@ write_state() {
   "poetry_lock_sha": "$(lock_sha)",
   "containers": { $cstates },
   "api_up": $(api_up && echo true || echo false),
+  "frontend_up": $(frontend_up && echo true || echo false),
   "ngrok_tunnels": "$tun"
 }
 EOF
@@ -114,9 +121,9 @@ fi
 # ---------------------------------------------------------------- fast path
 # Nothing to do when everything is already green. This is what makes the script
 # safe to run from a watchdog every few minutes.
-if [[ $DO_DEPLOY -eq 0 ]] && containers_healthy && api_up && ngrok_up; then
+if [[ $DO_DEPLOY -eq 0 ]] && containers_healthy && api_up && frontend_up && ngrok_up; then
   write_state "fast-path"
-  [[ $QUIET -eq 1 ]] || printf "${GREEN}${BOLD}infra already healthy${RESET} (containers + API + ngrok). Nothing to do.\n"
+  [[ $QUIET -eq 1 ]] || printf "${GREEN}${BOLD}infra already healthy${RESET} (containers + API + frontend + ngrok). Nothing to do.\n"
   exit 0
 fi
 
@@ -194,14 +201,19 @@ printf '%s' "$(lock_sha)" > "$STAMP"
 
 # ---------------------------------------------------------------- 4. app
 step "App layer"
-if api_up; then
-  ok "API already answering on :8000 -- not restarting"
+# Probe BOTH halves. The API answering on :8000 does not mean the product is up: the
+# public tunnel serves the frontend on :3000, and a machine event killed the frontend
+# while the API survived, leaving the fast path green and protea.ngrok.app at 502.
+if api_up && frontend_up; then
+  ok "API :8000 and frontend :3000 already answering -- not restarting"
 else
-  record_event "outage.detected" "api down"
+  api_up || record_event "outage.detected" "api down"
+  frontend_up || record_event "outage.detected" "frontend down"
   set -a; source .env; [[ -f .env.local ]] && source .env.local; set +a
   bash scripts/manage.sh start
-  for i in $(seq 1 30); do api_up && break; sleep 2; done
-  api_up && ok "API /health 200" || die "API not answering on :8000"
+  for i in $(seq 1 30); do api_up && frontend_up && break; sleep 2; done
+  api_up || die "API not answering on :8000"
+  frontend_up && ok "API :8000 + frontend :3000 up" || die "frontend not answering on :3000"
 fi
 
 # ---------------------------------------------------------------- 5. ngrok
