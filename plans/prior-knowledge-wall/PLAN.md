@@ -197,8 +197,8 @@ P3.1 is unquantified, P0.1 is unknown. **This plan does not promise 9/9.** It pr
 we stop attacking the wrong wall, and that the next negative costs hours rather than weeks.
 
 The fallback is not failure: a **characterised** frontier with a measured ceiling, a located
-channel and a named defect is a defensible doctoral result. But the ceiling is 0.54-0.61 and
-we deliver 0.2131, so the ambition is warranted.
+channel and a named defect is a defensible doctoral result. But the ceiling is 0.54 to 0.75
+and we deliver 0.2131, so the ambition is warranted.
 
 Receipts: `storage/regen_headline/{CROSS_ASPECT_CHANNEL,BP_WALL_CHARACTERIZATION}.md`,
 `storage/cooc_experiment/*.json`, `protea-reranker-lab/results/sparse_classifier/p4_recall_ceiling.json`.
