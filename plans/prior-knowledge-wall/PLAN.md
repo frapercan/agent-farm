@@ -23,13 +23,13 @@ PK-BPO protein set):
 | LK-bpo | 0.7668 | **0.8227** |
 | NK-bpo | 0.6985 | 0.7393 |
 
-And the oracle on the current export's pool (`storage/cooc_experiment/oracle_ceiling.py`,
-raw scores, board harness) says **0.6077**. The three agree once you notice they measure
-three pools of increasing richness: KNN only (0.47), KNN+classifier (0.54), the export's
-unioned pool (0.61). **`0.319` appears in no receipt anywhere.**
+And the oracle on the current export's pool (`storage/cooc_experiment/atlas_rebuild.py`,
+raw scores, board harness) says **0.7519**. The numbers agree once you notice they measure
+pools of increasing richness: KNN only (0.47), KNN+classifier (0.54), the export's unioned
+pool (0.75). **`0.319` appears in no receipt anywhere.**
 
-**Consequence.** We deliver **0.2131** against a ceiling of 0.54 to 0.61: we extract about
-**35%** of what the pool we already build allows. **The wall is RANKING, and it always was.**
+**Consequence.** We deliver **0.2131** against a ceiling of 0.54 to 0.75: we extract about
+**28%** of what the pool we already build allows. **The wall is RANKING, and it always was.**
 Every lever the old headline commissioned was a generation lever, and every one came back
 inert: co-occurrence expansion +0.0021, InterPro graft negative on BP, ProtST as a feature
 +0.0016. Those were not bad luck. **We were pushing a door that was already open.**
@@ -57,7 +57,7 @@ grid: **ceiling 0.8227, delivered 0.4402.**
    **regresses** on PK, -0.027 to -0.173).
 
 **Read together: we are serving a vote counter with extra steps, over a pool that fragments
-its own best evidence, while a 0.54-0.61 ceiling sits overhead.** Every technique lever is
+its own best evidence, while a 0.54-0.75 ceiling sits overhead.** Every technique lever is
 negative because the recipe is at the optimum *of a badly posed problem*.
 
 ## 2. Phase 0: repair the pool (this is a defect, not an experiment)
@@ -97,11 +97,21 @@ Then cut that headroom by every axis we can reach from frozen data:
 | count of t0-known terms | `anc2vec_query_known_count` | does more prior knowledge help or hurt us? |
 | neighbour identity | `neighbor_min_distance` | the twilight zone |
 | taxon | `taxonomy_*` | is the loss clade-specific? |
-| **pool recall per protein** | oracle vs gt | **separate "unreachable" from "misordered"**: 33.9% of PK proteins have ZERO true BP terms in the pool. Those are a generation problem and must never be counted against the ranker |
+| **pool recall per protein** | oracle vs propagated gt | separate "unreachable" from "misordered". **MEASURED and it barely matters**: only **2.3%** of PK proteins are truly unreachable and excusing them is worth **+0.0007**. Unreachability is per-TERM, not per-protein: 52% of the FN IA mass is not in the pool at all |
 
-**Deliverable:** the concentration curve. If 20% of proteins carry 80% of the recoverable
-loss, that subpopulation is the target and everything else is noise. **Gate:** if the loss
-is uniform across every axis, there is no subpopulation to attack and we say so.
+**Deliverable:** the concentration curve. **DONE 2026-07-17, and the gate fired: there is no
+subpopulation.** The top 20% of proteins carry 45.2% of the headroom against a random control
+of 20.5%; 51% of them are needed for 80%; **4,309 of 4,402 have positive headroom**. Length is
+flat, t0-known count is flat, neighbour identity is mildly inverse, and taxon is **not
+measurable at all** (the query taxid is absent from every frozen input). The only axes with a
+gradient are pool recall (2.7x) and pool size (2.5x), both **pool** properties rather than
+protein properties, and **headroom RISES where the pool is RICH**, which is the signature of
+misordering rather than of generation. The missed mass is ordinary: 77% sits in IA band 1-6
+and 71% at DAG depth 3-6, not in exotic deep leaves.
+
+So the remaining PK-BPO loss is a **broad ranking deficit spread over nearly every protein**,
+not a fixable tail. That kills the "find the hard subpopulation" strategy and redirects this
+plan at the pool-level and scale-level levers below.
 
 ## 4. Phase 2: run TransFew ourselves
 
@@ -256,19 +266,19 @@ tags: [cafaeval, measurement]
 id: PKW.3
 phase: PKW
 loop: prior-knowledge-wall
-status: pending
+status: done
 deps: []
 acceptance: |-
   For every LK-BPO and PK-BPO protein: delivered f, the pool's per-protein oracle,
   and its individual headroom. Cut the headroom by length, term IA, DAG depth,
   count of t0-known terms, neighbour identity, taxon, and above all by per-protein
-  pool recall, so "unreachable" is never charged to the ranker (33.9% of PK
-  proteins have ZERO true BP terms in the pool).
+  pool recall, so "unreachable" is never charged to the ranker.
   Deliverable: the concentration curve.
   GATE: if the loss is uniform on every axis there is no subpopulation to attack.
 estimated_hours: 4
 priority: P0
 tags: [analysis, stratification, frozen-data]
+note: "2026-07-17 DONE. Receipts storage/cooc_experiment/atlas_rebuild.py + atlas_atlas.json + atlas_per_protein.json (4,402 rows) + atlas_controls.py. Reproduces the anchor 0.2131@tau=0.393 and the label-built oracle 0.6077 exactly. (a) CORRECTS THE ORACLE: it was built from eval.parquet.label (DIRECT annotations) but cafaeval propagates gt, so pool terms that are ANCESTORS of true terms score TP (35,293 rows). oracle 0.6077 -> 0.7519, capture 35.1% -> 28.3%, unreachable 34.6% -> 2.3%. Caveat unresolved: the BP root is an ancestor of everything, so 'reachable' may be too generous and the true ceiling is likely between the two. (b) NO SUBPOPULATION: top 20% carry 45.2% (random control 20.5%), 51% of proteins needed for 80%, 4,309 of 4,402 have positive headroom. (c) CUTS: length FLAT, t0-known count FLAT, neighbour identity mild inverse, taxon NOT MEASURABLE (the query taxid is absent from every frozen input). Only pool recall (2.7x) and pool size (2.5x) carry gradient, and both are POOL properties. Headroom RISES where the pool is RICH = the signature of misordering. Missed mass is ordinary: 77% in IA band 1-6, 71% at DAG depth 3-6. (d) NEW BUG: neighbor_min_distance is byte-identical to distance on every non-NaN row; misnamed and miscomputed; may affect PROTEA#710's degeneracy check."
 ```
 
 ### PKW.4 — Run TransFew ourselves and diff it against us, protein by protein
