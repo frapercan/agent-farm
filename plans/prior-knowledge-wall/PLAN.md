@@ -103,21 +103,42 @@ Then cut that headroom by every axis we can reach from frozen data:
 loss, that subpopulation is the target and everything else is noise. **Gate:** if the loss
 is uniform across every axis, there is no subpopulation to attack and we say so.
 
-## 4. Phase 2: the head-to-head we cannot yet run
+## 4. Phase 2: run TransFew ourselves
 
-`CAFA_forever/modules/local/predictions.nf` has `PREDICT_TRANSFEW` and
-`PREDICT_FUNBIND_BATCH`, but they need `containers/*.sif` and **no `.sif` exists on this
-box**; there is no recipe and no registry. So their per-protein predictions are not
-reproducible here today. Two routes, in cost order:
+**Author constraint, 2026-07-17: do not contact An Phan or anyone at the benchmark until
+the thesis ships.** The host route is closed, and it turns out to be unnecessary.
 
-- **P2.1** Ask An Phan (`ahphan@iastate.edu`), the benchmark host, for the prediction files
-  or the containers. **Requires a human.** One email, potentially the highest value/cost
-  ratio in this plan.
-- **P2.2** Build TransFew from its public repo and run inference on our 7,401 targets. It is
-  a published method; this is inference, not training. Bounded, but days.
+`CAFA_forever/modules/local/predictions.nf` has `PREDICT_TRANSFEW`, but it needs a
+`containers/*.sif` that does not exist on this box, with no recipe and no registry. So we
+build from source instead. **TransFew is public and reproducible** (verified 2026-07-17):
+code at `github.com/BioinfoMachineLearning/TransFew`, **trained weights** and test samples
+at `calla.rnet.missouri.edu/rnaminer/tfew/TFewDataset`, paper *Bioinformatics Advances*
+2024, `vbae120`. Inference on 7,401 targets, not training.
 
-**What it buys:** the only direct answer to "what do they get that we do not". Everything
-else in this plan is introspection.
+**And the paper reframes every negative we hold.** Its stated mechanism: ESM2-t48 for the
+sequence, **BioBert over the GO terms' textual definitions**, and a **GCN autoencoder over
+the GO hierarchy**, combined by **cross-attention**, claiming better prediction of **rare
+terms with few annotations** by *"facilitating annotation transfer between GO terms"*. That
+is our exact gap. We have tested each of those three components, **separately, each bolted
+onto the reranker**:
+
+| their component | our equivalent test | result |
+|---|---|---|
+| GCN over the GO hierarchy | DAG proximity as a feature | **AUC 0.5501** |
+| annotation transfer between terms | term co-occurrence | **+0.0021** |
+| BioBert over GO text | GO-text BioBERT label basis | **+0.012 on LK-BPO** |
+
+He learns them **jointly with the sequence**; we measured the ingredients one at a time,
+cold. **Our negatives do not refute the signal, they refute the bolt-on.** That is not proof
+that joint learning works, but it is the first coherent account of why our decomposition
+found nothing.
+
+One more tell: their backbone is **ESM2-t48**, and our own ablation says **Ankh beats
+ESM2-3B** (family over size). If their sequence arm is weaker than ours and they still beat
+us where prior knowledge exists, **it is not the backbone: it is the label channel**.
+
+**What Phase 2 buys:** the only direct answer to "what do they get that we do not".
+Everything else in this plan is introspection.
 
 ## 5. Phase 3: levers, ordered by what the evidence supports
 
@@ -250,25 +271,62 @@ priority: P0
 tags: [analysis, stratification, frozen-data]
 ```
 
-### PKW.4 — Obtain the competitors' per-protein predictions
+### PKW.4 — Run TransFew ourselves and diff it against us, protein by protein
 
 ```yaml
 id: PKW.4
 phase: PKW
 loop: prior-knowledge-wall
-status: blocked
+status: pending
 deps: []
-requires_human: true
 acceptance: |-
-  CAFA_forever/modules/local/predictions.nf has PREDICT_TRANSFEW and
-  PREDICT_FUNBIND_BATCH but they need containers/*.sif, and no .sif exists on this
-  box: no recipe, no registry. Route A: ask An Phan <ahphan@iastate.edu>, the
-  benchmark host, for the prediction files or the containers. Route B: build
-  TransFew from its public repo and run inference on the 7,401 targets.
-  This is the only direct answer to "what do they get that we do not".
-estimated_hours: 2
+  AUTHOR CONSTRAINT 2026-07-17: do NOT contact An Phan or anyone at the benchmark
+  until the thesis ships. The host route is closed. It is also unnecessary.
+  TransFew is public and reproducible: code at
+  github.com/BioinfoMachineLearning/TransFew, TRAINED WEIGHTS and test samples at
+  calla.rnet.missouri.edu/rnaminer/tfew/TFewDataset, paper Bioinformatics Advances
+  2024 vbae120. This is inference on our 7,401 targets, not training.
+  (CAFA_forever/modules/local/predictions.nf has PREDICT_TRANSFEW but needs a
+  containers/*.sif that does not exist on this box, with no recipe and no registry.
+  Build from the repo instead.)
+  Deliverable: their per-protein, per-term predictions on our frame, then the diff
+  against ours on LK-BPO and PK-BPO. Which proteins do they win, which terms, and
+  do those terms share an IA band, a DAG depth, or a prior-knowledge count?
+  This is the only direct answer to "what do they get that we do not". Everything
+  else in this plan is introspection.
+estimated_hours: 12
 priority: P1
-tags: [head-to-head, blocked, human]
+tags: [head-to-head, transfew, inference]
+```
+
+### PKW.4b — The architectural read: we tested their ingredients, never their reaction
+
+```yaml
+id: PKW.4b
+phase: PKW
+loop: prior-knowledge-wall
+status: pending
+deps: [PKW.4]
+acceptance: |-
+  TransFew's stated mechanism (paper, verified 2026-07-17): ESM2-t48 for the
+  sequence, BioBert over GO TEXTUAL DEFINITIONS, and a GCN autoencoder over the GO
+  HIERARCHY, combined by CROSS-ATTENTION, claiming better prediction of RARE terms
+  with few annotations by "facilitating annotation transfer between GO terms".
+  That is our exact gap. And we have tested each of its three components
+  SEPARATELY, each bolted onto the reranker, each weak:
+    * GO-DAG hierarchical proximity as a feature -> AUC 0.5501
+    * term co-occurrence (annotation transfer) -> +0.0021
+    * GO-text BioBERT label basis -> +0.012 on LK-BPO
+  He learns them JOINTLY with the sequence; we measured the ingredients one by one,
+  cold. Our negatives do not refute the signal, they refute the bolt-on.
+  Note their backbone is ESM2-t48 while our own ablation says Ankh beats ESM2-3B
+  (family > size). If their sequence arm is weaker than ours and they still win
+  where prior knowledge exists, it is not the backbone: it is the label channel.
+  Deliverable: decide, on the PKW.4 diff, whether a jointly-learned label channel
+  is worth building or whether the diff points somewhere cheaper.
+estimated_hours: 3
+priority: P1
+tags: [transfew, architecture, decision]
 ```
 
 ### PKW.5 — Recency weighting of the training window
