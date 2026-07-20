@@ -22,22 +22,26 @@ Two independent findings now bound the problem from both sides:
    `project_transition_rescoring_calibration_wall_2026_07_20`. **You can order a protein's
    candidates perfectly and not move the cell.**
 
-2. **The pool is missing true mass at the TERM level.** The atlas (PKW.3) found per-protein
-   unreachability is only 2.3%, which read as "the wall is ranking". But the same receipt
-   records that **52% of the false-negative IA mass is not in the pool at all** at the term
-   level. The 0.75 oracle is inflated by fill-propagation of ancestors; the informative
-   leaves that carry the IA weight are frequently absent.
+2. **The pool is missing true mass at the TERM level, but less than first thought.** The
+   atlas (PKW.3) found per-protein unreachability is only 2.3%, which read as "the wall is
+   ranking". CG.1 (2026-07-20) quantified it correctly at the IA-mass level: the pool
+   captures **71-74% of true IA-mass**; the false-negative mass outside the pool is **26-29%**
+   (LK-BPO 26.1%, PK-BPO 28.6%), not the 52% a leaf-COUNT figure had suggested. The 0.75
+   oracle is inflated by fill-propagation of ancestors.
 
-Put together: the terms we most need are often ABSENT, and for the ones present we cannot
-rank our way to them because the metric rewards a calibration that does not transfer.
+Put together: about a quarter of the true IA-mass is ABSENT, and for the terms present we
+cannot rank our way to them because the metric rewards a calibration that does not transfer.
 **The only escape that both findings leave open is GENERATION: put the missing true terms
 INTO the candidate set.** A generated true term raises `f_micro_w` structurally (its
 ancestors inherit TP through `prop=fill`), independent of calibration. That is why
 generation is the one channel with transferable signal, restated three times now
 (classifier-extras, text-as-generator, and this).
 
-But not any generation. Every generator we have already had its shot and missed these
-terms, because they all read the same thing.
+But not any generation, and this is the hard part CG.1 nailed down: the missing tail is
+**REACHABLE but not SEPARABLE**. An in-house co-occurrence generator DOES propose the true
+missing terms, but at ~1% IA-precision, so it floods 100-200x more false mass to recover
+them and cannot clear the fill-tax bar. Generation PRECISION is the bar, and every generator
+we have reads the same sequence-derived thing.
 
 ## 1. The design principle: BP is a network property; our generators are sequence-blind
 
@@ -116,10 +120,18 @@ external data if the in-house channel cannot reach.
 
 ### CG.1 Known-annotations as a GENERATOR (frozen, cheap, decides the next step)
 
+**CG.1 DONE 2026-07-20: NO-GO at the gate.** Frozen in-house generator `P(new BP | known set)`
+reaches the true missing tail but at ~1% IA-precision (LK top5 1.61%, PK 1.03%), far below the
+fill-tax bar; the 11.59%-precision classifier generator already failed to convert, so 1% has no
+path. Missing mass is REACHABLE (26-29% of true IA outside the pool) but NOT SEPARABLE in-house =
+the separability wall, quantified. LK leakage handled clean (0 BP terms in any LK t0 known set).
+Step 2 not reached by design. **Redirects to CG.3 (external orthogonal channel).** Receipts
+`storage/regen_headline/CG1_KNOWN_ANNOTATION_GENERATOR.md` + `cg1_verdict.json`.
+
 ```yaml
 id: CG.1
 loop: contextual-generation
-status: pending
+status: done
 deps: []
 priority: P0
 estimated_hours: 5
