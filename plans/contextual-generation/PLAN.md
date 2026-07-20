@@ -173,20 +173,29 @@ acceptance: |-
 tags: [generation, literature, recall-added, leakage-audit]
 ```
 
-**CG.3 PREP DONE 2026-07-20: STRONG GO on feasibility, awaiting download greenlight.** Receipts
-`storage/regen_headline/CG3_NETWORK_CHANNEL_PREP.md` + `cg3_coverage.json`. Resource: STRING v12.0
-(released 2023-07-26, provably pre-t0, CC BY 4.0, ships UniProt alias map). Coverage decider (computed
-offline from the v225 GAF): 97.8% of the 4,925 targets are tier-1 model organisms STRING covers ~100%
-(LK 98.1%); no taxon NO-GO. Leakage: edges from STRING (drop textmining), partner annotations only from
-frozen t0 reference_annotations.parquet. THE ASK: greenlight a ~5-12 GB STRING v12.0 download (detailed
-links + aliases, ~22 tier-1 organisms). CIRCULARITY REFINEMENT: run experimental + coexpression channels
-first (clean); treat STRING's `database` channel (pathway/GO-derived) as a separate ablation to avoid a
-circular win.
+**CG.3 DONE 2026-07-20: NO-GO, but the STRONGEST of the five channels.** Author greenlit the download;
+STRING v12.0 obtained (18 tier-1 species, 1.7 GB, `storage/string_v12/`, release 2023-07-26 provably
+pre-t0). Clean channels (experimental+coexpression, textmining never read): added-true IA-precision top5
+LK-BPO 5.78% / PK-BPO 2.41% = 2.3-3.6x the co-occurrence floor, first channel to clear ~1% clearly, and
+it directionally VALIDATES "BP is a network property" (partners are our best BP generator; signal
+concentrates in densely-curated taxa). But it does not approach 11.59%, 94-98% of proposed mass is
+false, and Step-2 true-frame cafaeval is NEGATIVE in every arm (LK -0.002, PK -0.001..-0.004): 2-6%
+precision cannot survive the fill-tax. Database ablation only modestly higher (not circular); leakage
+CLEAN (target-as-partner ablation keeps signal via independent partners). Receipts
+`storage/regen_headline/CG3_NETWORK_GENERATOR.md` + `cg3_verdict.json`.
+
+**PLAN COMPLETE. Five generation channels characterized, all NO-GO** (rescoring calibration-capped;
+classifier 11.59% refuted under -known; co-occurrence 1%; literature 1.5%; network 5.8%). The missing
+BP tail is REACHABLE but not SEPARABLE by any signal tested; the network channel being directionally
+right yet insufficient shows this is a FIELD FRONTIER, not an in-house gap. No sixth orthogonal channel
+has a real chance (structure recovers MF not BP; phylo-profiles sparser than network). RECOMMENDATION:
+consolidate the characterized frontier as the Pillar-4 doctoral contribution (thesis task #48), not a
+sixth channel.
 
 ```yaml
 id: CG.3
 loop: contextual-generation
-status: blocked-on-download-greenlight
+status: done
 deps: [CG.1]
 priority: P1
 estimated_hours: 20
