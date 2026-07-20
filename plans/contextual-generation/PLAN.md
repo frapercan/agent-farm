@@ -148,12 +148,17 @@ acceptance: |-
 tags: [generation, frozen, cross-aspect, recall-added]
 ```
 
-### CG.2 Literature as a RECALL generator (pipeline exists, reframe the refuted test)
+**CG.2 DONE 2026-07-20: NO-GO at the gate.** A protein's own pre-t0 abstracts (S-PubMedBert vs GO
+definitions) generate the missing BP tail at only 1.88% (LK) / 1.49% (PK) added-true IA-precision,
+barely above co-occurrence and 6-8x below the 11.59% classifier bar. Coverage near-total (98%), so it
+is a channel property not missing data. Even an external, protein-specific literature channel cannot
+separate the true missed BP tail. Receipts `storage/regen_headline/CG2_LITERATURE_GENERATOR.md` +
+`cg2_verdict.json`.
 
 ```yaml
 id: CG.2
 loop: contextual-generation
-status: pending
+status: done
 deps: []
 priority: P1
 estimated_hours: 8
@@ -168,12 +173,20 @@ acceptance: |-
 tags: [generation, literature, recall-added, leakage-audit]
 ```
 
-### CG.3 Network / context channel (external, the real ceiling, needs author OK)
+**CG.3 PREP DONE 2026-07-20: STRONG GO on feasibility, awaiting download greenlight.** Receipts
+`storage/regen_headline/CG3_NETWORK_CHANNEL_PREP.md` + `cg3_coverage.json`. Resource: STRING v12.0
+(released 2023-07-26, provably pre-t0, CC BY 4.0, ships UniProt alias map). Coverage decider (computed
+offline from the v225 GAF): 97.8% of the 4,925 targets are tier-1 model organisms STRING covers ~100%
+(LK 98.1%); no taxon NO-GO. Leakage: edges from STRING (drop textmining), partner annotations only from
+frozen t0 reference_annotations.parquet. THE ASK: greenlight a ~5-12 GB STRING v12.0 download (detailed
+links + aliases, ~22 tier-1 organisms). CIRCULARITY REFINEMENT: run experimental + coexpression channels
+first (clean); treat STRING's `database` channel (pathway/GO-derived) as a separate ablation to avoid a
+circular win.
 
 ```yaml
 id: CG.3
 loop: contextual-generation
-status: blocked-on-decision
+status: blocked-on-download-greenlight
 deps: [CG.1]
 priority: P1
 estimated_hours: 20
