@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          pip install ruff
+          pip install "ruff==0.15.12"
 
       - name: Ruff lint (scoped to FARM-FEAT.9 test files)
         run: |
