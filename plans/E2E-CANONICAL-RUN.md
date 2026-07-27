@@ -67,17 +67,104 @@ The machine is being formatted. Confirm each survives BEFORE the format:
   same queue and Postgres (minimal architectural change, maximal throughput).
   The run is the demonstration that the environment is distributed and scalable.
 
-## 3. Axis: temporal frame (CONFIRM before locking)
+## 3. Axis: temporal frame (FIXED BY THE AUTHOR 2026-07-27)
 
-Working assumption (current campaign, memory temporal_eval_run_2026_06_26):
-VALID = 225 -> 227 (selection happens here), TEST = 227 -> 230 (frozen system
-scored once), metric = f_micro_w, externally validated on LAFA.
+**The base principle of the experimentation, in the author's words: tune
+parameters and decisions around 226-227, and compete on 227 forward, including
+231-232 if recently published. Balance the samples.**
 
-DISCREPANCY TO RESOLVE: the June roadmaps fixed SELECT 220 -> 227 / FINAL
-227 -> 230. This spec uses 225 -> 227 / 227 -> 230. Author confirms the window
-before the plan is committed (leakage-critical). Also flagged in memory:
-v230 annotation set is under-loaded (-18.87% vs -1.40% upstream) and truncates
-the eval set; a reload may be required before TEST is trustworthy.
+Formally:
+- **TUNE window: 226 -> 227.** Every parameter, threshold and design decision is
+  selected here. Nothing after 227 informs a choice.
+- **COMPETE window: 227 -> forward, OPEN-ENDED.** The frozen system is scored on
+  everything that accrued after 227. This supersedes the fixed 227 -> 230 test:
+  the test set GROWS as releases publish, which is a strength, since more ground
+  truth accumulates against the same t0.
+- Metric: f_micro_w. Externally validated on LAFA.
+
+This supersedes both the June roadmaps (SELECT 220 -> 227) and the July working
+assumption (VALID 225 -> 227).
+
+### What is actually published upstream (verified 2026-07-27 by HTTP HEAD)
+
+Four releases exist beyond v230, not two. The newest is **v234**.
+
+| release | date | gaf.gz size | delta vs previous |
+|---|---|---|---|
+| v226 | 2025-05-03 | 21.10 GB | base |
+| **v227** | 2025-09-04 | 14.58 GB | **-30.9%** |
+| v228 | 2025-11-10 | 15.77 GB | +8.1% |
+| v229 | 2025-12-04 | 16.50 GB | +4.6% |
+| v230 | 2026-03-04 | 14.38 GB | -12.8% |
+| v231 | 2026-04-10 | 14.33 GB | -0.3% |
+| **v232** | 2026-04-30 | 10.09 GB | **-29.6%** |
+| v233 | 2026-06-02 | 10.58 GB | +4.8% |
+| v234 | 2026-06-17 | 10.86 GB | +2.7% |
+
+### THE FINDING THAT CONSTRAINS THE DESIGN: GOA is not monotone
+
+**The corpus contracts by roughly 30% twice**, and both events sit inside the
+frame just fixed: **226 -> 227 is -30.9%** (the TUNE window) and
+**231 -> 232 is -29.6%** (inside the COMPETE window).
+
+This challenges an assumption the project has carried since the temporal-eval
+design: that the time axis is biocuration ACCRETION, so "what existed at t0" and
+"what arrived after" fully describe a window. If annotations also DEPART in bulk,
+then a window is a net of arrivals and removals, and a ground truth built as
+"terms present at t1 and absent at t0" silently mixes:
+- genuine new curation (the signal we want to predict),
+- re-annotation churn (same knowledge, different term or evidence code),
+- and the inverse of a bulk removal (a term absent at t1 because GOA dropped a
+  whole evidence class, not because it was never true).
+
+Consequences that must be resolved before any number is generated:
+1. **Decompose every window into ADDED and REMOVED**, not just net delta. The
+   ground truth must be built from ADDED only, and REMOVED must be reported.
+2. **Diagnose the two contractions.** A 30% drop is a structural change in what
+   `goa_uniprot_all` includes (a likely candidate is a change in IEA or in which
+   source databases are bundled). Identify it, because it determines whether the
+   windows either side are comparable at all.
+3. **Note that size is a proxy.** File bytes are not annotation counts. The
+   decomposition in point 1 is the real measurement; this table is the alarm that
+   makes it necessary.
+4. **The v230 under-load finding needs re-reading in this light.** Memory records
+   loaded -18.87% against "upstream -1.40%", but that -1.40% compares the v227
+   and v230 endpoints while the PATH between them is
+   14.58 -> 15.77 -> 16.50 -> 14.38, i.e. it contains a real -12.8% upstream
+   contraction at 229 -> 230. The loading defect is probably still real, but it
+   is smaller than a flat-upstream baseline implies.
+
+### Sample balancing (author's explicit requirement)
+
+The windows are wildly unbalanced on both axes, so "balance the samples" is a
+hard requirement, not a refinement:
+
+- **In time**: the gaps run 124, 67, 24, 90, 37, 20, 33 and 15 days. A window is
+  not a unit of biocuration.
+- **In content**: net change per window ranges from -30.9% to +8.1%.
+
+Rules adopted:
+1. **The COMPETE set is never balanced.** It must reflect the real population,
+   because f_micro_w is computed over that population and any reweighting makes
+   the number incomparable to the board. Balancing there would be a defect.
+2. **The TUNE window is balanced across the strata** of axis B (category x
+   aspect x length x homology band), so that a threshold selected on 226 -> 227
+   is not merely the threshold of whichever stratum happened to dominate a
+   124-day window that also lost 31% of its corpus.
+3. **Report per-stratum sample sizes with every tuned parameter.** Where a
+   stratum is starved in 226 -> 227, say so and either widen the window for that
+   stratum alone (documented) or decline to tune it separately.
+4. **Normalise per-window rates by elapsed time** when comparing windows, since
+   the gaps differ by 8x.
+5. Note the known landmine: naive class weighting inside the reranker is already
+   REFUTED. Balancing here means stratum representation in the tuning sample, not
+   class reweighting in the objective.
+
+### Still open for the author
+
+Whether to score the COMPETE window cumulatively (227 -> 234, one number) or as a
+per-release series (227 -> 228, 227 -> 229, ... 227 -> 234). The series is more
+informative and would show the contraction events directly, at more compute.
 
 ## 4. Axis B: stratification (fixed, applied to EVERY measurement)
 
