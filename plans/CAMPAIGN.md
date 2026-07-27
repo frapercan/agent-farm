@@ -163,10 +163,26 @@ aspects. No number is reported pooled across categories or aspects. A mean or a
 win count over the nine cells is permitted only with the nine cells and their
 population sizes shown beside it.
 
-**Additions and removals are decomposed, never netted.** The annotation corpus
-contracts as well as grows, and a ground truth built from a net difference would
-mix new curation with the inverse of a bulk removal. Ground truth is built from
-additions only; removals are reported separately as a property of the corpus.
+**Ground truth is first appearance.** An annotation counts for a window if it is
+present at the end **and was never present at any earlier cut**. The pairwise
+difference is retired, because the corpus contracts as well as grows, so an
+annotation can be present early, be withdrawn, and return, and a pairwise rule
+then asks the method to predict something already known and already in its
+training corpus. Measured over eleven consecutive releases, that leak reaches
+63.7% of apparent additions on all-evidence data and about one percent on
+experimental evidence, and it is not uniform: **it tracks the contraction points,
+and the validation window crosses one**. The restoration rate is published as a
+property of the corpus rather than hidden as a caveat.
+
+**Removals are decomposed and reported**, never netted into the ground truth.
+
+**The exclusion list is the start-of-window set.** For the prior-knowledge cells
+the terms withheld from scoring are what the protein knew at the start, including
+terms the corpus later withdrew, because the category is defined at the start and
+the alternative would penalise the method for a corpus event. **This rule lives in
+the split registry, not in an implementation detail**, and the count of
+withdrawn-from-known is reported per release, without which the dip the series
+shows at the contraction cannot be attributed.
 
 ---
 
@@ -252,8 +268,24 @@ Exit criteria: one dispatch chain completes end to end, every intermediate is
 registered with its provenance, the interface renders each stage, and the
 fragile points are written down. Then the long run starts.
 
-**The precondition, and it is not optional:** the environment is clean, prior
-results are archived rather than carried forward, and noise is out of sight. A
+**It runs the full chain, evaluation included**, and that decision reorders the
+work. Evaluating through the retired builder would certify the exact component
+the campaign has decided to replace, so **the window decomposition and the
+first-appearance builder move ahead of the short run rather than beside it.**
+More work up front, and the coherent order: there is no value in proving a chain
+end to end using the part that is being discarded.
+
+What that costs is worth stating, because it was the argument against. Evaluation
+is the best-tested stage in the system; a probe reproduced it from frozen inputs
+in under ten seconds and matched the recorded row at full granularity. Including
+it adds cost without removing much uncertainty. It is included anyway, on the
+grounds that a chain proven only to its penultimate stage has not been proven.
+
+**The preconditions, none of them optional:** the environment is clean and prior
+results are archived rather than carried; the window is strictly earlier than any
+adjustment window and is recorded in the exit receipt; the unreviewed retrieval
+hop carries the provenance split; and the short run's corpus is torn down before
+the campaign proper begins, so nothing it produced can reach a later split. A
 smoke run through a dirty environment proves nothing, because any failure can be
 blamed on the residue.
 
@@ -509,12 +541,24 @@ and a number that appears in both but differs is a worse one.
 
 ## 8. WHAT THIS CAMPAIGN IS FOR
 
-The result to beat is the current standing: first in seven of the nine cells,
-with the two losses both in the biological-process aspect, in the
-limited-knowledge and prior-knowledge regimes.
+**Every cell.** The target is stated per cell on the internal adjustment split,
+scored with our own evaluator, and the external series is reported rather than
+optimised against.
 
-The campaign has two honest outcomes and both are publishable. Either the
-remaining two cells fall, or they do not and we deliver the sharpest available
+**The previously recorded standing is not the baseline.** It is prior work, and
+it is not commensurable with what this run produces. The reason is specific: it
+was not measured once. Four successive arms were scored on the same frozen frame
+and the best kept, and the registry records the final increment as selected on
+test. Competing against that number would mean holding a clean measurement
+against an inflated one and losing for reasons unrelated to the system. It stays
+in the manuscript as context, labelled with how it was obtained.
+
+**No gate in section 5 may reference an external number.** That is the operative
+consequence, and it is what keeps the external window a validation rather than a
+second selection surface.
+
+The campaign has two honest outcomes and both are publishable. Either the two
+hard cells fall, or they do not and we deliver the sharpest available
 characterisation of why: a separability and calibration frontier, with the
 portion of the missing signal that no evidence available at prediction time can
 reach. The second outcome is not a failure. It is the fourth pillar, and it is
