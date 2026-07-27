@@ -23,25 +23,32 @@ Preservation has now been done (PRs: lab #114, lab #115, agent-farm #234).
 **Preservation is not integration**, and the rest of this document is the gap
 that remains.
 
-## 1. Cannot be regenerated: must be imported or rebuilt
+## 1. Missing producers: the procedures that must be WRITTEN
 
-These have **no producer in any of the eight repositories**. Losing the file
-means losing the capability, not just the artifact. Ordered by consequence.
+**Nothing is imported. The author's instruction is that the campaign is a clean
+run from the most primordial level, and that nothing is kept beyond the
+procedures.** This section is therefore not a preservation list. It is a work
+list, and every entry is a slice.
 
-| Artifact | Status | What it blocks |
+Seven artifacts were found with **no producer in any of the eight
+repositories**. Under a from-scratch policy each one is regenerable, so the
+defect is not the missing file, it is the missing procedure. Ordered by how much
+of it has to be written.
+
+| Artifact | What is actually missing | Slice |
 |---|---|---|
-| **`go_text_emb.npz`** (BioBERT text embeddings of every GO term) | **NO WRITER EXISTS.** A sweep of every `.py` on the machine for a writer of this file found zero. | The GO tower of the two-tower, therefore the PK generator that wins PK-MFO and PK-CCO. `build_go_sparse.py` is tracked but cannot run without it. **The most consequential single loss in the audit.** |
-| **`IA.tsv`** (v227 band, 39,906 terms) | Host file in a gitignored directory. `band_registry.py` pins the band to it and **explicitly rejects** the tracked alternative. | The weights behind every `f_micro_w` in the thesis. `scripts/compute_ia_for_snapshot.py` can regenerate one, but it is a CLI, not a dispatchable operation, and its output is not byte-identical to the pinned file. |
-| **`classifier_m2_anc2vec.pt`** (160 MB, the default served M2 head) | **NO PRODUCING CODE FOUND** anywhere, in any repo or under `storage/`. | The live serve fallback for the NK/LK classifier. An orphan artifact whose producer was never written down. |
-| **`anc2vec_2020-10.npz`** (32 MB) | Third-party pretrained artifact, no builder anywhere. Upstream cited in a docstring. | The M2 classifier label basis and the whole `anc2vec_*` feature family, which the LOFO shows carries PK. Re-obtainable, but the download step is recorded in no runbook. |
-| **`predictions_protea.tsv`** (the champion board submission) | **Already gone.** No repo ever tracked it. | The headline PK-BP figure. A reconstruction script exists and says so in its own docstring. |
-| **InterProScan 5.77-108.0** (50 GB) | Acquired by hand, gitignored, **no installer script anywhere**. | The InterPro2GO BP graft, which is +0.0179 on the nine-cell mean. |
-| **The 8 canonical `EmbeddingConfig` UUIDs** | Database rows, **no seed migration**. | **The ID graph.** On a clean database Postgres mints new UUIDs, so every payload, config pin and env var that names `d8979601` breaks. This is a silent, total break. |
+| **`go_text_emb.npz`** (BioBERT embeddings of GO name + definition) | **A writer for this file exists NOWHERE.** A sweep of every `.py` on the machine found zero. This is the only entry with no code path at all. | Write the producer. It is small: embed name + definition per GO term with the pinned BioBERT, keyed by accession. Without it `build_go_sparse.py` cannot run, so the GO tower and therefore the PK generator cannot be rebuilt |
+| **`IA.tsv`** (information accretion per band) | The generator EXISTS (`scripts/compute_ia_for_snapshot.py`) but is a CLI, not a dispatchable operation, so it violates the rule that every operation is UI-actionable. `band_registry.py` also pins the band to a host path. | Promote to an operation; make the band registry point at an operation output rather than a path |
+| **`classifier_m2_anc2vec.pt`** (the served M2 head) | No script in any repo saves this file. The training algorithm IS versioned; only the persistence step is not. | Add the checkpoint-saving path to the tracked trainer. Retraining it is the campaign, not a loss |
+| **`anc2vec_2020-10.npz`** | A third-party pretrained artifact, re-downloadable from the upstream cited in the loader docstring. The download step appears in no runbook. | Add a fetch step with a checksum |
+| **InterProScan 5.77-108.0** | Re-downloadable from EBI. No installer script anywhere; 50 GB acquired by hand. | Write the installer |
+| **`predictions_protea.tsv`** | An OUTPUT. It regenerates by running the pipeline. | Nothing to write; it falls out of the clean run |
+| **The 8 canonical `EmbeddingConfig` UUIDs** | **Resolved, and the earlier alarm was wrong.** `embedding_config` IS a table in the database dump, so the identifiers are not lost. They remain unversioned as a seed migration, which is a robustness gap rather than a break. | Add a seed migration so the identifiers are declared in code, not only in a dump |
 
-**Consequence for the format:** items 1 to 5 are preserved as files in
-`/mnt/protea-archive/archive/preformat-preserve-2026-07-27_preformat`. They must
-travel to the new machine as **imports**, and each one that lacks a producer
-should acquire one before the clean run claims reproducibility.
+**Consequence for the format: none.** Nothing in this table has to survive the
+disk. Six of the seven regenerate from procedures that already exist or from
+upstream sources, and the seventh needs a script written that should have
+existed anyway.
 
 ## 2. Capabilities that were never versioned and must be BUILT
 
@@ -114,19 +121,32 @@ is strong and survives.
 **F. Evaluation.** `run_cafa_evaluation` with the band recipe. Blocked on the IA
 artifact.
 
-## 4. What regenerates and what travels
+## 4. What travels: only the procedures
 
-**Regenerates, do not carry:** every embedding, every reference cache, every
-exported dataset, every prediction, every evaluation artifact, all derived
-parquet and npz. This is the bulk of the 55 GB under `storage/` and the 44 GB of
-`datasets` and `eval_artifacts` in object storage. The author's instruction is
-explicit: results are not preserved, they are regenerated.
+**The author's instruction, verbatim in intent: erase everything, keep nothing
+beyond the procedures. The campaign is a clean run from the most primordial
+level.** That is the policy, and this plan is built on it rather than against it.
 
-**Travels as an import:** the seven artifacts in section 1, the secret and
-config surface, and the memory store.
+**Travels as code, and nothing else matters:** the eight repositories, including
+the training and research procedures pushed on 2026-07-27 (lab #114, lab #115,
+agent-farm #234) and the three planning documents. If a procedure is not in
+GitHub it does not exist.
 
-**Travels as code:** everything now on GitHub, including the procedures
-preserved today.
+**Travels because it is not code and cannot be rederived from one:** the memory
+store, and the operator's own credentials. Everything else is discarded.
+
+**Regenerated, deliberately:** the corpus, every embedding, the reference
+caches, the exported datasets, every prediction, every evaluation artifact,
+every trained model, and the entire object store. This includes the expensive
+things, and that is the point: an embedding set that only exists as a disk image
+proves nothing about the procedure that made it.
+
+**The disk layout as it stands** (relevant because it is what the format
+destroys): `/home` has no separate partition and lives inside `/`, and the
+Docker root is also on `/`, so a system reinstall removes the home tree and
+roughly 306 GB of container volumes holding Postgres, RabbitMQ and object
+storage. Under the policy above this is the intended outcome, not an incident.
+Nothing in the clean-run plan depends on any of it.
 
 ## 5. The honest statement of reproducibility
 
