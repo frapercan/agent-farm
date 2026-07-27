@@ -235,6 +235,33 @@ the regimes differ.
 
 Gate: one frozen substrate, chosen on validation, per cell.
 
+### The hardware envelope, which prunes rung 1 before it runs
+
+**The second machine is a laptop with six gigabytes of memory, and everything
+must fit there.** This is a design constraint, not a detail, because it decides
+which backbones the campaign may even consider.
+
+Ranked on the correlation proxy already measured, the strong end of the field
+does not fit. The two best backbones are out on memory alone. What fits is a
+mid-weight family, and within it one member is clearly ahead of the rest, which
+is why it is the substrate the run starts from.
+
+The honest cost, stated so it is not discovered later: **restricting to what fits
+gives up roughly a tenth of the proxy against the best backbone available.** The
+campaign accepts that, because a representation that cannot be recomputed on both
+machines cannot be part of a distributed claim, and a claim that only runs on one
+box is not the contribution this project is making.
+
+Two consequences:
+
+- **The grid is homogeneous.** Both machines run the same backbones. Running
+  heavy models on one and light ones on the other would double the substrate and
+  make every downstream number machine-dependent.
+- **The smallest backbone is excluded despite fitting easily.** It was already
+  measured as an unfaithful substrate, losing a large share of the proxy, and the
+  record shows signal grows with size without a cheap plateau. Light does not
+  mean smallest; it means the largest that fits.
+
 ### Rung 2: the learned representation as the lever
 
 Question: does the learned sparse encoder beat the winner of rung 1 at equal
@@ -250,7 +277,46 @@ transfer between base models. It is a recipe fitted to a base, not a
 transplantable trick, and the campaign must state that rather than discover it
 twice.
 
-Gate: retrieval improvement per stratum, with intervals.
+**The aggregator order is measured here, not argued.** The author's instruction
+settles a question the plans had been carrying as a claim: rather than freeze the
+shipped recipe and defend a length argument about a different one, the run builds
+the variants over the rung-1 champion and lets the measurement choose. That turns
+the project's oldest open assertion into an experiment with one changed variable.
+
+The variant set, over the frozen champion base:
+
+| Recipe | Unit | Sparsify | Aggregate | Role |
+|---|---|---|---|---|
+| A | whole sequence | after pooling | none | the shipped recipe, the incumbent |
+| B | chunk | after pooling | mean over chunks | **the control** |
+| C | chunk | per chunk | union of supports | the hypothesis |
+| D | chunk | per chunk | max | the hypothesis, other aggregate |
+| E | residue | per residue | union, within chunk then across | finest grain |
+| F | residue | per residue | max | finest grain, other aggregate |
+
+**B is what makes the comparison interpretable and is the arm most likely to be
+skipped.** Without it, a difference between A and C could come from chunking or
+from the order, and the two are the whole question. B chunks and still pools
+first, so A versus B isolates chunking and B versus C isolates the order.
+
+Two constraints the memory envelope imposes on how these are computed:
+
+- **The residue variants stream.** A residue-level representation is sparsified
+  and folded into the running aggregate immediately; the full residue matrix for
+  a protein is never held beyond the chunk being processed. Written any other
+  way these arms do not fit.
+- **A chunked substrate already exists** at a longer maximum length with overlap,
+  which is what the chunk variants read. The whole-sequence arms truncate at the
+  shorter limit, so the comparison must report coverage per arm rather than
+  assume the arms saw the same sequence.
+
+Whatever wins is the representation everything downstream uses. The claim that
+follows is whatever the measurement supports, stated at the grain it was measured:
+if the order matters, that is the finding; if it does not, that is also a finding,
+and it is the one that retires an assertion the project has carried for months.
+
+Gate: retrieval improvement per stratum, with intervals, and the length stratum
+reported separately because it is where the order should show if it shows at all.
 
 ### Rung 3: the functional classifier
 
