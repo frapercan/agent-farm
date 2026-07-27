@@ -20,7 +20,7 @@ belong, and are never load-bearing for the argument.
 |---|---|
 | the reference release | the specific annotation release number |
 | the evaluation cut | the cut identifier |
-| the competition window | the external board window label |
+| the validation window | the external board window label |
 | the base protein language model | the model configuration identifier |
 | the learned sparse encoder | the embedding configuration identifier |
 | the sparse functional generator | the internal component code name |
@@ -59,19 +59,37 @@ already in the system. **Ground truth stays experimental. Always.**
 
 ## 2. THE TEMPORAL DESIGN
 
-**One rule fixes everything: the test set is the cut immediately preceding the
-one the external board marks.** The board's own window is therefore never
-touched by any decision we make, which makes it a genuine external validation
-rather than a second validation set. Everything earlier is ours to split.
+**One rule fixes everything: everything before the board's mark is ours for
+fitting and for choosing champions, and the board is what validates.** There is
+no internal held-out test competing with the board for that role, because
+inventing one would mean holding out twice and reporting whichever came out
+better. The board's window is never touched by any decision we make, which is
+what makes it a genuine external validation rather than a second selection set.
 
-| Split | What it is | What it may inform |
-|---|---|---|
-| **Train** | Earlier cuts, freely partitioned | model fitting |
-| **Validation** | The cut before test | every hyperparameter, threshold and design choice |
-| **Test** | The cut immediately before the board's mark | measured once, per frozen candidate |
-| **Competition** | The board's window, forward | nothing. Reported, never optimised against |
+| Split | What it is | Scored with | What it may inform |
+|---|---|---|---|
+| **Train** | The earlier cuts, freely partitioned | our scorer | model fitting |
+| **Adjustment** | The windows before the board's mark, chosen for representativeness | our scorer | every hyperparameter, every threshold, every design choice, and the choice of champion |
+| **Validation** | The board's window, forward | the board | nothing. Reported, never optimised against |
 
-**The competition result is reported as a series, one point per release, from the
+**The naming is deliberate and it inverts the usual convention, so it is worth
+stating plainly.** What machine learning normally calls validation is here
+called adjustment, because that is all it does: it adjusts and it selects. What
+is called validation is the board, because the board is the only thing that
+validates. A reader who meets the words in their usual sense would assume an
+internal held-out test exists. It does not, on purpose.
+
+**Choosing the adjustment windows is a decision, not a default.** The obvious
+choice, the single window ending at the board's mark, is the worst available:
+that window is one of the two roughly thirty percent corpus contractions, so
+selecting champions on it would tune against an anomaly and then validate on
+normal accretion. The adjustment set therefore spans several windows chosen for
+representativeness, and **the choice is made after additions and removals have
+been decomposed**, never before, because until then nobody knows which windows
+are representative. The concrete release pairs live in the split registry, in
+code, with a guard.
+
+**The validation result is reported as a series, one point per release, from the
 board's mark forward through the newest published release.** It crosses the
 corpus contraction rather than stopping short of it, because a curve that shows
 the discontinuity is more defensible than a single number that hides it.
@@ -88,11 +106,20 @@ space, or the external validation is destroyed by the very mechanism the
 temporal design exists to prevent.
 
 **Sample balancing.** Cuts are wildly uneven, in elapsed time and in content, so
-balance is a requirement rather than a refinement. Train and validation are
-balanced across the four axes; **test and competition are never balanced**,
-because the metric is computed over a real population and reweighting it makes
-the number incomparable. Per-stratum sample sizes are reported beside every
-tuned parameter, and per-window rates are normalised by elapsed time.
+balance is a requirement rather than a refinement. **Train and adjustment are
+balanced across the four axes; the validation window never is**, because the
+metric there is computed over a real population and reweighting it makes the
+number incomparable to anyone else's. Per-stratum sample sizes are reported
+beside every tuned parameter, and per-window rates are normalised by elapsed
+time, since the gaps between releases range from about two weeks to four months.
+
+The same prohibition covers aggregates, and it has been violated in the past:
+**an unweighted mean across the nine cells is itself a reweighting**, because the
+cells hold populations that differ by more than an order of magnitude, and it
+moves in the flattering direction because the smallest cells are the easiest
+aspects. No number is reported pooled across categories or aspects. A mean or a
+win count over the nine cells is permitted only with the nine cells and their
+population sizes shown beside it.
 
 **Additions and removals are decomposed, never netted.** The annotation corpus
 contracts as well as grows, and a ground truth built from a net difference would
@@ -288,7 +315,7 @@ Ordered. A slice is done when its gate has a receipt.
 3. Additions and removals decomposed per window; the two corpus contractions diagnosed.
 4. Accretion weighting promoted to a dispatchable operation.
 5. The four-axis stratification implemented as a versioned module. It is a standing norm of this project with no implementation anywhere, and every stratified table until now came from a script that no longer exists.
-6. Split registry: train, validation, test and competition declared in code with a guard, as the band registry already does for the ontology binding.
+6. Split registry: train, adjustment and validation declared in code as ordered release pairs with a guard, as the band registry already does for the ontology binding. Runs AFTER slice 3, since the adjustment windows cannot be chosen before additions and removals are decomposed.
 
 **Scale**
 7. Unreviewed ingestion at volume, provenance-flagged.
