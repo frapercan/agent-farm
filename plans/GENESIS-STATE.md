@@ -123,6 +123,19 @@ artifact.
 
 ## 4. What travels: only the procedures
 
+**Superseded framing, corrected 2026-07-28.** This section was written as a
+preservation question, which was the wrong question. The governing rule is the
+invariant in `CAMPAIGN.md` section 0bis: **every artifact is produced by a
+registered operation, lands in the object store, and is published from there.**
+Nothing travels because nothing needs to: what does not have a producing
+operation is not preserved, it is a defect to be closed, and section 1 above is
+therefore the work list rather than an import manifest.
+
+The text below is kept because its inventory is accurate, but read every
+"travels" as "is regenerated", and read the safety copies made before the
+reinstall as a hedge against total loss that the plan does not depend on and may
+not cite.
+
 **The author's instruction, verbatim in intent: erase everything, keep nothing
 beyond the procedures. The campaign is a clean run from the most primordial
 level.** That is the policy, and this plan is built on it rather than against it.
