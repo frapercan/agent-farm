@@ -152,6 +152,42 @@ board.
 
 ---
 
+## 4bis. THE SHORT RUN (runs BEFORE the long run)
+
+**A complete end-to-end pass at small scale, on the new machine, before the
+campaign proper begins.** Pick any one delta. Take its start of window. Retrieve
+neighbours into the unreviewed corpus. Then apply every subsequent step through
+the platform, dispatched as operations rather than run as scripts.
+
+**It is not a result. It is a proof that the chain exists.** Nothing measured
+here enters the thesis and no decision is taken from its numbers. What it
+delivers is the answer to a question no amount of code reading can settle: does
+the output of each stage actually feed the next when a real payload flows
+through it?
+
+Why it must precede the long run:
+
+- **Every hop is exercised once, cheaply.** The readiness audit found stages
+  that are individually sound while several consumers resolve their input from a
+  filesystem path supplied by an environment variable rather than from a
+  registered entity. That defect is invisible until something flows.
+- **It is the first honest test of unreviewed ingestion and of retrieval into
+  it**, which is otherwise a claim rather than a demonstration.
+- **It gives the interface and the visualisations something real to render.**
+  Polishing a surface against fabricated data is how a surface ends up
+  describing a pipeline that does not exist.
+- **It surfaces the fragile parts while they are still cheap to fix**, rather
+  than eight hours into a full pass.
+
+Exit criteria: one dispatch chain completes end to end, every intermediate is
+registered with its provenance, the interface renders each stage, and the
+fragile points are written down. Then the long run starts.
+
+**The precondition, and it is not optional:** the environment is clean, prior
+results are archived rather than carried forward, and noise is out of sight. A
+smoke run through a dirty environment proves nothing, because any failure can be
+blamed on the residue.
+
 ## 5. THE EXPERIMENTAL LADDER
 
 Five rungs. Each has one question, one gate, and nothing advances carrying
@@ -300,6 +336,16 @@ datasets; the representation; the signals and their integration; and the
 frontier, which is the characterisation of where the method stops and why. It
 obeys section 0 absolutely: no identifiers, no release numbers, no codes in
 prose, and every number stratified on the four axes.
+
+**Length is not a target, and the ceiling is deliberately low: forty pages is
+acceptable if forty pages is what is relevant.** This inverts the job. The task
+is not to repair the existing manuscript but to decide what earns a page, and
+the readiness audit supplies the test. An implementation chapter that is almost
+free of results, while the four contributions this campaign actually produced
+have no section at all, is not a long thesis. It is a misallocated one.
+Operational detail belongs on the reference surface, where an examiner goes to
+verify that a claim reproduces. The argument surface carries the argument and
+then stops.
 
 The three surfaces must agree, and the lint that checks they agree is itself a
 slice. A number that appears in the thesis and not in the interface is a defect,
