@@ -166,6 +166,77 @@ Whether to score the COMPETE window cumulatively (227 -> 234, one number) or as 
 per-release series (227 -> 228, 227 -> 229, ... 227 -> 234). The series is more
 informative and would show the contraction events directly, at more compute.
 
+## 3bis. THE CONCISE PATH (sequencing, author's instruction 2026-07-27)
+
+**TrEMBL at scale plus directed case mining is the CULMINATION of the solution,
+and the route to it is concise.** Culmination means the argument builds toward
+it: TrEMBL is not an early ingredient that contaminates every measurement below
+it, and the path does not detour.
+
+Five stages, each with a gate. Nothing advances carrying unmeasured baggage.
+
+**Stage 0 - Foundation.** Reload v230. Decompose every window into ADDED and
+REMOVED. Diagnose the two ~30% contractions.
+GATE: the ground truth is trustworthy. Nothing measured before this counts.
+
+**Stage 1 - Retrieval substrate.** Settle the representation FIRST, because every
+downstream number inherits it. Raw ProtST (+0.0305, 8/9) vs z-scored (+0.0335,
+9/9) vs the champion, plus the triple-combine (+0.044 pre-reranker), plus the
+8-PLM matched-parameter grid, all on a stratified subsample, gated on recall@30
+and IA-coverage. Counter-evidence already on record: the learned k-WTA head does
+NOT transfer to ProtST, so this is a base swap, not a recipe transplant.
+GATE: one frozen champion substrate.
+
+**Stage 2 - Signals and fusion on the REVIEWED corpus.** The four signal groups.
+Properly measure the three families that were never actually measured (emb_pca
+with the emit flag split from `use_embedding_pca`, the homology block with a
+design that can see block weight, interpro-as-feature with the variable set),
+each with CIs. The score-search to decision-tree transversal.
+GATE: every registry row carries a receipt and a frame.
+
+**Stage 3 - Scale (the SYSTEM claim).** TrEMBL ingested at scale, several million
+embeddings, distributed across two machines.
+GATE: throughput, correctness and reproducibility measured. **No accuracy claim
+is attached to this stage.**
+
+**Stage 4 - Directed case mining (the SCIENTIFIC claim, the culmination).**
+TrEMBL admitted SELECTIVELY where the reviewed pool is thin (NK/dark regions,
+long proteins, taxonomic gaps), provenance-flagged, gated at retrieval per
+stratum.
+GATE: per-stratum recall@30 improvement with CIs.
+
+**Stages 3 and 4 must not be merged.** They are different claims with different
+failure modes. If scale works and mining does not, the system contribution still
+stands. Merged, a null mining result reads as a failed scale claim and both are
+lost.
+
+### The circularity trap that is specific to TrEMBL
+
+The project already measured that de-circularizing IEA is NULL: dropping or
+downweighting it leaves val-AUC flat because **only ~2% of BP positives are
+IEA-only**. **That finding does NOT transfer to TrEMBL**, and assuming it does
+would be the single most damaging error available here. It was measured on the
+REVIEWED corpus. TrEMBL is overwhelmingly electronic.
+
+The specific hazard: a large share of TrEMBL IEA annotations are themselves
+**derived from sequence similarity** (UniRule, ARBA, InterPro2GO). Transferring
+them through a sequence-similarity KNN is circular. The system would re-derive an
+InterPro2GO prediction from a neighbour and count it as independent evidence.
+**And InterPro2GO is already banked in the system as an explicit BP score-level
+graft worth +0.0179**, so this would double-count a channel that is already
+credited.
+
+Rules adopted:
+1. **The provenance flag must be load-bearing, not decorative.** Split TrEMBL
+   donors by evidence pipeline (sequence-derived: UniRule / ARBA / InterPro2GO,
+   versus everything else).
+2. **The safest first cut admits only NON-sequence-derived TrEMBL evidence**, and
+   the sequence-derived arm is measured separately against the InterPro graft
+   already in place, to show whether it adds anything or merely restates it.
+3. **Ground truth stays experimental-only.** TrEMBL enters as reference and donor
+   material, NEVER as ground truth, or the system would be scored against
+   electronic predictions.
+
 ## 4. Axis B: stratification (fixed, applied to EVERY measurement)
 
 category (NK / LK / PK) x aspect (MFO / CCO / BPO) x sequence length (buckets)
