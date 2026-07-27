@@ -160,11 +160,39 @@ Rules adopted:
    REFUTED. Balancing here means stratum representation in the tuning sample, not
    class reweighting in the objective.
 
-### Still open for the author
+### DECIDED BY THE AUTHOR 2026-07-27: per-release series, crossing the contraction
 
-Whether to score the COMPETE window cumulatively (227 -> 234, one number) or as a
-per-release series (227 -> 228, 227 -> 229, ... 227 -> 234). The series is more
-informative and would show the contraction events directly, at more compute.
+The COMPETE window is scored as a **series, one point per release**, from the
+board's mark forward through the newest published release, and it **crosses the
+contraction rather than stopping short of it**.
+
+This is the right call and it converts a hazard into a result, but only if three
+conditions hold. Without them the series is a curve nobody can interpret.
+
+1. **ADDED and REMOVED are decomposed per release, and reported alongside the
+   metric.** This is what makes the series readable at all. When performance dips
+   at a contraction, the reader must be able to see whether the method missed
+   terms or the corpus withdrew them. A false negative caused by a bulk removal
+   is not a prediction error, and the series is only defensible if the two are
+   separable on the page.
+2. **One point is designated THE comparable number: the board's own window.**
+   That is the point other methods are scored on, so it is the only one that
+   supports a competitive claim. Every other point in the series is
+   characterisation, not competition, and must be labelled as such. A series
+   with no designated headline invites the reader to pick the flattering point.
+3. **The series is a property of the FROZEN champion.** It is not a search
+   space. Nothing in it may inform a decision, or the external validation is
+   destroyed by exactly the mechanism the temporal design exists to prevent.
+
+Cost is real but bounded: the frozen system is scored once per release, no
+retraining, and the strata are already computed.
+
+**What this buys the thesis.** A method whose apparent performance moves with a
+change in the annotation corpus, shown as a curve with the corpus change plotted
+beneath it, is a stronger contribution than a single number. It demonstrates that
+the temporal frame is measuring something real about biocuration and not only
+about the method, which is precisely the claim the temporal-dataset contribution
+needs to support and has so far asserted rather than shown.
 
 ## 3bis. THE CONCISE PATH (sequencing, author's instruction 2026-07-27)
 

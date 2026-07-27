@@ -71,6 +71,22 @@ rather than a second validation set. Everything earlier is ours to split.
 | **Test** | The cut immediately before the board's mark | measured once, per frozen candidate |
 | **Competition** | The board's window, forward | nothing. Reported, never optimised against |
 
+**The competition result is reported as a series, one point per release, from the
+board's mark forward through the newest published release.** It crosses the
+corpus contraction rather than stopping short of it, because a curve that shows
+the discontinuity is more defensible than a single number that hides it.
+
+Three conditions make the series readable, and without them it is a curve nobody
+can interpret. Additions and removals are decomposed per release and plotted
+beneath the metric, so a dip is attributable to the corpus or to the method and
+never ambiguous between them. **One point is designated the comparable number,
+the board's own window**, because that is the only point other methods are
+scored on; every other point is characterisation and is labelled as such, since
+a series with no designated headline invites the reader to choose the flattering
+point. And the whole series is a property of the frozen champion, never a search
+space, or the external validation is destroyed by the very mechanism the
+temporal design exists to prevent.
+
 **Sample balancing.** Cuts are wildly uneven, in elapsed time and in content, so
 balance is a requirement rather than a refinement. Train and validation are
 balanced across the four axes; **test and competition are never balanced**,
