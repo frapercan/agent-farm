@@ -237,9 +237,22 @@ Gate: one frozen substrate, chosen on validation, per cell.
 
 ### The hardware envelope, which prunes rung 1 before it runs
 
-**The second machine is a laptop with six gigabytes of memory, and everything
+**The second machine is a laptop with eight gigabytes of memory, and everything
 must fit there.** This is a design constraint, not a detail, because it decides
 which backbones the campaign may even consider.
+
+Allowing for system and runtime overhead, roughly six and a half gigabytes are
+usable. That is enough for the chosen backbone with comfortable margin, and not
+enough for the largest members of the field under any precision.
+
+**One open question changes the margin and should be settled before rung 1: is
+that memory system memory or graphics memory?** With a graphics device and
+half precision, the second-best backbone becomes reachable; on a processor at
+single precision it does not. The difference is a few points of proxy, and it
+is worth measuring rather than assuming. There is also a reason to decline it
+even if it fits: **a backbone that runs comfortably on only one of the two
+machines reintroduces exactly the heterogeneity the envelope exists to
+prevent.**
 
 Ranked on the correlation proxy already measured, the strong end of the field
 does not fit. The two best backbones are out on memory alone. What fits is a
@@ -261,6 +274,12 @@ Two consequences:
   measured as an unfaithful substrate, losing a large share of the proxy, and the
   record shows signal grows with size without a cheap plateau. Light does not
   mean smallest; it means the largest that fits.
+- **The laptop can run the whole chain, not only the representation stage.** At
+  this envelope the chosen backbone and a slice of the reference bank fit
+  together, which is what makes the short run executable end to end on the
+  companion machine. That is worth more to the campaign than a marginally
+  stronger backbone would be, because the thing most in need of debugging is the
+  composition, not the representation.
 
 ### Rung 2: the learned representation as the lever
 
