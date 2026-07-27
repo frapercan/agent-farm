@@ -25,7 +25,7 @@ RENDER_PY = REPO_ROOT / "plans" / "render.py"
 
 # Import the render module by path so tests work regardless of cwd.
 sys.path.insert(0, str(REPO_ROOT / "plans"))
-import render  # noqa: E402
+import render  # noqa: E402, I001
 
 
 # ---------------------------------------------------------------------------
