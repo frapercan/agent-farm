@@ -412,3 +412,55 @@ The platform's release line still names branches for all seven of its internal
 dependencies. It is six hundred and eighty four commits behind its trunk, so
 this is not an omission in the migration: it closes when the trunk is promoted,
 and promotion is a release decision.
+---
+
+## D-08 No rehearsal. The long run starts, and the first window is the gate
+
+**Decided 2026-07-28. Supersedes D-04, which specified a separate small-scale
+pass before the campaign proper.**
+
+There is no short run. The campaign goes straight at the long run and implements
+what surfaces, in detail, as it surfaces.
+
+### What is kept, because it was never about scale
+
+The rehearsal existed to enforce an **order**, not a size: exercise every hop
+once before committing to a full pass. That survives as a gate inside the long
+run. The first window goes through the entire chain, evaluation included, and
+everything stops for inspection before the run widens.
+
+The risk it guards is specific and was found by the audit rather than imagined.
+Several consumers resolve their input from a filesystem path supplied by an
+environment variable rather than from a registered entity, and that defect is
+invisible until something flows. The gate is where it becomes visible and the
+last cheap moment to fix it.
+
+Passing means one dispatch chain completed end to end, every intermediate
+registered with its provenance, the interface rendering each stage, and the
+fragile points written down.
+
+### What gets better, and it is not only cost
+
+**The leak hazard disappears rather than being managed.** D-04 required the
+rehearsal corpus to be torn down before the campaign proper began, precisely so
+what it produced could not reach a later split. A teardown that must not be
+forgotten is a hazard; not building the corpus removes it.
+
+**The interface gets real data sooner.** Polishing a surface against fabricated
+data is how a surface ends up describing a pipeline that does not exist. The
+gate feeds it from the actual run rather than from something thrown away.
+
+### What this accepts
+
+A defect that a cheap pass would have caught early is now caught inside the
+expensive one. That is the trade, and it is taken deliberately: the gate keeps
+the detection point in the same place, so what changes is the cost of the
+material flowing through it, not the moment the chain is proven.
+
+### What does not change
+
+The first window stays strictly earlier than any adjustment window. The
+unreviewed retrieval hop still carries the provenance split. And evaluation
+still runs through the first-appearance builder rather than the retired one,
+which is the part of D-04 that survives intact: certifying a chain with the
+component being discarded proves nothing about the chain that ships.
