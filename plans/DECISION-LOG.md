@@ -248,3 +248,83 @@ on its own merit.
 
 **The query-side donor filter remains blocked on this decision**, because it
 must read the policy the caller sent, and that policy is a contract type.
+
+---
+
+## D-07 A branch name was being used as a version, and it split the stack
+
+**Decided 2026-07-28. Supersedes D-06, which framed this as a promotion to be
+timed. It is not a timing problem, it is a model problem.**
+
+### What was found
+
+Six repositories consume the shared contract. They do not agree on what the
+contract is.
+
+| consumer | pinned to |
+|---|---|
+| the platform | the release branch |
+| the inference layer | the release branch |
+| the backends plugin set | the trunk |
+| the runners plugin set | the trunk |
+| the sources plugin set | the trunk |
+| the offline lab | a commit |
+
+**The stack builds against two different contracts at once, split down the
+middle.** The plugins the platform loads at runtime are built against the
+trunk; the platform that loads them is built against the release branch.
+
+The damage today is bounded and was measured rather than assumed: the schema
+identity is byte-identical on both branches, so no feature fingerprint
+currently diverges. The divergence is in the payload surface. But the
+mechanism that would let the schema diverge is intact and running.
+
+### Why it happens, and why it is nobody's carelessness
+
+Because consumers pin a BRANCH, that branch is the delivery channel. When
+something is urgent it lands directly on the consumed branch to unblock the
+consumer, bypassing the gates on the trunk. The promotion that is supposed to
+reconcile them snapshots a tree rather than merging, so the trunk never
+receives those commits back.
+
+**The divergence therefore cannot converge. It grows by construction.** All
+eight repositories are diverged in both directions, without exception, and the
+commit subjects narrate the loop: port a family onto the release branch,
+cherry-pick a fix to the release branch, forward-port the trunk, repin to
+unblock the platform.
+
+### What it already cost
+
+A scorer fix landed on the release branch only. That commit is the origin of
+the two scorer versions whose disagreement shifted one aspect's headline by
+almost thirteen percent. **The branch model produced an inconsistency in a
+measured result**, which is the strongest argument available that this is not
+a matter of tidiness.
+
+### The decision
+
+A commit is a version. No release ceremony is required to have one.
+
+1. **One branch per library repository.** With a single branch the question of
+   which one is the contract cannot be asked.
+2. **Consumers pin a commit, never a branch.** The offline lab already does
+   this, which is the evidence that it works here. Updating a dependency
+   becomes one pull request in the consumer that moves the commit and
+   regenerates the lockfile, gated by that consumer's own checks, which is
+   where the decision belongs.
+3. **A check that refuses a branch pin**, so the invariant is enforced rather
+   than remembered.
+
+### How the collapse is performed
+
+**By merging, never by snapshotting a tree.** The snapshot is the mechanism
+that caused this: it produces a commit on one branch whose content matches the
+other while sharing none of its ancestry, so the graphs drift apart forever and
+no tool can see them as reconciled. A real merge makes the histories converge
+once, which is the whole point.
+
+### What this deliberately gives up
+
+Tagged releases as the unit of delivery. Reproducibility comes from the
+lockfile's resolved commit, which is exact, rather than from a tag, which is a
+label on a commit that the lockfile was going to record anyway.
