@@ -370,3 +370,45 @@ claim and still sufficient to justify the change.
 
 The wording is corrected here rather than by rewriting the commits that carry
 it, since those are merged and the project does not rewrite merged history.
+
+### D-07 outcome, same day: the cascade is closed on the trunks
+
+Fourteen of the fifteen long-lived branches in the stack now name commits for
+every internal dependency, and the check that refuses a branch pin runs on the
+platform's pull requests. The contract package has one branch again, reached by
+a real merge, so its trunk is a direct ancestor of its release line rather than
+a tree that happens to match.
+
+**Why the order was forced, and it was not a preference.** A resolver refuses
+outright to satisfy one dependency pinned to a commit and another pinned to a
+branch. Pinning the platform's contract while a plugin still named a branch did
+not resolve at all. So the migration had to run leaf first: every consumed
+package pinned its own dependencies before the package consuming it could pin
+anything.
+
+**What the work surfaced, all of it the same species.** Three checks that did
+not check what their names claimed:
+
+- Two repositories REQUIRED an attribution guard that no workflow in them
+  produced. A required check nothing emits protects nothing and blocks
+  everything, and it is why their pull requests sat unmergeable with no failure
+  to point at.
+- Four repositories configured the type checker for a Python older than the one
+  they require. The mismatch made a dependency's own stubs a syntax error, so
+  the run aborted before reaching any local source and reported a failure that
+  had nothing to do with the code.
+- One workflow matrix named three interpreters and ran one, because the
+  resolver rejects the other two against the project's own requirement and
+  falls back silently.
+
+**What remains, and both belong to the author.**
+
+The contract package's trunk branch still exists. Deleting it needs its branch
+protection lifted first. Its commits are reachable from the release line, so
+removing it loses no history, and the guard that compared the two now skips
+cleanly when only one is present rather than failing forever.
+
+The platform's release line still names branches for all seven of its internal
+dependencies. It is six hundred and eighty four commits behind its trunk, so
+this is not an omission in the migration: it closes when the trunk is promoted,
+and promotion is a release decision.
