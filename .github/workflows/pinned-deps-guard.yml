@@ -1,0 +1,84 @@
+name: pinned-deps-guard
+
+# A branch name is not a version.
+#
+# Six repositories in this stack consumed the shared contract package and
+# disagreed about what the contract was: two pinned the release branch, three
+# pinned the trunk, one pinned a commit. The stack built against two contracts
+# at once, split between the plugins and the platform that loads them at
+# runtime, and nothing in the tooling noticed.
+#
+# The mechanism is worth naming, because it is not carelessness. When a
+# consumer pins a BRANCH, that branch becomes the delivery channel, so urgent
+# work lands on it directly to unblock the consumer and bypasses the gates on
+# the trunk. The divergence then grows by construction. It already cost a
+# measured result: a scorer fix that landed on one branch only is the origin of
+# two scorer versions whose disagreement moved an aspect's headline by nearly
+# thirteen percent.
+#
+# So an internal git dependency must name a commit. A commit is a version, and
+# it needs no release ceremony to be one. Updating a dependency becomes one
+# pull request in the consumer that moves the commit and regenerates the
+# lockfile, gated by that consumer's own checks, which is where the decision
+# belongs.
+#
+# Trigger model matches coauthor-guard: callers invoke this via workflow_call
+# from their own pull_request workflow.
+
+on:
+  workflow_call: {}
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refuse a git dependency pinned to a branch
+        run: |
+          set -euo pipefail
+
+          # Two spellings reach the same place, so both are checked:
+          #   "pkg" = { git = "...", branch = "main" }
+          #   pkg @ git+https://host/org/repo.git@main
+          # A commit is 40 hex characters, so the second form is only an
+          # offence when what follows the @ is not one.
+          offences=0
+
+          while IFS= read -r -d '' file; do
+            # Table form: an explicit branch= or tag= key on a git source.
+            if grep -nE '^[^#]*git[[:space:]]*=.*(branch|tag)[[:space:]]*=' "$file"; then
+              echo "  ^ in ${file}: a git dependency names a branch or tag"
+              offences=$((offences + 1))
+            fi
+
+            # URL form: git+...@<ref> where <ref> is not a full commit.
+            while IFS= read -r line; do
+              ref="${line##*@}"
+              if ! printf '%s' "$ref" | grep -qE '^[0-9a-f]{40}"?,?$'; then
+                echo "${file}: ${line}"
+                echo "  ^ the ref after @ is not a full commit"
+                offences=$((offences + 1))
+              fi
+            done < <(grep -oE 'git\+[^"]+\.git@[A-Za-z0-9._/-]+' "$file" || true)
+          done < <(find . -name pyproject.toml -not -path './.git/*' -print0)
+
+          if [ "$offences" -gt 0 ]; then
+            echo ""
+            echo "A branch name is not a version."
+            echo ""
+            echo "Pin the commit instead:"
+            echo '  "pkg" = { git = "https://...", rev = "<40-char commit>" }'
+            echo ""
+            echo "Updating the dependency is then one pull request here that"
+            echo "moves the commit and regenerates the lockfile, gated by this"
+            echo "repository's own checks. That is where the decision belongs."
+            exit 1
+          fi
+
+          echo "pinned-deps OK: every internal git dependency names a commit."
