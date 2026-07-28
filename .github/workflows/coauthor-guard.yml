@@ -46,6 +46,17 @@ jobs:
           fi
           git fetch --no-tags --depth=200 origin "${BASE_SHA}"
 
+          # The scan below excludes what is already on a long-lived branch, so
+          # those refs have to be present locally for the exclusion to mean
+          # anything. A missing ref is not an error: a repository may have
+          # collapsed to a single branch, and one that never had a develop is
+          # ordinary. Failing to fetch silently would make the exclusion a
+          # no-op and the guard would fire on history again.
+          for ref in main master develop; do
+            git fetch --no-tags --depth=200 origin "${ref}:refs/remotes/origin/${ref}" 2>/dev/null \
+              || echo "  no ${ref} branch in this repository, nothing to exclude from it"
+          done
+
       - name: Scan commit messages for forbidden attribution
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -57,9 +68,31 @@ jobs:
             exit 0
           fi
           range="${BASE_SHA}..${HEAD_SHA}"
+
+          # Anything already reachable from a long-lived branch is history,
+          # not something this pull request is proposing. Scanning it makes
+          # the guard fire on commits the author has already decided to keep,
+          # and a guard that fails on work nobody can change is a guard people
+          # learn to route around. This matters most for a pull request that
+          # merges one long-lived branch into another, where the range spans
+          # every commit of the incoming side.
+          #
+          # Refs that do not exist are skipped rather than assumed, because a
+          # repository that has collapsed to a single branch has no second one
+          # and must not fail on the lookup.
+          excludes=()
+          for ref in origin/main origin/master origin/develop; do
+            if git rev-parse --verify --quiet "${ref}" >/dev/null; then
+              excludes+=("${ref}")
+            fi
+          done
           echo "Scanning commit range: ${range}"
+          if [[ ${#excludes[@]} -gt 0 ]]; then
+            echo "Excluding what is already on: ${excludes[*]}"
+          fi
           tmp="$(mktemp)"
-          git log --format='commit %H%n%B%n---END---' "${range}" > "${tmp}"
+          git log --format='commit %H%n%B%n---END---' "${range}" \
+            ${excludes[@]:+--not "${excludes[@]}"} > "${tmp}"
           pattern='co-authored-by:[[:space:]]*.*(claude|anthropic|noreply@anthropic)|generated[[:space:]]+with[[:space:]]+\[?claude|generated[[:space:]]+by[[:space:]]+\[?anthropic|^[[:space:]]*claude[[:space:]]+(code|opus|sonnet|haiku)\b|\bby[[:space:]]+anthropic\b'
           if grep -iEn "${pattern}" "${tmp}"; then
             echo ""
