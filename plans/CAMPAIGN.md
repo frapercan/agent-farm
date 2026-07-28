@@ -237,57 +237,46 @@ board.
 
 ---
 
-## 4bis. THE SHORT RUN (runs BEFORE the long run)
+## 4bis. THE FIRST WINDOW IS A GATE, NOT A REHEARSAL
 
-**A complete end-to-end pass at small scale, on the new machine, before the
-campaign proper begins.** Pick any one delta. Take its start of window. Retrieve
-neighbours into the unreviewed corpus. Then apply every subsequent step through
-the platform, dispatched as operations rather than run as scripts.
+**There is no separate small-scale run.** The campaign goes straight at the long
+run and implements what surfaces, in detail, as it surfaces.
 
-**It is not a result. It is a proof that the chain exists.** Nothing measured
-here enters the thesis and no decision is taken from its numbers. What it
-delivers is the answer to a question no amount of code reading can settle: does
-the output of each stage actually feed the next when a real payload flows
-through it?
+What the discarded rehearsal was for is worth keeping, because it was never
+about scale. It was about **order**: exercising every hop once before committing
+to a full pass. That survives as a gate inside the long run rather than as a run
+beside it.
 
-Why it must precede the long run:
+**The gate.** The first window goes through the entire chain, evaluation
+included, and then everything stops for inspection before anything fans out.
+Not to produce a number, which nothing here does, but to answer the question no
+amount of code reading settles: does the output of each stage actually feed the
+next when a real payload flows through it?
 
-- **Every hop is exercised once, cheaply.** The readiness audit found stages
-  that are individually sound while several consumers resolve their input from a
-  filesystem path supplied by an environment variable rather than from a
-  registered entity. That defect is invisible until something flows.
-- **It is the first honest test of unreviewed ingestion and of retrieval into
-  it**, which is otherwise a claim rather than a demonstration.
-- **It gives the interface and the visualisations something real to render.**
-  Polishing a surface against fabricated data is how a surface ends up
-  describing a pipeline that does not exist.
-- **It surfaces the fragile parts while they are still cheap to fix**, rather
-  than eight hours into a full pass.
+The audit found the specific shape of that risk. Several consumers resolve their
+input from a filesystem path supplied by an environment variable rather than
+from a registered entity, and that defect is invisible until something flows.
+The gate is where it becomes visible, and it is the last cheap moment to fix it.
 
-Exit criteria: one dispatch chain completes end to end, every intermediate is
-registered with its provenance, the interface renders each stage, and the
-fragile points are written down. Then the long run starts.
+**Passing the gate means:** one dispatch chain completed end to end, every
+intermediate registered with its provenance, the interface rendering each stage,
+and the fragile points written down. Only then does the run widen.
 
-**It runs the full chain, evaluation included**, and that decision reorders the
-work. Evaluating through the retired builder would certify the exact component
-the campaign has decided to replace, so **the window decomposition and the
-first-appearance builder move ahead of the short run rather than beside it.**
-More work up front, and the coherent order: there is no value in proving a chain
-end to end using the part that is being discarded.
+**Two things get better by dropping the rehearsal, and they are worth naming.**
 
-What that costs is worth stating, because it was the argument against. Evaluation
-is the best-tested stage in the system; a probe reproduced it from frozen inputs
-in under ten seconds and matched the recorded row at full granularity. Including
-it adds cost without removing much uncertainty. It is included anyway, on the
-grounds that a chain proven only to its penultimate stage has not been proven.
+A rehearsal corpus has to be torn down before the campaign proper begins, or
+what it produced can leak into a later split. Not building one removes that
+hazard rather than managing it.
 
-**The preconditions, none of them optional:** the environment is clean and prior
-results are archived rather than carried; the window is strictly earlier than any
-adjustment window and is recorded in the exit receipt; the unreviewed retrieval
-hop carries the provenance split; and the short run's corpus is torn down before
-the campaign proper begins, so nothing it produced can reach a later split. A
-smoke run through a dirty environment proves nothing, because any failure can be
-blamed on the residue.
+And the interface gets real data sooner. Polishing a surface against fabricated
+data is how a surface ends up describing a pipeline that does not exist; the
+gate feeds it from the actual run instead of from a throwaway.
+
+**What does not change.** The first window is still strictly earlier than any
+adjustment window. The unreviewed retrieval hop still carries the provenance
+split. And evaluation still runs through the first-appearance builder rather
+than the retired one, because certifying a chain with the component being
+discarded proves nothing about the chain that ships.
 
 ## 5. THE EXPERIMENTAL LADDER
 
@@ -350,7 +339,7 @@ Two consequences:
   mean smallest; it means the largest that fits.
 - **The laptop can run the whole chain, not only the representation stage.** At
   this envelope the chosen backbone and a slice of the reference bank fit
-  together, which is what makes the short run executable end to end on the
+  together, which is what lets the whole chain be exercised end to end on the
   companion machine. That is worth more to the campaign than a marginally
   stronger backbone would be, because the thing most in need of debugging is the
   composition, not the representation.

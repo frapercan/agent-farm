@@ -194,8 +194,8 @@ them from being averaged into one misleading number.
   selects proposers, rung 4 selects evidence and the scorer stack, rung 5 handles
   ensembling within a layer. That is not a coincidence, it is the same structure
   seen from the experimental side.
-- **The short run exercises one element per layer**, which is the smallest thing
-  that proves the composition works end to end.
+- **The first window exercises one element per layer**, which is the smallest
+  thing that proves the composition works end to end, and is why it is a gate.
 - **Two known defects are reclassified.** Query length and projected components
   are layer-3 elements whose producer discards values that exist at the call
   site. They are not unmeasured evidence, they are a broken producer, and they
