@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **72**.
+Total first-class capabilities: **73**.
 
 ## 1-agents
 
@@ -137,6 +137,7 @@ Total first-class capabilities: **72**.
 | [feature-producer-coverage](feature-producer-coverage.md) | working | `.github/workflows/feature-producer-coverage.yml`, `scripts/lib/feature_producer_coverage.py`, `tests/test_feature_producer_coverage.py` | `python3 -m pytest tests/test_feature_producer_coverage.py -q` | `docs/features/README.md` | agent-farm conductor loop |
 | [features-surface](features-surface.md) | working | `docs/features/`, `scripts/render-features-index.sh`, `scripts/check-features-coverage.sh`, `scripts/lib/features/render_index.py`, `scripts/lib/features/coverage.py`, `.github/workflows/features-coverage.yml` | `bash scripts/check-features-coverage.sh` | `docs/features/README.md` | agent-farm conductor loop |
 | [memory-prompt-drift](memory-prompt-drift.md) | working | `scripts/memory-prompt-drift.py`, `tests/test_memory_prompt_drift.py` | `python3 -m pytest tests/test_memory_prompt_drift.py -q` | `docs/features/README.md` | agent-farm conductor loop |
+| [pinned-deps-guard](pinned-deps-guard.md) | working | `.github/workflows/pinned-deps-guard.yml` | `yamllint .github/workflows/pinned-deps-guard.yml \|\| python3 -c "import yaml; yaml.safe_load(open('.github/workflows/pinned-deps-guard.yml'))"` | `?` | agent-farm conductor loop |
 | [plans-render-check](plans-render-check.md) | working | `.github/workflows/plans-render-check.yml`, `plans/render.py` | `python3 plans/render.py --check` | `docs/features/plan-system.md` | agent-farm conductor loop |
 | [pr-base-guard](pr-base-guard.md) | working | `scripts/lib/pr_base.py`, `scripts/lib/pr-base.sh`, `tests/test_pr_base.py` | `python3 -m pytest tests/test_pr_base.py -q` | `docs/features/README.md` | agent-farm conductor loop |
 | [pull-request-ci](pull-request-ci.md) | working | `.github/workflows/pull_request.yml` | `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/pull_request.yml'))"` | `docs/features/README.md` | agent-farm conductor loop |

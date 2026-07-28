@@ -123,6 +123,19 @@ artifact.
 
 ## 4. What travels: only the procedures
 
+**Superseded framing, corrected 2026-07-28.** This section was written as a
+preservation question, which was the wrong question. The governing rule is the
+invariant in `CAMPAIGN.md` section 0bis: **every artifact is produced by a
+registered operation, lands in the object store, and is published from there.**
+Nothing travels because nothing needs to: what does not have a producing
+operation is not preserved, it is a defect to be closed, and section 1 above is
+therefore the work list rather than an import manifest.
+
+The text below is kept because its inventory is accurate, but read every
+"travels" as "is regenerated", and read the safety copies made before the
+reinstall as a hedge against total loss that the plan does not depend on and may
+not cite.
+
 **The author's instruction, verbatim in intent: erase everything, keep nothing
 beyond the procedures. The campaign is a clean run from the most primordial
 level.** That is the policy, and this plan is built on it rather than against it.
@@ -160,3 +173,59 @@ campaigns old.
 That is a fixable gap, and the fix is the list in section 2. It is also the
 strongest argument for doing the clean run at all: **the run is what proves the
 procedure, and the procedure is the contribution.**
+
+---
+
+## 6. What now exists in the platform (2026-07-28)
+
+Five of the missing procedures stopped being descriptions and became code with
+guards. Each is stated here by what it REFUSES, because that is the part that
+survives contact with a tired operator at four in the morning.
+
+**The pool identity is one value.** The reference cache is keyed by what the
+cached pool contains, donor restriction included, and the identity cannot be
+passed in part. This branch had already applied the restriction to the read
+path and missed the write path, which stores a restricted pool under the
+unrestricted name; bundling the identity makes that impossible to express.
+
+**The temporal splits refuse to guess.** An unknown split raises and names the
+ones that exist. A split whose windows are not chosen yet raises rather than
+returning a placeholder, because a placeholder propagates into results that
+look decided. The validation split may inform nothing, enforced at the call
+rather than asserted in prose, and the adjustment set is cut off strictly
+before the window the board scored.
+
+**Ground truth is first appearance.** An annotation counts only if it was never
+present at any earlier cut. Too little history raises rather than falling back
+to the endpoint difference. The restoration rate is measured and reported per
+sub-ontology, because the leak tracks the contraction points and the validation
+series crosses one.
+
+**The four axes refuse to pool.** Combining across strata requires the
+population sizes, and there is no unweighted variant to reach for. Length
+boundaries are the model context limits rather than corpus quantiles, and the
+homology axis is crossed with donor provenance rather than standing alone.
+
+**A join cannot lose rows silently.** Helpers that state the expectation and
+fail when the data disagrees, plus a narrow check in the lint pipeline.
+
+### Two findings this produced
+
+**The adjustment set is not yet expressible.** With the releases the campaign
+currently enumerates there are NO candidate windows at all: the table begins at
+the comparable window's own start, so nothing earlier exists to select on. The
+preceding releases have to be ingested before a champion can be chosen. The
+registry reports this through a function the caller can gate on rather than
+leaving it to be discovered mid-run.
+
+**A join in the feature path depended on list order.** Indexing a group's leaf
+predictions by term kept whichever record arrived last, so which row survived
+could differ under another batch size or worker count. It now keeps the
+closest, which is deterministic and is what the surrounding expansion already
+assumed.
+
+### What remains blocked
+
+The query-side donor filter, on the contract fork recorded as an open author
+decision. It must read the policy the caller sent, and that policy is a
+contract type the platform cannot currently resolve.
