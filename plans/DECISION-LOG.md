@@ -328,3 +328,45 @@ once, which is the whole point.
 Tagged releases as the unit of delivery. Reproducibility comes from the
 lockfile's resolved commit, which is exact, rather than from a tag, which is a
 label on a commit that the lockfile was going to record anyway.
+
+### D-07 correction, same day: the split was narrower than first stated
+
+The entry above says the stack built against two contracts at once, split
+between the plugins and the platform that loads them. **That is wrong for the
+deployed path and the error was mine.** The claim came from reading the working
+copies, which sit on the development branches, rather than the branches the
+platform actually consumes.
+
+Read from the consumed branches, every plugin and the platform pin the contract
+to the same branch. The deployed stack was consistent.
+
+| repository | on its release branch | on its trunk |
+|---|---|---|
+| the backends plugin set | the contract's release branch | the contract's trunk |
+| the runners plugin set | the contract's release branch | the contract's trunk |
+| the sources plugin set | the contract's release branch | the contract's trunk |
+| the inference layer | the contract's release branch | the contract's release branch |
+| the platform | the contract's release branch | |
+
+The disagreement is real but it is **between each repository's own two
+branches**, not across the running stack.
+
+**What survives unchanged**, because each was verified rather than inferred:
+
+- Every repository in the stack is diverged in both directions.
+- Work lands on the consumed branch directly and the trunk never receives it
+  back, so the divergence grows by construction.
+- The platform's trunk could not consume a new contract type at all: it took
+  the whole test suite down at collection time.
+- Snapshotting a tree cannot make two branches converge, and a real merge can.
+  Measured on the collapse: zero commits of the trunk left outside afterwards,
+  and the trunk became a direct ancestor.
+- Pinning a commit while a dependency pins a branch is refused outright by the
+  resolver, which is what turns the latent disagreement into a hard failure.
+
+**What is downgraded:** the urgency argument. This was not a live inconsistency
+in what runs. It was a mechanism guaranteed to produce one, which is a weaker
+claim and still sufficient to justify the change.
+
+The wording is corrected here rather than by rewriting the commits that carry
+it, since those are merged and the project does not rewrite merged history.
