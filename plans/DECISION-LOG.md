@@ -182,3 +182,69 @@ history at precisely the moment the campaign needs a stable base.
 - **This record is the answer.** Anyone who finds the trailer in history should
   find this explanation rather than an unexplained trace, which is the entire
   point of writing it down instead of quietly leaving it.
+
+---
+
+## D-06 The contract fork blocks the campaign, and closing it is a release decision
+
+**Status: OPEN. Needs the author.**
+**Raised: 2026-07-28, by the donor-policy work hitting it head on.**
+
+### What was found
+
+The main pipeline declares its dependency on the shared contract package at
+that package's **release branch**. Every contract change of this campaign, the
+donor policy among them, has landed on the package's **trunk**, which now sits
+thirty two commits and two minor versions ahead of the release branch.
+
+The consequence is not subtle. A pipeline branch that imports anything added
+to the contract on the trunk resolves the release branch instead, fails to
+import it, and takes the entire test suite down with it at collection time,
+whatever else that branch touched. That is how it surfaced: three red checks
+on a change that had nothing to do with contracts.
+
+### Why it matters beyond one pull request
+
+This is the operational cost of a divergence the project has recorded before
+and left open. It means the pipeline's trunk **cannot consume a new contract
+at all** until a promotion happens. Any campaign work that needs a new payload
+field, a new policy, or a new schema column is blocked behind that promotion,
+not behind its own merit.
+
+It also bears directly on the requirement that the contracts be clean in both
+the short and the long run. They are not currently clean: they mean two
+different things depending on which branch resolved, and the pipeline is
+pinned to the older meaning.
+
+### Why it is not decided here
+
+Promoting the trunk to the release branch cuts a release. The project's own
+record is explicit that promotion carries continuous integration across the
+dependent repositories and can lock the release line, and that an override is
+never the answer. That is an author decision about release timing, not a
+janitorial fix an autonomous loop should take on its own initiative.
+
+### The options, stated plainly
+
+1. **Promote the contract trunk to its release branch.** Closes the fork,
+   unblocks every dependent change, and is the only option that makes the
+   contract mean one thing. Costs a release and the dependent integration that
+   follows it.
+2. **Point the pipeline at the contract trunk.** Unblocks immediately and
+   contradicts the branch model, which exists so the pipeline builds against
+   released contracts rather than moving ones.
+3. **Keep contract-dependent work out of the pipeline until the promotion.**
+   What this loop did to stay unblocked, by moving the affected tests onto the
+   plain values the layer actually handles. It is correct for one case and does
+   not scale: the query-side donor filter genuinely needs the payload.
+
+### What was done in the meantime
+
+The cache-key work was separated at the seam. The cache never imported the
+payload type; only its test did. The layer's own property, that a restriction
+reaches the key and every path built from it, is now pinned without reaching
+across a repository boundary to state it, so that work is unblocked and merged
+on its own merit.
+
+**The query-side donor filter remains blocked on this decision**, because it
+must read the policy the caller sent, and that policy is a contract type.
