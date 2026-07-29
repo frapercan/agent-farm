@@ -116,16 +116,35 @@ leave compute time flat.
 The sequences arrive shorter because of the order the corpus is read in, and
 that order is accidental. `compute_embeddings` selects sequence ids with no
 `ORDER BY` at all, so rows come back in whatever physical order the table
-happens to have, and in this corpus that order correlates with declining length.
+happens to have.
+
+**The profile is a U, not a slope.** An earlier version of this section said the
+order correlates with declining length. That holds for the first half and is
+wrong for the second. Per-batch compute time on the desktop, binned by position
+in the corpus and measured on both backbones over the same span:
+
+| corpus position | ESM2 650M | Ankh base | ratio |
+|---|---|---|---|
+| 0 to 10% | 5.21 s | 12.94 s | 2.5x |
+| 10 to 20% | 4.16 s | 10.93 s | 2.6x |
+| 20 to 30% | 3.60 s | 8.34 s | 2.3x |
+| 30 to 40% | 3.24 s | 6.27 s | 1.9x |
+| 40 to 51% | 3.28 s | 6.24 s | 1.9x |
+| 51 to 61% | 3.77 s | 8.63 s | 2.3x |
+
+Cost falls to a minimum near 40 percent and climbs again after it, and **both
+backbones turn at the same place**, which is what makes it a property of the
+corpus rather than of either model.
 
 Three consequences, and the third is the one that bites:
 
-- **Any rate measured early overestimates the total cost badly.** The first hour
-  of this run predicts a job roughly a third longer than it will take. Quote a
-  rate with the window it came from, and prefer the whole series.
-- **A length-aware batch size would gain more, not less, than first thought.**
-  If length declines across the run, a fixed batch sized for the opening batches
-  is wrong for a growing majority of the rest.
+- **Any rate measured in one window misestimates the total, in either
+  direction.** A rate from the first hour is too pessimistic; one from the
+  trough near 40 percent is too optimistic. Quote a rate with the window it came
+  from, and prefer the whole series.
+- **A length-aware batch size would gain across the whole run.** A fixed batch
+  sized for the opening is wrong in the trough and wrong again in the tail, and
+  the U means no single constant is right anywhere for long.
 - **Nothing guarantees this order holds.** It is a property of the current
   physical layout, not of the query, and a vacuum or a rewrite can change it
   without warning. If the run order matters, and the two points above say it
@@ -254,9 +273,21 @@ first backbone:
 | card utilisation | 82% | 96% |
 | measured wall clock | 4.8 h | still running |
 
-**Ankh base is 2.9 times slower and uses 1.7 times the memory**, at an identical
-recipe and an identical corpus. Parameter count does not predict this: Ankh base
-is the smaller model of the two.
+**Ankh base is slower and uses 1.7 times the memory**, at an identical recipe
+and an identical corpus. Parameter count does not predict this: Ankh base is the
+smaller model of the two.
+
+On the multiple, two figures that are both right and mean different things. End
+to end in the early window it read 2.9 times slower, but those windows were not
+at matched corpus positions. Comparing pure compute at the **same corpus
+positions**, in the table in section 3, the ratio sits between 1.9 and 2.6 with
+no trend across the span, and averages about **2.2 times**. Use 2.2 for the
+model comparison and the end to end figure only for scheduling.
+
+The flat ratio also settles a question this ledger raised earlier and can now
+close: Ankh base does not scale worse with sequence length than ESM2. It costs a
+near-constant multiple, and the earlier appearance of worse scaling came from
+comparing windows that sat at different places in the corpus.
 
 Projected duration for the second backbone, and it is a projection with a stated
 method rather than a measurement: the first run's rate rose by a factor of 1.36
@@ -526,3 +557,4 @@ which is exactly the shape of defect the campaign's invariant exists to remove.
 | 2026-07-29 06:52 | Ankh base measured 2.9 times slower; the grid estimate corrected |
 | 2026-07-29 09:20 | stored vectors verified valid; anisotropy differs per model and reaches the features |
 | 2026-07-29 09:35 | false unreachable alert traced to a weak wifi link at -75 dBm |
+| 2026-07-29 13:15 | corpus cost profile is a U, not a slope; the model ratio is flat at 2.2x |
