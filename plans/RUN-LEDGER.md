@@ -481,6 +481,74 @@ for this grid.
 All of it is fixable after the fact. Centring is a transform on stored vectors,
 so none of the compute already spent is at risk.
 
+---
+
+## 3quater. The grid, measured: four backbones and a method that works
+
+By the end of 2026-07-29 the rung 1 grid had three members measured end to end
+and the fourth running, all at an identical recipe over an identical corpus.
+
+| backbone | wall clock | ratio to ESM2 | card peak | batch size |
+|---|---|---|---|---|
+| ESM2 650M | 4.79 h | 1.00 | 2,419 MiB | 4 |
+| ESM-C 600M | 4.84 h | 1.01 | 3,490 MiB | 4 |
+| Ankh base | 9.41 h | 1.96 | 5,213 MiB | 4 |
+| Ankh large | **about 15.4 h, predicted** | 3.21 on compute | **5,918 MiB** | **2** |
+| **grid total** | **about 34.4 h** | | | |
+
+**A grid of four costs a day and a half of continuous compute on these two
+machines**, and the largest member alone accounts for 45 percent of it. The
+estimate this ledger carried a day earlier, a day and a half for eight members,
+was wrong by a factor of two, and it was wrong because it generalised from the
+cheapest member.
+
+### The estimation method, scored twice
+
+| backbone | predicted | measured | error |
+|---|---|---|---|
+| Ankh base | 10.5 h | 9.41 h | **+12%** |
+| ESM-C 600M | 4.4 h | 4.84 h | **-9%** |
+
+Two predictions inside 12 percent **with the errors in opposite directions**,
+which is what says there is no systematic bias. Both came from the same recipe:
+compare per-batch compute time against a known backbone **over the same fraction
+of the corpus**, then scale that backbone's measured wall clock.
+
+The predictions also settle quickly. Ankh large read 3.23x over its first 2.3
+percent of the corpus and 3.21x over its first 4.7 percent, so a usable figure
+arrives within an hour of a fifteen-hour run rather than at the end of it.
+
+**One correction that made things worse, recorded so it is not repeated.** After
+the first score, this ledger proposed shaving 12 percent off future predictions.
+Applied to ESM-C that would have given 3.9 h against 4.84 measured, an error of
+-20 percent, worse than not correcting at all. Fitting a correction to a single
+observation is overfitting even when the observation is real.
+
+### Where the method's limit is
+
+ESM-C's compute was measurably cheaper than ESM2's, 0.92x at matched positions,
+yet its wall clock came out at 1.01x. The gap is per-batch overhead, which the
+compute ratio does not see.
+
+So the rule has a stated scope: **matched-position compute predicts wall clock
+only while per-batch overhead is comparable between the models.** Ankh large is
+exactly where that assumption is weakest, because its batch size was halved to
+2 and it therefore pays the fixed per-batch cost twice as often. Its 15.4 h
+should be read as a floor.
+
+### The memory ceiling is now the binding constraint
+
+Ankh large peaks at **5,918 MiB, 48 percent of a 12 GB card, already with the
+batch size halved**. Read against the campaign's hardware envelope, which
+reasons about roughly 6.5 GB usable on the companion machine, that is not
+comfortable headroom: it is the edge.
+
+This is the concrete form of the question `CAMPAIGN.md` raises and leaves open.
+The envelope section asks which backbones the grid may consider given the
+companion machine. The answer for the largest member is now measurable rather
+than argued, and it is close enough to the limit that it should be measured on
+the companion machine directly before the grid is fixed.
+
 ### Not done in stage B
 
 The learned sparse encoder head has not been applied, so no retrieval codes
@@ -597,4 +665,7 @@ which is exactly the shape of defect the campaign's invariant exists to remove.
 | 2026-07-29 13:15 | corpus cost profile is a U, not a slope; the model ratio is flat at 2.2x |
 | 2026-07-29 15:41 | Ankh base complete in 9.41 h; the 14 h projection was 49 percent high |
 | 2026-07-29 15:52 | third backbone dispatched, ESM-C 600M, picked up automatically |
+| 2026-07-29 20:41 | ESM-C complete in 4.84 h; the method's second score, 9 percent low |
+| 2026-07-29 20:45 | fourth backbone dispatched, Ankh large, at half the batch size |
+| 2026-07-29 22:00 | Ankh large predicted at 15.4 h; the grid totals about 34 h |
 | 2026-07-29 12:37 | GO annotations loaded: two releases, 10.65 M annotations |
