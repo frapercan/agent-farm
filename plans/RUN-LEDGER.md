@@ -41,7 +41,7 @@ history on 2026-07-29 01:30 UTC.
 | isoforms | 41,343 |
 | reviewed / unreviewed | 616,846 / 0 |
 | with functional metadata | 575,503 |
-| with GO annotations | 0 |
+| with GO annotations | 557,481 as of 15:50 UTC, was 0 at 01:30 |
 | ontology snapshots loaded | 10, spanning 2024-03-28 to 2026-01-23 |
 
 Sequence lengths, which decide the cost of every representation stage:
@@ -61,9 +61,16 @@ residues. Any batch sized for the mean will fail on the tail, and any batch
 sized for the tail wastes the card on the body. This is the single most
 actionable fact in this ledger and it is picked up in section 5.
 
-**Not done in stage A:** the annotation releases are not loaded, so ground truth
-does not exist yet; release publication dates are not backfilled; the unreviewed
-tier is not ingested at all.
+**Annotations landed during the day.** Two GOA releases were loaded at 10:36 and
+12:37 UTC, 10.65 million annotations between them, and 557,481 of the 575,503
+canonical proteins now carry GO terms: 96.9 percent. Ground truth exists.
+
+That closes the gap this ledger flagged twice. The functional question in
+section 3ter, whether centring returns better neighbours rather than merely
+different ones, is now answerable and was not before.
+
+**Still not done in stage A:** release publication dates are not backfilled, and
+the unreviewed tier is not ingested at all.
 
 ---
 
@@ -289,11 +296,41 @@ close: Ankh base does not scale worse with sequence length than ESM2. It costs a
 near-constant multiple, and the earlier appearance of worse scaling came from
 comparing windows that sat at different places in the corpus.
 
-Projected duration for the second backbone, and it is a projection with a stated
-method rather than a measurement: the first run's rate rose by a factor of 1.36
-between its early window and its whole-run average, for the sequence-length
-reason in section 3. Applying the same factor gives **about 14 hours** for Ankh
-base. It will be checked against the real figure when the run ends.
+### Both runs finished, and the estimate can be scored
+
+| backbone | wall clock | mean rate | ratio to the first |
+|---|---|---|---|
+| ESM2 650M | **4.79 h** | 0.479 batches/s | 1.00 |
+| Ankh base | **9.41 h** | 0.244 batches/s | **1.96x** |
+
+Both completed 8,255 of 8,255 with no failures. Every protein in the reviewed
+corpus now carries a vector under each of the two backbones.
+
+**Two estimates were made during the run and one of them was much better.**
+
+| method | predicted | error |
+|---|---|---|
+| extrapolate from an early wall-clock window | 14.0 h | **+49%** |
+| the compute ratio at matched corpus positions | 10.5 h | +12% |
+
+The reason the first failed is worth keeping, because it looks reasonable until
+it is measured. It took the factor by which the first run's rate rose between
+its early window and its whole-run average, 1.36, and applied it to the second.
+The real factor for the second run was 2.01, not 1.36.
+
+**A fixed window of time samples a different fraction of the corpus for every
+model.** In 33 minutes the first backbone covered 8.5 percent of the corpus; in
+27 minutes the second covered 2.4 percent. The second run's window sat entirely
+inside the expensive opening described in section 3, while the first run's had
+already reached cheaper batches. The correction factor was never a property of
+the corpus; it was a property of how far into the corpus each window happened to
+reach.
+
+**The rule for the rest of the grid.** To estimate a new backbone, measure it
+over a fixed **fraction of the corpus** and compare it against a known backbone
+over that same fraction. Do not measure it for a fixed number of minutes. The
+third member started at 15:52 UTC, so its cost can be predicted from its first
+eight percent rather than waited out.
 
 ### The connection drops once per backbone, at model load
 
@@ -558,3 +595,6 @@ which is exactly the shape of defect the campaign's invariant exists to remove.
 | 2026-07-29 09:20 | stored vectors verified valid; anisotropy differs per model and reaches the features |
 | 2026-07-29 09:35 | false unreachable alert traced to a weak wifi link at -75 dBm |
 | 2026-07-29 13:15 | corpus cost profile is a U, not a slope; the model ratio is flat at 2.2x |
+| 2026-07-29 15:41 | Ankh base complete in 9.41 h; the 14 h projection was 49 percent high |
+| 2026-07-29 15:52 | third backbone dispatched, ESM-C 600M, picked up automatically |
+| 2026-07-29 12:37 | GO annotations loaded: two releases, 10.65 M annotations |
