@@ -80,12 +80,33 @@ Call the output a **mechanism receipt**.
 
 ## 3. The sequence
 
-Hosts are not interchangeable. The artifact store is local filesystem on
-whichever machine executes, verified: the default is `local`
-(`settings.py:86`), the compose passes no storage variables, and the canonical
-secret bundle defines none. So an artifact written on one machine is invisible to
-the other, and the write succeeds silently because
-`LocalFsArtifactStore.__init__` creates the directory.
+**Correction, 2026-07-30.** An earlier version of this section claimed the
+artifact store is local filesystem on whichever machine executes, and therefore
+that hosts are not interchangeable. **That was wrong, and the error is worth
+recording because it is a method error rather than a reading error.** The claim
+rested on three checks that were each true and together misleading: the default
+backend is `local` (`settings.py:86`), the compose passes no storage variables,
+and the secret bundle defines none. The third was checked against the copy
+recovered from the 2026-07-27 archive, not against the live file. **The live
+bundle on the server does define `PROTEA_STORAGE_BACKEND=minio`.** The two
+diverged, and an archived config was treated as the running one.
+
+Verified empirically instead of inferred: the server wrote the ground truth of
+this very window to `s3://protea/eval_groundtruth/<id>/groundtruth.parquet`, and
+the compute node **read that object back**, 9,004,385 bytes, bucket `protea`,
+from its own machine. The store is genuinely shared.
+
+So the placement rule is not "hosts are not interchangeable". It is narrower:
+
+**Any stage can run on either machine once that machine is configured for the
+shared store.** The server is. The compute node is not: its environment file
+defines connection and tuning settings only, so an artifact written there today
+would land on its local disk and be invisible, and the write would succeed
+silently because `LocalFsArtifactStore.__init__` creates the directory. Configure
+the node before giving it a stage that writes an artifact; until then, keep the
+artifact-writing stages on the server.
+
+The prediction stage is exempt either way, because it writes no artifact.
 
 | step | where | operation | queue |
 |---|---|---|---|
