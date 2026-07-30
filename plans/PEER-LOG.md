@@ -210,3 +210,135 @@ that is not in the store. The one receipt that does exist ranks it second of eig
 per-cell win on lk-mfo at 0.5870, and the same receipt puts the largest model last. Francisco chose
 to keep it excluded and respect the section as written. Recording the discrepancy here so the
 decision is visible rather than inherited.
+
+---
+
+## 2026-07-30 (later), laptop (server, 192.168.18.121)
+
+Server side of the first mechanism receipt. Steps 1 through 5 done, step 6 waiting on the
+prediction.
+
+### The public exposure is real, but reset-db is NOT reachable
+
+Confirmed from the public network, read-only probes, nothing destructive invoked:
+
+    https://protea.ngrok.app/api-proxy/v1/auth/api-keys   200
+    https://protea.ngrok.app/v1/auth/api-keys             200
+
+`PROTEA_AUTHN_REQUIRED=false` in the live API process, and `roles.py:61` maps a `None` principal to
+`ROLE_ADMIN`, so any visitor is an admin. That part of the report is correct.
+
+**The claim that `POST /v1/admin/reset-db` stays reachable is not.** It carries two guards beyond
+the role check, at `protea/api/routers/admin.py:39`, and the docstring gives the reason ("The live
+DB has been wiped four times"):
+
+    if principal is None:
+        raise HTTPException(401, "reset-db requires a real authenticated admin principal;
+                                  the dev no-auth fallback is not accepted for this
+                                  destructive operation")
+    if os.getenv("PROTEA_ALLOW_DB_RESET") != "1":
+        raise HTTPException(403, "reset-db is disabled")
+
+The dev fallback is explicitly rejected there, and `PROTEA_ALLOW_DB_RESET` is not present in the
+live API process environment (checked via `/proc/<pid>/environ`). `DROP SCHEMA` is unreachable.
+
+### What IS open, which is the part that matters
+
+Every route gated on `operator` or `admin` is reachable by anyone:
+
+    POST   /v1/auth/api-keys                      mint a real admin API key
+    POST   /v1/maintenance/vacuum-sequences       "Delete sequences not referenced by any Protein"
+    POST   /v1/maintenance/vacuum-embeddings      "Delete embeddings for sequences not referenced"
+    DELETE /v1/embeddings/configs/{id}            would delete the seeded rung-1 grid configs
+    DELETE /v1/embeddings/prediction-sets/{id}
+    DELETE /v1/jobs/{id}
+    DELETE /v1/scoring/configs/{id}, /rerankers/{id}
+    DELETE /v1/query-sets/{id}, /experiment-runs/{id}, /reranker-models/{id}
+    DELETE /v1/auth/api-keys/{id}
+
+There is also an escalation chain worth seeing whole: minting a key yields a real principal, which
+satisfies reset-db's first guard. Only the `PROTEA_ALLOW_DB_RESET` sentinel then stands between a
+visitor and `DROP SCHEMA`. It is unset today, so the chain breaks, but it breaks on one environment
+variable.
+
+### Proposed closure, preserving open reads
+
+One line, at `protea/api/roles.py:61`:
+
+    if principal is None:
+        return ROLE_VIEWER      # was ROLE_ADMIN
+
+Reads stay open, since GETs and the viewer-gated routes are unaffected. Everything requiring
+operator or admin closes. It needs an API-only restart, not a stack restart. Two companions: never
+define `PROTEA_ALLOW_DB_RESET` on this host, and apply the same reject-null-principal pattern to
+the two vacuum endpoints and to key minting, which are the routes that delete data.
+
+Not applied. It is Francisco's call, and applying it would also have blocked steps 2 through 5,
+which need the operator role.
+
+### Steps 2 to 5
+
+**Scoring presets** created, HTTP 201, seven of them: embedding_only, vote_fraction,
+alignment_only, embedding_plus_alignment, embedding_plus_vote, evidence_veto, composite.
+
+**The three identifiers were verified against this database before dispatching**, since the pivot is
+the irreversible decision:
+
+    41b31f10-7a23-430f-adee-af555c85e244  ->  annotation_set v226
+    8f4d6c89-9188-4e56-924f-cb57af6fdf0e  ->  annotation_set v227
+    bfa1d095-d618-4c01-a8b2-62f3b5569f16  ->  ontology_snapshot releases/2025-03-16
+
+The pivot is v226's own snapshot, which is the term universe the model could know at t0. Dispatched
+with exactly the three fields specified: no `window_role`, no native-snapshot overrides.
+
+**Event trail confirms the frame.** `mode = "reconciled"`,
+`pivot_ontology_snapshot_id = bfa1d095-d618-4c01-a8b2-62f3b5569f16`, and the old and new snapshot
+ids resolve to v226 and v227 respectively.
+
+    evaluation_set_id     8e464c85-7ac0-4251-abbf-7bb252d4f66f
+    delta_proteins        6,216       not zero, so the run continues
+    nk_proteins             523       nk_annotations   9,860
+    lk_proteins             622       lk_annotations   8,811
+    pk_proteins           5,331       pk_annotations  32,187
+    removed_proteins     13,059
+    removed_annotations  75,421
+    known_terms_count 3,652,485
+
+`removed_proteins` and `removed_annotations` are recorded here because this operation is the only
+surface that reports them. Note that the category counts do not sum to `delta_proteins`: NK is a
+per-protein category while LK and PK are per (protein, namespace), so a protein can contribute to
+both LK and PK. 6,216 minus 523 NK leaves 5,693 proteins spread across 5,953 LK-or-PK pairs, which
+is consistent.
+
+### No cohort leak
+
+Read back from the API, not from the write event:
+
+    known-terms.tsv        3,652,485 rows   equals known_terms_count exactly
+    ground-truth-PK.tsv       32,187 rows   equals pk_annotations exactly
+                               5,331 unique proteins, equals pk_proteins exactly
+    delta-proteins.fasta       6,216 records, 6,216 unique headers
+
+**The FASTA record count equals `delta_proteins` exactly.** The accession versus
+canonical_accession hypothesis does not materialise: had the 41,343 isoform rows leaked in, the
+FASTA would carry more records than the cohort. Headers also carry the category, for example
+`>A0A031WDE4 HYPD_CLODI OS=Clostridioides difficile OX=1496 (PK)`, so the label travels with the
+sequence.
+
+### One assumption in the plan that does not hold on this host
+
+Section 3 states the artifact store is local filesystem on whichever machine executes, and reasons
+about which stages must run where on that basis. **On the server it is MinIO.** The canonical secret
+bundle here sets `PROTEA_STORAGE_BACKEND=minio`, and the ground truth landed at
+
+    s3://protea/eval_groundtruth/8e464c85-7ac0-4251-abbf-7bb252d4f66f/groundtruth.parquet
+
+This is better than the plan assumes, since the artifact is reachable from both machines through the
+object store rather than being invisible on one filesystem. But the placement argument in section 3
+rests on a premise that is false here, and should be rechecked before it is relied on again.
+
+### Step 6 is armed and waiting
+
+Scoring will use `band="v226"` with `leakage_role="probe"` and an absolute `ia_file` path verified on
+this machine, band and ia_file together. The gate will be the existence of the metric, not the job
+status, since the scorer reports success on an empty result.
