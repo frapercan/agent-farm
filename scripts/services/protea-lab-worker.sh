@@ -52,4 +52,9 @@ if [[ ! -x "${POETRY}" ]]; then
 fi
 
 echo "protea-lab-worker: starting queue=${QUEUE} repo=${REPO} at $(date -Is)"
-exec "${POETRY}" run python scripts/worker.py --queue "${QUEUE}" --log-format text
+# JSON and not text. The platform's own default is json, and a text line is
+# invisible to any log pipeline that filters on structure: a Loki rule written
+# as `| json | level="error"` never matches one. The first version of this
+# script passed --log-format text and would have made the compute node the one
+# machine whose failures no dashboard could see.
+exec "${POETRY}" run python scripts/worker.py --queue "${QUEUE}" --log-format json

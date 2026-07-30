@@ -64,6 +64,18 @@ Per-batch timings, which the throughput analysis reads, go to
 the first version of this logged to `/tmp` and a reboot erased fourteen hours of
 timings.
 
+**The format is JSON, not text.** The platform's own default is json and a text
+line is invisible to any pipeline that filters on structure: a Loki rule written
+as `| json | level="error"` never matches one. The first version of this script
+passed `--log-format text`, which would have made the compute node the one
+machine whose failures no dashboard could see.
+
+**Rotation is not automatic.** `append:` does not rotate and these files grow for
+as long as the node runs. `protea-lab-worker.logrotate` in this directory is a
+user-level rotation that needs no root; wire it into your own crontab. It uses
+`copytruncate` on purpose, because the worker holds the file open through systemd
+and a rename would leave it writing to an unlinked inode.
+
 ## What it assumes
 
 - `~/.secrets/protea-lab.env` defines `PROTEA_DB_URL` and `PROTEA_AMQP_URL`
