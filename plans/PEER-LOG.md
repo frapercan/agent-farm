@@ -342,3 +342,138 @@ rests on a premise that is false here, and should be rechecked before it is reli
 Scoring will use `band="v226"` with `leakage_role="probe"` and an absolute `ia_file` path verified on
 this machine, band and ia_file together. The gate will be the existence of the metric, not the job
 status, since the scorer reports success on an empty result.
+
+---
+
+## 2026-07-30 (third entry), laptop (server, 192.168.18.121)
+
+Design study, no code written and nothing dispatched. Francisco asked whether the scorer could be
+adjusted to give four-axis stratification while reusing computation and keeping the complexity out of
+the platform. It can, in one pass. The design was then attacked and the attack found that its safety
+gates do not work. Both halves are worth carrying.
+
+### Where the four axes stand today
+
+Two of four. The scorer stratifies on category (three ground-truth files) and aspect (its per-namespace
+loop). Length band and homology band are not expressible in the CAFA file format.
+`protea/core/strata.py` is written and tested and has ZERO production callers, but the inputs it needs
+are all stored per prediction row and populated by default: `length_query`, `identity_nw` /
+`identity_sw` (`compute_alignments` defaults to True in `config/tuning.py:351`), and the donor
+`evidence_code`. So the missing piece is wiring, not capture.
+
+### The seam, and why one pass is enough
+
+In `cafaeval/evaluation.py` the per-protein arrays survive to the end: `pred_at_tau` and `tp_at_tau`
+at :222-223 (NK/LK) and :334-335 (PK) are dense `(n_prot, n_tau)`, and all six output columns are a
+`.sum(axis=0)` over them. Segmenting that final collapse yields every cell from ONE propagation pass.
+Measured cost: about 2 MFLOP per call, against a propagation measured in seconds.
+
+Three arithmetic facts shaped the design, each verified numerically rather than argued:
+
+**One integer label per protein is a sufficient statistic for every marginal.** I had claimed the
+opposite in the brief, reasoning that a protein belongs to its length band and its homology band at
+once. That is true only if the scorer normalises, and it does not: all six raw columns are sums over
+proteins and `ne` is a protein count, so every marginal is the elementwise sum of the cartesian cells
+composing it. Verified to 3.3e-16 relative. **Cartesian versus marginal therefore becomes a caller
+groupby, decidable after the run and changeable without re-scoring.** The one hard requirement is that
+normalisation runs AFTER the caller's aggregation, never before.
+
+**The stratified block must be computed alongside the existing collapses, never replace them.**
+Measured: an indicator matmul over a (5331, 99) array agrees BITWISE with `X.sum(axis=0)` on only 9 of
+99 columns, max abs diff 1.7e-11. `np.sum` uses pairwise summation; bincount and sparse matmul
+accumulate in scatter order. So a design that replaces the collapses and recovers the global by summing
+strata cannot pass a bit-identity gate however correct it is. Leaving the existing expressions
+byte-for-byte makes parity true by construction.
+
+**Per-stratum `ne` needs no change to `_count_proteins_in_toi` or `normalize`.** Both stay out of the
+patch. Verified on a constructed PK case: `_count_proteins_in_toi` returns 258, the kernel's filtered
+row space holds 346 rows, and `eligible_rows.sum()` is also exactly 258, because any row dropped from
+`proteins_with_gt` has no ground truth in TOI at all and is all-False in both predicates.
+
+Cardinality is **36, not 324**: category is already the ground-truth file and aspect is already the
+namespace loop, so encoding either in the sidecar creates two spellings of one partition. The 324 is
+9 x 36, assembled by the caller for free.
+
+Interface is a sidecar TSV plus a `strata_file=` kwarg. The three in-band alternatives were each
+rejected on evidence: the ground-truth parser does `split()` then `[:2]` so a third column is SILENTLY
+DROPPED and is anyway the wrong grain (per annotation, not per protein); the prediction reader is
+pinned to three column names so a fourth raises, gets swallowed, and silently falls back to a roughly
+10x slower legacy path; the IA parser's strict two-unpack raises and kills the run.
+
+Platform delta: one written file, one None-defaulted context field, one kwarg. `parse_results`,
+`_merge_weighted_metrics`, `batch_rescore_evaluation` and `evaluate_external_tool.py` all unchanged,
+because the payload rides as a new `dfs_best` key and every reader uses `.get("f")`.
+
+### The attack found the gates are vacuous, and this is the part to carry
+
+The design's headline safety assertion was `ne_k.sum() == ne`, described as "the assertion that catches
+label misalignment, which nothing else will". **It catches nothing.**
+`np.bincount(labels[eligible], minlength=K).sum()` equals `eligible.sum()` for ANY labels array of the
+correct length, because bincount conserves count. Tested with label rolls of 0, 777 and 1554 elements:
+all three pass. The remaining gates are permutation-invariant too, either summing over the stratum axis
+or comparing the unstratified path. Rolling 777 labels moved the sum over strata by 1.8e-12, float
+noise.
+
+So the design had five gates and none could distinguish a correct label vector from a rolled one, on a
+feature whose only possible error is the labels.
+
+**The general lesson: a conservation check cannot validate an assignment.** "The parts sum to the
+whole" says nothing about which part is which. Worth applying to the other invariants this project
+relies on.
+
+**The fix is an independent oracle, and it recycles the route we rejected.** Partition the ground-truth
+and prediction files by ONE stratum, run the PINNED scorer on that partition, and compare the RAW
+columns (tp, fp, fn, pr, rc), which are partition-invariant sums over proteins. Only `n`, `ne` and
+normalisation depend on the cohort, which is exactly why partitioning is wrong for production and right
+as a test oracle. Verified exact: difference 0.0, not float noise.
+
+Two further defects, both silent: the multiprocessing unzip was specified as `p[0][0]` where it must be
+`p[1][0]`, and concatenating 1-D length-6 arrays succeeds and propagates garbage rather than raising;
+and `_cm_worker` / `_cme_worker` were never updated to forward the new globals, so they would return
+unstratified output without complaint. Third, the caller-side normalisation uses plain division where
+`normalize` uses `np.divide(..., out=zeros, where=denominator > 0)`, so every empty stratum yields inf
+or NaN. Empty cells are certain: NK has 523 proteins across 36 cells.
+
+### One trap that would survive all of the above
+
+`feature_engineering.py:95` stores identity as `matches / aln_len`, a fraction in [0,1].
+`strata.homology_band_for` expects [0,100] and raises only outside that range, so a fraction silently
+collapses every protein into TWILIGHT. The homology axis would flatten to a single level and every
+table would still render. This needs a non-degenerate band-distribution assertion at startup, not a
+note in a code review.
+
+### The threshold question, and Francisco's call on it
+
+Stratified reporting has to choose whether each cell reports its Fmax at its OWN best tau or all cells
+report at the GLOBAL best tau. Francisco's position, which I agree with: **global tau**.
+
+Three reasons, strongest first. Taking a maximum over about 99 thresholds inside each cell is
+maximising over noise, and with 6,216 delta proteins spread over 324 cells the median cell holds under
+twenty, so every per-cell Fmax would be optimistically biased and worst exactly where the cells are
+smallest. It is a distributed version of the disease D-05 diagnoses in the recorded standing. Second,
+global tau keeps the cells decomposable: the raw counts sum back to the published number. Third, cells
+scored at different tau sit at different precision-recall trade-offs and are not comparable to each
+other.
+
+Where I would qualify it: per-cell tau is useless as a SCORE but is a real DIAGNOSTIC. The distance
+between a cell's performance at its own tau and at the global tau measures calibration mismatch in that
+stratum, which is a finding and belongs to the fourth pillar. Since raw counts are emitted at every tau,
+both come out of one run, so the decision can be made when writing. The only unacceptable outcome is
+reporting the first while describing it as the second, which the design itself warns "reads correctly
+in every table".
+
+### Cost, unchanged by any of this
+
+The seam is inside the kernel bodies, so the cross-repo cascade is unavoidable: clone the fork, patch
+`evaluation.py` and `parser.py`, PR, bump the pin from 80d705a, re-lock, reinstall on BOTH machines,
+re-run the gates on each. **Between bumping the pin and reinstalling on both hosts, the two machines
+run different scorers under the same PROTEA commit**, which is precisely the condition
+`SCORER-PROVENANCE.md` blames for a -12.8% to -22.7% f_micro_w move. Pin bump and parity
+re-verification have to be atomic per machine.
+
+A monkeypatch path exists that keeps the pin frozen, since cafaeval is a plain module with module-level
+functions. It moves the complexity into the platform rather than out of it, which is the opposite of
+what was asked for. Cheap, not right.
+
+Nothing here has been implemented, and I would not implement it until the partition oracle exists,
+because without it the feature ships with no net.
