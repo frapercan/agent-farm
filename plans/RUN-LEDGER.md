@@ -549,6 +549,38 @@ companion machine. The answer for the largest member is now measurable rather
 than argued, and it is close enough to the limit that it should be measured on
 the companion machine directly before the grid is fixed.
 
+### The compute node was absent for two hours, and it cost an hour
+
+The desktop was powered down between roughly 22:44 and 00:41 UTC during the
+fourth backbone's run. Recorded because it is the first measurement of what a
+reboot of the compute node actually costs.
+
+| | |
+|---|---|
+| queue depth at the last sample before | 7,557 |
+| queue depth when the node returned | 7,144 |
+| drained by the server alone, in 2 h | 413 batches, 0.057 batches/s |
+| rate with both machines | 0.112 batches/s |
+| **cost** | **about one hour of compute** |
+
+**Nothing was lost.** No job failed, no batch was dropped, the run continued at
+half throughput and the job's progress counter never went backwards. That is the
+two-machine split working exactly as designed: the server owns the state, so an
+absent compute node is a slowdown and not a failure.
+
+Two things did go wrong, and both are now fixed.
+
+**The worker did not come back.** It had been started by hand, so it died with
+the machine and the queue ran with one consumer until somebody noticed. There
+was a bring-up path for the server and none for the node. There is now:
+`scripts/services/protea-lab-worker@.service`, verified by killing the worker
+and watching systemd replace it within thirty seconds.
+
+**Fourteen hours of per-batch timings were erased**, because the worker log was
+in `/tmp`. Those timings are what every cost measurement in this ledger is built
+from, and the only reason the earlier runs survive at all is that the throughput
+samples were written to `storage/`. Logs now go to `storage/logs/` too.
+
 ### Not done in stage B
 
 The learned sparse encoder head has not been applied, so no retrieval codes
@@ -668,4 +700,6 @@ which is exactly the shape of defect the campaign's invariant exists to remove.
 | 2026-07-29 20:41 | ESM-C complete in 4.84 h; the method's second score, 9 percent low |
 | 2026-07-29 20:45 | fourth backbone dispatched, Ankh large, at half the batch size |
 | 2026-07-29 22:00 | Ankh large predicted at 15.4 h; the grid totals about 34 h |
+| 2026-07-29 22:44 | compute node powered down; the server ran on alone |
+| 2026-07-30 00:41 | node back; worker restarted by hand, then put under systemd |
 | 2026-07-29 12:37 | GO annotations loaded: two releases, 10.65 M annotations |
