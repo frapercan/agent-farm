@@ -1,0 +1,43 @@
+[Unit]
+Description=PROTEA compute-node worker for queue %i
+Documentation=https://github.com/frapercan/agent-farm/blob/main/scripts/services/README-lab-worker.md
+After=network-online.target
+Wants=network-online.target
+# The persistent server can be unreachable for hours, either because it is
+# closed or because the link is down. That is not a reason to give up, so the
+# start rate limiter is disabled and the unit retries for as long as it takes.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# %h rather than a literal home directory: a hardcoded path is what broke
+# every other unit and script in this project when the username changed.
+#
+# The wrapper is INSTALLED to a stable path rather than run out of the
+# checkout, so that a worktree, a branch switch or a rebase cannot stop a
+# running node. The repository stays the source; see the README for the one
+# command that reinstalls it after a pull.
+ExecStart=/bin/bash %h/.local/lib/protea/protea-lab-worker.sh %i
+WorkingDirectory=%h/Thesis2/repositories/PROTEA
+
+Restart=always
+RestartSec=30
+
+# A configuration error is not worth retrying thirty seconds at a time, so the
+# wrapper exits 78 for those and the unit stops instead of looping.
+RestartPreventExitStatus=78
+
+# Kept as a file as well as in the journal, because the throughput analysis
+# reads per-batch timings out of it. The journal alone would be enough for
+# operating the node; the file is what makes the run measurable afterwards.
+StandardOutput=append:%h/Thesis2/storage/logs/protea-lab-worker-%i.log
+StandardError=inherit
+
+# Give an in-flight batch time to finish before the process is killed. An
+# unacknowledged batch is redelivered by the broker rather than lost, so this
+# only saves duplicated compute.
+TimeoutStopSec=120
+KillSignal=SIGINT
+
+[Install]
+WantedBy=default.target
