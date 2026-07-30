@@ -2,7 +2,7 @@
 
 From 2026-07-29 the project runs on two machines. This file is the shared
 description of that split. It lives here, in a repository both machines clone,
-because that is the only place a instruction can be written once and read by
+because that is the only place an instruction can be written once and read by
 both.
 
 `CAMPAIGN.md` stays authoritative for what the run is. `RUN-LEDGER.md` records
@@ -80,15 +80,21 @@ do not cross machines at all.
 remote. An instruction committed on one machine reaches the other on the next
 pull. **If something must be known by both machines, it goes in a repository.**
 
-### Assistant memory does not cross
+### Assistant memory does not cross, and that is the decision
 
 The memory store is per machine, at `~/.claude/projects/<project>/memory/`, and
-nothing synchronises it. A decision recorded there on one machine is invisible
-to every session on the other. `thesis2-archive` mirrors it off-machine, but by
-hand.
+nothing synchronises it. A decision recorded there on one machine is invisible to
+every session on the other.
 
-So the rule is blunt: **memory is for what one machine needs to remember, a
-repository is for what both machines must agree on.** When in doubt, commit it.
+**Decided 2026-07-30: memory stays per agent.** Each machine's sessions keep
+their own store and see only their own. It is not a gap waiting to be closed by
+a mirror, so no synchronisation is planned and `thesis2-archive` stays a
+hand-refreshed off-machine copy rather than a channel.
+
+That makes one rule mandatory rather than advisory: **memory is for what one
+machine needs to remember, a repository is for what both machines must agree
+on.** Anything the other machine must know is not recorded, it is committed. When
+in doubt, commit it.
 
 ### The live state crosses by itself
 
@@ -111,18 +117,43 @@ things:
 
 ---
 
-## 4. Open, and worth closing
+## 4. Decided, so it is not re-litigated
+
+### The API's read endpoints stay open
+
+Writes on the jobs router require an operator role. All four reads do not:
+`GET /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/events` and
+`GET /jobs/{id}/comments` carry no auth dependency, and the router is mounted
+without a global one. This is deliberate and consistent with the anonymous quota
+the deployment already grants for a public open-research demo.
+
+**Decided 2026-07-30: they stay open.** The consequence has to be designed for
+rather than discovered, because the stack is reachable through a public tunnel:
+
+- **A job's payload is public.** For an agent, the payload is its instruction.
+- **A job's events are public.** For an agent, the events are its reasoning.
+
+So the rule that follows, and it binds every agent operation: **nothing sensitive
+inside a payload or an event.** Anything sensitive is passed by reference, an
+identifier the server resolves against the secret surface, and is never inlined.
+An agent that needs a credential receives the name of one, not the value.
+
+### Memory is per agent
+
+See section 3. Recorded here as well, because it is the decision that makes
+committing mandatory.
+
+---
+
+## 5. Still open
 
 **The root `CLAUDE.md` is tracked nowhere.** It is the highest-authority
-instruction file in the project and it exists only as a loose file on each disk.
-It has already been lost once. Tracking it, most naturally in `thesis2-archive`
-alongside the memory mirror, would close that.
+instruction file in the project, it exists only as a loose file on each disk, and
+it has already been lost once, in the 2026-07-28 reinstall. Tracking it would
+close that. Not decided.
 
 **Nothing pulls.** Both machines have checkouts that update only when somebody
 runs `git pull`, so an instruction committed on one can sit unseen on the other
 indefinitely. A periodic fast-forward of the instruction surface, plus a line
-recording what changed, would make this file's promise real rather than
+recording what changed, is what makes this file's promise real rather than
 theoretical.
-
-**The memory mirror is manual.** Durable decisions cross machines only when
-somebody refreshes `thesis2-archive`.
