@@ -581,6 +581,35 @@ in `/tmp`. Those timings are what every cost measurement in this ledger is built
 from, and the only reason the earlier runs survive at all is that the throughput
 samples were written to `storage/`. Logs now go to `storage/logs/` too.
 
+### The grid, decided 2026-08-02: seven backbones, and one of them is not a backbone
+
+| display name | checkpoint | why it is in |
+|---|---|---|
+| esm2_650m | facebook/esm2_t33_650M_UR50D | measured reference, 4.79 h |
+| esmc_600m | esmc_600m | measured, 4.84 h |
+| ankh_base | ElnaggarLab/ankh-base | measured, 9.41 h |
+| ankh_large | ElnaggarLab/ankh-large | the largest that fits the envelope |
+| prot_t5 | Rostlab/prot_t5_xl_half_uniref50-enc | encoder only, half precision |
+| prostt5 | Rostlab/ProstT5 | same family, joint residue and structure vocabulary |
+| **protst** | **mila-intel/ProtST-esm1b** | **not a protein language model in the same sense** |
+
+**ProtST is in for a different reason than the other six**, and the distinction
+should survive into the write-up. The six are protein language models being
+compared as substrates at a matched recipe. ProtST is text-aligned, and the
+project's own record already names it the largest unexploited measured lever,
+strong as a retrieval space and noise as a feature. Including it in the same
+matched grid measures it as a substrate, which is the honest first question, but
+its interesting use is not the one this grid tests.
+
+Excluded, and both exclusions are the campaign's own reasoning rather than a new
+decision: **esm2_3b**, out on memory, and **esm2_150m**, out because the record
+already measured the smallest backbone as an unfaithful substrate. Light means
+the largest that fits, not the smallest.
+
+Not a grid member: **esm2_8m**, dispatched as the smoke test that validated the
+chain on the rebuilt corpus. It has full coverage and should not be reported
+beside the others.
+
 ### Not done in stage B
 
 The learned sparse encoder head has not been applied, so no retrieval codes
