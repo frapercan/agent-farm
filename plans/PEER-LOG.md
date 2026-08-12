@@ -607,3 +607,81 @@ Testing it costs one deliberate reboot and nobody has paid it.
 **The rest of the review.** The session limit was reached. The remaining claims will be checked at a
 sane scale, with the document present through a worktree, and with partial results written as they
 arrive rather than at the end.
+
+---
+
+## 2026-08-12, laptop: a claim is not a delivery, and the unit runs from a branch
+
+Two findings from the hours after the previous entry. The second one is the serious one, and it was
+caught by the researcher reading the ledger rather than by either machine, which is itself the point.
+
+### The unit executes its supervisor out of the working tree, and the tree has branches
+
+`coord-keeper.service` sets `ExecStart=/bin/bash %h/Thesis2/agent-farm/scripts/services/coord-keeper-supervisor.sh`
+and `WorkingDirectory=%h/Thesis2/agent-farm`. That path is the PRIMARY working tree of a repository
+whose branches do not all contain `scripts/`. `plan/rung2-amendment` has the amendment and no coord
+scripts; `peer/host-report` has this log and no coord scripts.
+
+So checking out a branch to read a document, in the tree the unit points at, removes the file systemd
+will exec on the next restart. `Restart=always` means the service then fails in a loop, and the only
+symptom on the other machine is a keeper that stopped pulsing. Nothing in the runbook says the tree is
+load bearing.
+
+This is the same collision reported in the previous entry, which was framed as an inconvenience for
+readers. It is not. It can stop the keeper.
+
+Mitigation applied here: the primary tree stays on `main` permanently, and every other branch gets a
+`git worktree`. This entry is being written from `~/Thesis2/agent-farm-peer`. The durable fix belongs
+in the unit: point `ExecStart` at a path that is not a branch-switchable checkout, or have the
+supervisor verify its own script's presence and exit 78 with a message naming the branch, the way it
+already does for the missing clone.
+
+### A claim is a lock taken by a shell script, not a message received by an agent
+
+The previous entry reported the first cross-machine claim as the mechanism being closed. That was
+correct about transport and wrong about delivery, and the gap matters more than the success.
+
+Observed state at 16:31Z, from the ledger and both pulses:
+
+    01KZT2GC   done      04:08:41Z   desktop's own probe, HAS a ledger outcome entry
+    01KZTR5J   done      10:30:44Z   desktop's own probe, HAS a ledger outcome entry
+    01KZVCAB   claimed   16:19:22Z   first message from the laptop, NO outcome entry
+    01KZVD0P   unclaimed 16:31:17Z   second message from the laptop, still only in inbox/
+
+The desktop's pulse carries `active: [{message_id: 01KZVCAB, task_id: coord-1786551564-1368,
+status: running}]` and has done so since 16:19. Twelve minutes later there is no outcome entry, and
+the second message has not been claimed at all, against twelve seconds for the first.
+
+The documentation is explicit that this is by design in V0: "the tick does not spawn the agent (the
+conductor consumes the block)". The chain has three links and only two of them run unattended:
+
+    send  ->  keeper claims  ->  [nothing]  ->  an agent reads
+
+The two probes that reached `done` were processed while an agent session existed on the desktop. The
+first laptop message arrived after that session ended, so it was claimed and then held.
+
+Three consequences worth stating plainly, because the mechanism looks healthy from both sides while
+this is happening:
+
+1. **A claim proves a lock was taken, nothing else.** Neither the pulse nor the claim distinguishes
+   "an agent is working on this" from "a shell script took it and nobody came". Both render as
+   `running`.
+
+2. **The held claim appears to block the queue.** The second message sat unclaimed for twelve minutes
+   while the first was claimed in twelve seconds. If the tick will not take a second message while
+   holding an unreleased first, then one absent agent stops the channel entirely rather than
+   degrading it.
+
+3. **Nothing recovers it without a reboot.** V0 has no writer for `released`. The documented recovery
+   is the boot-id marker vanishing on restart, which does not apply here because the desktop is up.
+   The six hour stale-claim alarm is the only backstop, and it summons a human.
+
+The lease item already named in the design closes all three, and until it exists the honest summary
+is: **the two machines can pass locks reliably and cannot yet pass work.** A message sent to a
+machine with no agent session is not queued for later, it is captured.
+
+The mistake in the previous entry is worth naming for the next reader. The check used to confirm the
+second claim searched the ledger tree for the message id and found it under `inbox/desktop/`, which is
+the file the sender itself had just written. It confirmed its own send and reported it as a claim.
+Any future check for a claim must match on the `claims/` prefix specifically, and better, must read
+`state` out of the claim body rather than infer from a path.
