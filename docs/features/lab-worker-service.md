@@ -55,6 +55,8 @@ Verify with `loginctl show-user <user> | grep Linger`.
 
 ## Smoke
 
-    bash -n scripts/services/protea-lab-worker.sh
-    systemctl --user is-enabled 'protea-lab-worker@protea.embeddings.batch'
-    loginctl show-user "$USER" | grep Linger
+```bash
+bash -n scripts/services/protea-lab-worker.sh
+systemctl --user is-enabled 'protea-lab-worker@protea.embeddings.batch'
+loginctl show-user "$USER" | grep Linger
+```
