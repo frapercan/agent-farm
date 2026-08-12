@@ -31,6 +31,9 @@
 
 set -euo pipefail
 
+# Resolved from this script's own location rather than the caller's directory,
+# so a send from anywhere finds the same state directory the keeper writes to.
+FARM_ROOT="${AGENT_FARM_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 COORD_ROOT="${FARM_COORD_ROOT:-$HOME/Thesis2/farm-coord}"
 COORD_BRANCH="${FARM_COORD_BRANCH:-ledger}"
 COORD_REMOTE="${FARM_COORD_REMOTE:-origin}"
@@ -62,10 +65,16 @@ done
 # This machine's coordination name routes every claim and is stamped into every
 # message, so it is never guessed from the hostname: a wrong name addresses a
 # machine that does not exist and nothing downstream reports it.
-MACHINE_FILE="$COORD_ROOT/.git/machine"   # inside .git, so it is never untracked
+#
+# The SAME file the tick reads. These two scripts run against different clones,
+# the human's and the keeper's, so a name kept beside either clone is a name
+# that can disagree with itself; the identity belongs to the machine, not to a
+# checkout. Keeping it in the farm's state directory is what makes "one name per
+# machine" true rather than merely intended.
+MACHINE_FILE="${COORD_MACHINE_FILE:-$FARM_ROOT/state/coord-machine}"
 FROM="${COORD_MACHINE:-}"
 if [[ -z "$FROM" && -r "$MACHINE_FILE" ]]; then FROM=$(tr -d '[:space:]' < "$MACHINE_FILE"); fi
-[[ -n "$FROM" ]] || die "this machine has no coordination name: export COORD_MACHINE, or write it to $MACHINE_FILE"
+[[ -n "$FROM" ]] || die "this machine has no coordination name: write it to $MACHINE_FILE (one word, for example 'desktop' or 'laptop'), or export COORD_MACHINE"
 
 [[ -n "$TO" ]]       || die "--to is required (a machine name, or 'any')"
 [[ -n "$SUBJECT" ]]  || die "--subject is required"

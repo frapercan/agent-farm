@@ -49,4 +49,12 @@ state/deploy-keeper-triggers/
 state/deploy_keeper_*_count
 state/stack-owner.json
 state/stack-owner.json.lock
+
+# Per-machine coordination identity and capabilities. Committing either would
+# make one machine's answer the other's: the desktop publishes a graphics card
+# it has and the laptop does not, and a shared name would have both claiming as
+# the same machine, which is the one thing the ledger cannot detect.
+state/coord-machine
+state/coord-capabilities
+state/coord-keeper/
 state/thesis_pdf_published.sha

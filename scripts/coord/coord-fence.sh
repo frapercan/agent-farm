@@ -41,9 +41,15 @@ fi
 COORD_REPO="${COORD_REPO:-${FARM_COORD_ROOT:-$HOME/Thesis2/farm-coord}}"
 COORD_BRANCH="${COORD_BRANCH:-ledger}"
 COORD_REMOTE="${COORD_REMOTE:-origin}"
-# One name for this machine, shared with the tick and the supervisor. The state
-# file wins so a rename is one edit; the hostname is only the fallback.
-COORD_MACHINE="${COORD_MACHINE:-$(cat "${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}/state/coord-machine" 2>/dev/null || hostname -s)}"
+# One name for this machine, from the same file the tick and the sender read.
+# No hostname fallback, and here the reason is sharper than elsewhere: this
+# script compares the name against the claim's owner, so a fallback that
+# resolved to the hostname would answer 'held by somebody else' for a claim this
+# machine holds perfectly well, and stop every agent while the ledger was
+# healthy. A name it cannot establish is reported as unknown, below.
+COORD_MACHINE_FILE="${COORD_MACHINE_FILE:-${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-farm}/state/coord-machine}"
+COORD_MACHINE="${COORD_MACHINE:-$(cat "$COORD_MACHINE_FILE" 2>/dev/null || true)}"
+COORD_MACHINE="${COORD_MACHINE//[[:space:]]/}"
 
 # Two prerequisites, each reported as 'ownership unknown' (3) and never as
 # 'superseded' (1). Both stop the agent, but only one of them is a statement
@@ -51,6 +57,10 @@ COORD_MACHINE="${COORD_MACHINE:-$(cat "${AGENT_FARM_ROOT:-$HOME/Thesis2/agent-fa
 # every agent home while the ledger was perfectly healthy.
 if [[ ! -d "$COORD_REPO/.git" ]]; then
   echo "coord-fence: no coordination clone at $COORD_REPO; ownership unknown, stopping" >&2
+  exit 3
+fi
+if [[ -z "$COORD_MACHINE" ]]; then
+  echo "coord-fence: this machine has no coordination name in $COORD_MACHINE_FILE; ownership unknown, stopping" >&2
   exit 3
 fi
 if ! command -v jq >/dev/null 2>&1; then
