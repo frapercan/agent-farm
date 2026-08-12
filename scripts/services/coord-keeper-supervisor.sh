@@ -57,6 +57,27 @@ if [[ ! -f "$COORD_TICK_SCRIPT" ]]; then
   echo "coord-keeper: no tick script at $COORD_TICK_SCRIPT" >&2
   exit 78
 fi
+# The machine name, checked HERE and not left to the tick. The tick does check
+# it, but the template treats only prereq_fail specially: a config_fail goes
+# down the quick-retry ladder and escalates a janitor after seven minutes, so
+# the unit sits there reporting 'active' while being permanently misconfigured.
+# Measured on the first install on 2026-08-12: the service ran for three minutes
+# in that state with an empty journal, because heartbeats go to the state
+# database and nothing was reaching stderr. A name that will never appear on its
+# own is a configuration error, and a configuration error should stop the unit
+# loudly on the first pass.
+COORD_MACHINE_FILE="${COORD_MACHINE_FILE:-$ROOT/state/coord-machine}"
+COORD_MACHINE_NAME="${COORD_MACHINE:-$(cat "$COORD_MACHINE_FILE" 2>/dev/null || true)}"
+COORD_MACHINE_NAME="${COORD_MACHINE_NAME//[[:space:]]/}"
+if [[ ! "$COORD_MACHINE_NAME" =~ ^[a-z][a-z0-9-]{0,31}$ ]]; then
+  echo "coord-keeper: this machine has no usable coordination name." >&2
+  echo "coord-keeper: got '${COORD_MACHINE_NAME:-<empty>}' from $COORD_MACHINE_FILE" >&2
+  echo "coord-keeper: write one plain lower-case word there, for example:" >&2
+  echo "coord-keeper:   echo desktop > $COORD_MACHINE_FILE" >&2
+  echo "coord-keeper: the hostname is deliberately NOT a fallback: it routes every" >&2
+  echo "coord-keeper: claim, so it is declared rather than guessed." >&2
+  exit 78
+fi
 
 # spawn.sh sets TASK_ID; systemd does not, and heartbeats carry a foreign key
 # onto tasks, so under systemd we mint the row ourselves rather than write

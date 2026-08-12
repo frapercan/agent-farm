@@ -96,9 +96,16 @@ COORD_REPO="${COORD_REPO:-$HOME/Thesis2/farm-coord-keeper}"
 COORD_BRANCH="${COORD_BRANCH:-ledger}"
 COORD_PULSE_BRANCH="${COORD_PULSE_BRANCH:-pulse}"
 COORD_REMOTE="${COORD_REMOTE:-origin}"
-# One name for this machine, shared with the fence and the supervisor. The
-# state file wins so a rename is one edit; the hostname is only the fallback.
-COORD_MACHINE="${COORD_MACHINE:-$(cat "$ROOT/state/coord-machine" 2>/dev/null || hostname -s)}"
+# One name for this machine, and one place it comes from: the environment, or
+# state/coord-machine. There is deliberately NO hostname fallback. This box is
+# called xaxi-PC, which fails the plainness check below, so the fallback turned
+# a missing configuration file into an error blaming the operator for not
+# exporting a variable they had no reason to export. A name that routes every
+# claim should be declared, not guessed from something that was never chosen
+# for the purpose.
+COORD_MACHINE_FILE="${COORD_MACHINE_FILE:-$ROOT/state/coord-machine}"
+COORD_MACHINE="${COORD_MACHINE:-$(cat "$COORD_MACHINE_FILE" 2>/dev/null || true)}"
+COORD_MACHINE="${COORD_MACHINE//[[:space:]]/}"
 COORD_CAPABILITIES_FILE="${COORD_CAPABILITIES_FILE:-$ROOT/state/coord-capabilities}"
 COORD_STATE_DIR="${COORD_STATE_DIR:-$ROOT/state/coord-keeper}"
 COORD_NET_TIMEOUT_SEC="${COORD_LSREMOTE_TIMEOUT_SEC:-30}"
@@ -157,7 +164,10 @@ case "$COORD_REPO" in
     fail config_fail 78 "refusing to run: COORD_REPO=$COORD_REPO is inside a code checkout" ;;
 esac
 [[ -d "$COORD_REPO/.git" ]] || fail config_fail 78 "no farm-coord clone at $COORD_REPO"
-[[ "$COORD_MACHINE" =~ ^[a-z][a-z0-9-]{0,31}$ ]] || fail config_fail 78 "machine name '$COORD_MACHINE' is not plain; set COORD_MACHINE"
+if [[ -z "$COORD_MACHINE" ]]; then
+  fail config_fail 78 "this machine has no coordination name: write it to $COORD_MACHINE_FILE (one word, for example 'desktop' or 'laptop'), or export COORD_MACHINE"
+fi
+[[ "$COORD_MACHINE" =~ ^[a-z][a-z0-9-]{0,31}$ ]] || fail config_fail 78 "machine name '$COORD_MACHINE' is not plain: lower case, starting with a letter, at most 32 characters. Fix it in $COORD_MACHINE_FILE"
 
 # Capabilities. A file so the answer is the same for the tick and for a human
 # reading it; 'gpu' on the desktop is only the fallback when the file is absent.

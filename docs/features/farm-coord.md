@@ -44,6 +44,30 @@ Five pieces, three of which a human touches:
 - `state/coord-capabilities` (one capability per line)
 - `state/coord-keeper/` (markers, pulse throttle, last fail kind)
 
+## Before it will run: name the machine
+
+```bash
+echo desktop > state/coord-machine        # or laptop, on the other one
+printf 'gpu\ncuda\ncompute\n' > state/coord-capabilities
+```
+
+Both files are per machine and both are gitignored. Committing either would make
+one machine's answer the other's: the compute node publishes a graphics card the
+server does not have, and a shared name would have both machines claiming as the
+same one, which is the single thing the ledger cannot detect, because a claim
+records a name and not a host.
+
+**There is no fallback to the hostname**, in any of the three scripts. This box
+is called `xaxi-PC`, which is not a plain name, so the fallback only ever
+produced an error blaming the operator for not exporting a variable they had no
+reason to export. In the fence it was worse than useless: it compared the
+hostname against the claim's owner and answered "held by somebody else" for a
+claim this machine held perfectly well, which stops every agent while the ledger
+is healthy. A name that routes every claim is declared, not guessed.
+
+Without the file, the keeper exits 78 and systemd stops it rather than looping,
+and the message says which file to write.
+
 ## Branches on the coordination repository
 
 | Branch | Written by | Holds |
