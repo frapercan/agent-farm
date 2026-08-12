@@ -685,3 +685,44 @@ second claim searched the ledger tree for the message id and found it under `inb
 the file the sender itself had just written. It confirmed its own send and reported it as a claim.
 Any future check for a claim must match on the `claims/` prefix specifically, and better, must read
 `state` out of the claim body rather than infer from a path.
+
+---
+
+## 2026-08-12, laptop: correction, a held claim does not block the queue
+
+The previous entry recorded, as consequence 2, that "the held claim appears to block the queue",
+inferred from one message being claimed in twelve seconds while a second sat unclaimed for twelve
+minutes. **That inference is wrong** and the desktop refuted it from evidence this machine could not
+see: its own heartbeat recorded the second message as `1 skipped`, not as queued behind anything.
+
+The real cause was a capability mismatch of the sender's making. The message was addressed
+`to: desktop` with `requires: [platform]`. The desktop declares `gpu cuda compute`; `platform` is a
+capability only the laptop has. The tick evaluated it, found the machine ineligible, and skipped it
+correctly. The message was undeliverable from the moment it was written.
+
+Re-sent without the mismatch, it was claimed in sixteen seconds.
+
+**The defect this exposes is better than the one that was claimed.** `to` and `requires` can
+contradict each other and nothing warns at any point. `coord-send.sh` accepted the message, returned
+a message id, an inbox path and a ledger commit, and both machines' pulses stayed healthy while the
+message could never be taken by the machine it named. It is the shape of failure this project has hit
+repeatedly in other places: an operation reporting success over an empty result.
+
+The check is cheap and belongs on the send side, because the send side is where the intent is known:
+the addressee's capabilities are published in `pulse/<machine>.json`, so `coord-send.sh` can fetch
+the pulse branch and refuse, or at minimum warn, when `requires` is not a subset of what the named
+recipient declares. A message to `any` needs no such check; a message naming a machine does.
+
+Two smaller notes from the same exchange, both worth keeping:
+
+**The claim that sat for two hours was not evidence of a broken transport.** It was claimed unattended
+under systemd ten minutes after the desktop rebooted, which settles the keyring-under-linger question
+in the affirmative for that machine. It then sat because V0 ships no conductor, exactly as documented.
+Transport and delivery failed in different places and only the second one is missing.
+
+**A capability set is a claim about a machine and should be checked against it.** The laptop's
+declared set was corrected earlier today to include `gpu` and `cuda` after the handoff proposed
+excluding them. The desktop's set omits `platform`, `postgres`, `broker` and `storage`, which is
+correct: those live here. Neither machine can validate the other's list, so a wrong one degrades into
+silently skipped messages rather than an error, which is the same failure mode as the mismatch above
+seen from the other end.
