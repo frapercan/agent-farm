@@ -1,0 +1,64 @@
+[Unit]
+Description=agent-farm coordination keeper on the farm-coord ledger
+Documentation=https://github.com/frapercan/agent-farm/blob/main/plans/FARM-COORD.md
+After=network-online.target
+Wants=network-online.target
+# The arbiter is a WAN hop away and the link can be down for hours. That is
+# failure mode 1 of the design and it is not a reason to give up, so the start
+# rate limiter is disabled and the unit retries for as long as it takes.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+
+# %h rather than a literal home directory: a hardcoded path is what broke every
+# other unit and script in this project when the username changed.
+Environment=AGENT_FARM_ROOT=%h/Thesis2/agent-farm
+
+# The KEEPER'S OWN clone, and deliberately not %h/Thesis2/farm-coord. The tick
+# resets and cleans this checkout to follow the remote tip, and reset and clean
+# are branch and tree scoped rather than path scoped, so a checkout it shares
+# with a human's coord-send.sh or with a finishing agent writing its outcome
+# entry is a checkout where a commit can vanish with no error. Create it with
+# 'git clone <farm-coord remote> ~/Thesis2/farm-coord-keeper'; the supervisor
+# exits 78 until it exists.
+Environment=COORD_REPO=%h/Thesis2/farm-coord-keeper
+
+# Run from the checkout, and NOT from an installed copy under ~/.local/lib.
+# This is a deliberate divergence from protea-lab-worker@.service, which is
+# installed out of the checkout so a branch switch cannot stop a running node.
+# That protection does not transfer here: the supervisor sources
+# scripts/lib/common.sh out of AGENT_FARM_ROOT on every heartbeat, so the
+# checkout is a live dependency no matter where the entry point lives, and
+# installing only the entry point would buy the appearance of safety and none
+# of it. The keeper is cheap to restart and holds no work in flight, which is
+# what makes running from the checkout acceptable here and not there.
+ExecStart=/bin/bash %h/Thesis2/agent-farm/scripts/services/coord-keeper-supervisor.sh
+WorkingDirectory=%h/Thesis2/agent-farm
+
+Restart=always
+RestartSec=30
+
+# A configuration error is not worth retrying thirty seconds at a time, so the
+# supervisor exits 78 (EX_CONFIG) when the farm-coord clone is missing and the
+# unit stops instead of looping.
+RestartPreventExitStatus=78
+
+# The journal, and no log file. The durable record of what this service did is
+# the heartbeats table in state/tasks.sqlite and the ledger branch itself, and
+# neither of those is a log line. The sibling worker keeps a file because the
+# throughput analysis reads per-batch timings out of it; nothing reads timings
+# out of this one.
+StandardOutput=journal
+StandardError=journal
+
+# The supervisor traps INT and TERM, marks its task row killed, and exits. A
+# tick in flight is at most one git round trip, so it needs no grace period
+# beyond the ls-remote timeout.
+TimeoutStopSec=45
+
+[Install]
+# default.target, not multi-user.target, because this is a --user unit.
+# Lingering must be on or it stops at logout; it was measured off on this
+# machine on 2026-08-12 and enabled the same day.
+WantedBy=default.target
