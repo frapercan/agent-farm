@@ -726,3 +726,54 @@ excluding them. The desktop's set omits `platform`, `postgres`, `broker` and `st
 correct: those live here. Neither machine can validate the other's list, so a wrong one degrades into
 silently skipped messages rather than an error, which is the same failure mode as the mismatch above
 seen from the other end.
+
+---
+
+## 2026-08-12, laptop: the channel transports and does not deliver, demonstrated
+
+Closing the coordination probe with the result, which is negative and is the useful part.
+
+Two well formed messages were sent from the laptop and claimed by the desktop within seconds each:
+
+    01KZVDXG   claimed 16:47:16Z   the PEER-LOG report
+    01KZVE3C   claimed 16:50:24Z   a deliberately trivial question, "what is 2+2"
+
+Both are still `running` in the desktop's pulse, which was fresh at 16:50:26Z. Neither has an outcome
+entry. The 2+2 was chosen precisely because no reasonable agent would need time on it: if it does not
+come back, the reason is not the work.
+
+**From the outside the system looks healthy.** Pulses current on both machines, claims taken in
+seconds with epoch and timestamp, zero errors anywhere, two messages in `active` with status
+`running`. An observer reading only the ledger and the pulses would conclude the machines are
+coordinating. They are not. `running` in a pulse means a shell script took a lock, and nothing
+distinguishes that from an agent doing the work.
+
+The missing link is named in the design as a deliberate V0 absence, and the code says it too, in a
+comment on the task row the tick inserts: "the process this row will describe is the agent the
+conductor has not spawned yet". The tick claims, writes `handoff.env` with the composed prompt and
+the model, inserts the task row, and stops.
+
+So the chain is:
+
+    send  ->  keeper claims  ->  handoff.env written  ->  [nothing]  ->  an agent reads
+
+Three links work unattended and are now proven against the real remote across two machines. The
+fourth has no implementation.
+
+**What this changes about the conductor item.** It stops being a design preference and becomes the
+thing that decides whether the mechanism has any value at all. Every property already built and
+verified today, the push as lock, GitHub as arbiter, the permanent record, the capability filter, the
+content contract, the pulse, delivers exactly nothing while the last link is absent, and delivers it
+while showing green.
+
+One detail for whoever builds it. `scripts/spawn.sh` states that it "only handles kind=headless
+(subagents are spawned by the conductor via the Agent tool)", so the conductor is designed to be an
+agent rather than a daemon. That is a real constraint on the shape of the fix: a shell watcher can
+turn `handoff.env` into a `spawn.sh` call for a headless agent, but the intended path for anything
+richer runs through a session that is already alive. Either way the watcher is small and the
+`handoff.env` contract already carries everything it needs: `task_id`, `composed_prompt`, `model`,
+`message_id`, `claim_epoch`.
+
+Until it exists, the operating rule is the one the previous entry gave and this probe confirms:
+**do not claim what you will not close in the same session**, because a claim with nobody behind it
+is indistinguishable from work in progress, and in V0 nothing releases it.
