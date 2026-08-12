@@ -477,3 +477,133 @@ what was asked for. Cheap, not right.
 
 Nothing here has been implemented, and I would not implement it until the partition oracle exists,
 because without it the feature ships with no net.
+
+---
+
+## 2026-08-12, laptop: the coordination mechanism is closed, and four things the runbook omits
+
+Written from the laptop after acting on the desktop's handoff. Three of the four asks are done, one
+is partial and says so.
+
+### The first real cross-machine claim
+
+A message was sent from this machine and claimed by the desktop in about twelve seconds, under the
+twenty second bar the handoff set:
+
+    message_id     01KZVCABET1SSSQR61PY2TVG48
+    sent           16:19:05Z
+    claimed        16:19:22Z   claimed_by desktop, epoch 1, state claimed
+    ledger_commit  2967a878
+
+Everything verified before today was the desktop talking to itself. This is two machines, a real
+remote, and GitHub as the arbiter. The pulse published fifteen seconds later carries
+`ledger_sha 2967a878`, the same commit, so both machines agreed on the ledger tip in the same second
+the claim landed.
+
+### Four things the runbook does not mention, in the order they bite
+
+**Git identity is a hard prerequisite and it fails late.** `coord-send.sh` aborted with "author
+identity unknown" after doing its work, at `commit-tree`. The keeper needs the same identity to
+write claims, so on a fresh machine the service would fail on its first eligible message and the
+only evidence would be in the journal. Set `user.name` and `user.email` in BOTH clones before
+enabling the unit, or add the check to the supervisor's exit-78 path where the missing-clone check
+already lives.
+
+**The scripts and the amendment live on different branches of the same repository.** `scripts/coord/`
+is on `main`, `plans/RUNG2-AMENDMENT.md` is on `plan/rung2-amendment`. With one working tree you
+cannot hold both, and switching to read one removes the other. This is not hypothetical: checking out
+`main` to get the coord scripts deleted the amendment out from under a review that was reading it,
+and fifty six percent of that review's verdicts were produced by readers that no longer had the
+document. Use `git worktree` for the amendment, or the next reader repeats the mistake.
+
+**The paths differ between machines and every default assumes the desktop's.** The unit, the fence
+and the sender all hardcode `$HOME/Thesis2/...`. On the laptop the tree is `~/Thesis-laptop`. Rather
+than add one override per script forever, `~/Thesis2` is now a symlink to `~/Thesis-laptop`, so the
+runbook's commands are literally correct on both machines. Reversible with `rm ~/Thesis2`.
+
+**The proposed capabilities are wrong for this machine.** The handoff proposed
+`platform postgres broker storage cpu`, reasoning that "the laptop has the platform, not the card".
+The laptop has an RTX 4060 and was computing ProtST embeddings while the handoff was being read. The
+declared set is now `platform postgres broker storage cpu gpu cuda`. What is true is that the card is
+capped at 45 W by firmware and runs at roughly half its nominal clock, so it contributes a fraction
+of the desktop's throughput. That is a weight, and `requires` is a boolean, so excluding `gpu` would
+have permanently routed away work this machine demonstrably does.
+
+### The forward pass fraction, measured
+
+The handoff asked for this number before `embed_chunks_multi` is written, because the whole argument
+rests on the pass dominating. Instrumented at `compute_embeddings.py` (PROTEA `77af263`) and measured
+over six batches:
+
+    total per batch      65.28 s
+      forward pass       64.23 s
+      model load          1.045 s
+      serialize           0.002 s
+      unaccounted         0.006 s
+    INFERENCE FRACTION   0.9838
+
+The three phases account for the batch almost exactly, so there is no fourth sink hiding. At 0.9838,
+emitting twenty configurations from one pass saves on the order of ninety three percent of twenty
+passes, and the "billing, not compute" framing holds.
+
+**The caveat matters as much as the number.** This was measured on ProtST, which is the cheapest
+backend in the grid: a 512-d whole-protein projection, one chunk per sequence, no residue-level work.
+A chunked or multi-layer configuration moves tensor work out of the pass, so 0.9838 is plausibly an
+upper bound. The honest reading is that the fraction is high enough to justify building the emitter,
+and that the figure should be re-measured on a genuinely chunked configuration before it is quoted as
+the saving. No such configuration exists yet, which is the amendment's own point.
+
+### PR #243: eight findings that survive with the document present
+
+The review was run at the wrong scale and half of it is discarded for the reason given above. Of the
+forty nine verdicts produced by readers that had the document, thirty four confirm and fourteen
+refute. The eight that carry decisions:
+
+1. **The grid has one axis, not three.** All three seed migrations freeze an identical STD block and
+   vary only `model_name` and `model_backend`. Depth, chunking and pooling are constant across all
+   eight seeded configurations. The amendment's framing of pruning axes describes a grid that was
+   never built.
+
+2. **The fan-out trigger does not trip.** The amendment says its own two-factor rung 2 needs four
+   full-corpus configurations and therefore trips the "more than two" trigger. It needs two, the
+   rung 1.5 winner and the rung 1 incumbent, and the incumbent already exists at one hundred percent.
+   One new pass, about fifteen hours. The four conflates experimental cells with embedding configs.
+
+3. **The homology axis was populated, and not omitted for want of pricing.** MMseqs2 nearest-donor
+   identity bands were computed on both the 227 to 230 and 225 to 227 frames six weeks before the
+   amendment, and carry a headline result. The claim that nobody priced it is contradicted by the
+   project's own committed record.
+
+4. **The chunking premise does not match the run.** All eight seeded configurations are
+   `use_chunking=False`, `chunk_size=512`, `chunk_overlap=0`, `max_length=2048`, verified against the
+   live database. The row-per-sequence ratio for the run as configured is exactly 1.00. No 64 overlap
+   exists anywhere.
+
+5. **A cited effect size has no provenance.** The figure appears once in the amendment and nowhere
+   else in the tree, with no derivation and no citation. The defensible statement is the one the
+   registry supports; the number should be struck rather than corrected.
+
+6. **`batch_size=1` is attributed to the wrong cause.** It is a conservative guard for the largest T5
+   configuration at 2048, explicitly raisable per configuration, not a device limit. Today's own
+   measurement at batch size 8 contradicts the stated cause.
+
+7. **The safety probe has the wrong scope.** The size is right, about fourteen minutes at the
+   measured rate, but restricting it to T5 and ESM excludes Ankh, which is the only overflow case
+   this repository has actually reproduced.
+
+8. **The taxonomic banding will not carry three levels.** Corpus-wide the split is Bacteria 336764,
+   Eukaryota 241098, Archaea 19904, Viruses 18164. Crossed with category and aspect, only Eukaryota
+   and Bacteria have the population to support a cell; a third band requires splitting Eukaryota.
+
+### What is not closed
+
+**The keyring under linger after a reboot.** Pushing works unattended right now, through
+`gh auth git-credential` against the keyring, verified in a clean environment. Linger is now `yes` on
+this machine too, which was `no` and contradicted the CLAUDE.md exactly as the desktop found. What is
+NOT established is whether the keyring is unlocked for a user service that starts at boot with nobody
+logged in. If it is not, the keeper retries forever and the ledger looks healthy from the other side.
+Testing it costs one deliberate reboot and nobody has paid it.
+
+**The rest of the review.** The session limit was reached. The remaining claims will be checked at a
+sane scale, with the document present through a worktree, and with partial results written as they
+arrive rather than at the end.
