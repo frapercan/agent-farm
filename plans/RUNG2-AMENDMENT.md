@@ -5,9 +5,15 @@ rung 2, inserts a rung between 1 and 2, and turns the declared four-axis
 stratification into something that touches a result.
 
 Every number is measured or cited to a receipt. Where a claim is an estimate it
-says so. Two adversarial reviews of the first draft are folded in, and the
-places they changed the design are marked, because the changes are the
-interesting part.
+says so.
+
+**Three adversarial reviews of the first draft are folded in, and every place
+they changed the design is marked.** They changed it in four ways, and the
+changes are the interesting part: the fixed-representation ceiling turned out to
+be measured and larger than the head; the rule excluding incomplete backbones
+turned out to exclude the one that would falsify the rung; the boundary between
+the rungs turned out not to hold; and the cost that justified every pruning
+turned out to be an accounting artefact with an arithmetic error on top.
 
 ## Why this exists
 
@@ -269,36 +275,70 @@ pair. The instantaneous rate implies closer to seven, so roughly half goes to
 write, queueing and interruption. That gap is unmeasured and should not be
 planned around.
 
-The naive grid on the carrier is five depths by two chunkings by two poolings:
-thirty configurations, **450 accelerator-hours, nineteen days of the pair flat
-out**, before a second backbone and before anything is trained. Not affordable
-and not necessary.
+### Corrected after review: the bill is an accounting artefact, not a cost
 
-| pruning | effect |
+The first draft priced the naive grid at thirty configurations and 450 hours and
+used that number to justify four prunings. **Five depths by two chunkings by two
+poolings is twenty, not thirty**, so at fifteen hours per pass it is 300 hours,
+not 450. The figure carrying the words "not affordable" was inflated by half.
+
+The structural error underneath is worse. The draft established that chunking is
+free at the accelerator, then pruned **pooling** on cost grounds. Pooling is free
+by the identical mechanism: `chunk_and_pool` receives an already-computed `[L, D]`
+tensor and both the chunk spans and the pooling reduction are slices over it, and
+`_aggregate_layers` indexes out of one `output_hidden_states=True` pass.
+
+**All three axes of the grid come out of one forward pass.** The 300 hours is the
+cost of running that same forward pass twenty times, because the platform bills
+one job per `EmbeddingConfig` row. It is an accounting artefact, and the draft
+pruned real science to pay a bill physics does not send. Worse, it defunded max
+and `mean_max` citing a prior about **learned attention pooling**, which is a
+different mechanism.
+
+Of a corrected 90-hour substrate budget, roughly **65 hours is billing rather
+than computation**. And there is no parallelism to recover instead:
+`compute_embeddings` serialises jobs deliberately, one at a time, because the
+card is shared.
+
+So the prunings are restated:
+
+| pruning | status |
 |---|---|
-| screen on the stratified subsample the campaign already mandates | ~70,000 sequences, two hours per configuration, twenty configurations in **40 hours** |
-| only survivors go to full corpus | rung 2 needs exactly two materialised substrates, the winner and the incumbent: **30 hours** |
-| pooling goes first if anything must go | attention pooling lost three ways, mean was never beaten, `mean_max` doubles the write |
-| the second backbone is a transfer check, not a grid | two configurations on the subsample, four hours |
+| screen on the stratified subsample the campaign already mandates | **kept**, but see the residue caveat below |
+| only survivors go to full corpus | **kept and recounted**: rung 2's two-factor design needs four configurations at full corpus, not two, and one of them already exists at 100%. Three new passes, 45 hours without fan-out, **one pass with it** |
+| pooling goes first if anything must go | **withdrawn.** It costs nothing at the accelerator and `mean_max` costs about 200 MB of write on the subsample. Keep all three and let the measurement decide, which is what this amendment demands everywhere else |
+| the second backbone is a transfer check, not a grid | kept, two configurations on the subsample |
 
-Total: **about 75 accelerator-hours, roughly four days including write**, against
-450.
+**And the screening unit is optimistic.** Transformer cost scales with residues,
+not sequences, and the campaign's screening set is *stratified*, so it balances
+length buckets and its mean length sits well above the corpus mean of 399. The
+two-hour unit should be treated as roughly half of what it will be until it is
+measured.
+
+There is no headroom to buy the time back on this card: `batch_size` defaults to
+one because anything higher runs the 12 GB device out of memory.
 
 **The residue arms cannot be stored, and that is arithmetic.** 528,294 sequences
 by 399 mean residues is about 211 million rows and 324 gigabytes in half
 precision. They stream inside the ablation and are never written.
 
-### The one piece of compute code worth writing, and when
+### Corrected after review: fan-out emit is on the critical path
 
 All depths, chunkings and poolings derive from a single forward pass. An
 `embed_chunks_multi` in the backends plus a multi-configuration payload in
-`compute_embeddings` would take the full grid from thirty passes to one.
+`compute_embeddings` takes the grid from twenty passes to one.
 
-It is not on the critical path: the subsample screen is affordable without it. It
-becomes worth writing at exactly one moment, **when more than two configurations
-need full-corpus materialisation**. Measure the forward-pass share of a job
-before committing, because the whole argument rests on the forward pass
-dominating and that has not been measured on this hardware.
+The first draft called this off the critical path and set its trigger at "more
+than two configurations need full-corpus materialisation". **That trigger is
+already tripped by this amendment's own two-factor rung 2**, which needs four.
+It was never off the path; the draft had miscounted.
+
+So it moves ahead of the screen. With it the 40-hour screen becomes two or three
+hours plus write, and the full-corpus step becomes one pass instead of three.
+
+**Run the forward-pass-share probe first**, before writing it. The whole argument
+rests on the forward pass dominating the job, and that has not been measured on
+this hardware.
 
 ## Rung 2, restated
 
