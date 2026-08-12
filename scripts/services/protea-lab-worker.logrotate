@@ -1,0 +1,25 @@
+# Rotation for the compute node's worker logs.
+#
+# systemd's `append:` does not rotate, and these files are where the throughput
+# analysis reads its per-batch timings from, so they grow for as long as the
+# node runs. A fifteen-hour embedding run writes tens of thousands of lines.
+#
+# Install as a user rotation, invoked from the user's own crontab so it needs no
+# root:
+#   logrotate --state ~/.local/state/logrotate.status \
+#             ~/Thesis2/agent-farm/scripts/services/protea-lab-worker.logrotate
+#
+# Compression is on but the current file is never compressed, so the analysis
+# can always read the live one without decompressing.
+/home/xaxi/Thesis2/storage/logs/protea-lab-worker-*.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    # The worker holds the file open through systemd, so truncate in place
+    # rather than renaming: a rename would leave the process writing to an
+    # unlinked inode and the new file permanently empty.
+    copytruncate
+}

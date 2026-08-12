@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **73**.
+Total first-class capabilities: **74**.
 
 ## 1-agents
 
@@ -47,6 +47,12 @@ Total first-class capabilities: **73**.
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
 | [full-stack-compose](full-stack-compose.md) | working | `infra/compose/docker-compose.full-stack.yml` | `python3 -m pytest tests/test_full_stack_compose_yaml.py -q` | `infra/compose/README.md` | FARM-INFRA.4 |
+
+## 4-infrastructure
+
+| Feature | State | Source | Smoke | Runbook | Owner |
+|---|---|---|---|---|---|
+| [lab-worker-service](lab-worker-service.md) | working | `scripts/services/protea-lab-worker.sh`, `scripts/services/protea-lab-worker@.service`, `scripts/services/protea-lab-worker.logrotate` | `bash -n scripts/services/protea-lab-worker.sh` | `scripts/services/README-lab-worker.md` | compute node, unattended |
 
 ## 4-lifecycle
 
