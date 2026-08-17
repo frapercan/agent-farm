@@ -256,9 +256,28 @@ The three results:
 | `max_terms` cap | +0.0102 on prot_t5, 7 of 7 improve | +0.0024, six of seven improve, three quarters of the gain was concentration on the self hit |
 | K equals 3 | wins on score | wins on score, and the margin is not a retrieval claim because the self hit falls from 73.6 to 17.4 per cent across K |
 
-The substrate result got stronger and the cap result got weaker. A rule that only
-ever deflated findings would be a scepticism habit; one that moves both ways is
-measuring something.
+A fourth arrived after the rule was written and it is the sharpest, because it
+survives the leak being removed entirely rather than merely being read around.
+Bounding K survives leak removal in eight of eight models and gets SHARPER on no
+knowledge, which is the opposite of what the cap does.
+
+The mechanism separates them cleanly and is worth stating because it predicts
+which other axes will behave which way. **K bounds donors. `max_terms` bounds
+terms.** The self hit is one donor sitting at rank one, so lowering K keeps it
+while discarding twenty-seven noisier neighbours: its share of the vote rises but
+its absolute contribution does not move, and the gain is the noise leaving. The
+cap works on the ranked terms instead, where the self hit's own terms sit at the
+top, so tightening it retains them and discards everything else: the gain is the
+leak staying.
+
+So an axis that bounds WHO donates is measuring retrieval, and an axis that
+bounds WHAT SURVIVES a ranking is measuring how much of the answer was already
+present. That is a question to ask of every remaining axis before it is run, and
+it costs nothing to ask.
+
+The substrate result got stronger, the K result got sharper, and the cap result
+got weaker. A rule that only ever deflated findings would be a scepticism habit;
+one that moves in both directions is measuring something.
 
 **So the rule is that no ablation axis is read on a pooled mean.** Every axis
 reports on no knowledge, or reports the self-hit share of the surviving rows
