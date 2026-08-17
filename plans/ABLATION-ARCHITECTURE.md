@@ -253,7 +253,7 @@ The three results:
 | result | pooled reading | on no knowledge |
 | --- | --- | --- |
 | substrate separation | t between 5 and 10 | the same separation, carried by a quarter of the mass, so the effect within what can vary is roughly four times larger |
-| `max_terms` cap | +0.0102 on prot_t5, 7 of 7 improve | +0.0024, six of seven improve, three quarters of the gain was concentration on the self hit |
+| `max_terms` cap | +0.0102 on prot_t5, 7 of 7 improve | see the correction below: the number in this row was read at a cap of 10, which is not the optimum |
 | K equals 3 | wins on score | wins on score, and the margin is not a retrieval claim because the self hit falls from 73.6 to 17.4 per cent across K |
 
 A fourth arrived after the rule was written and it is the sharpest, because it
@@ -275,8 +275,48 @@ bounds WHAT SURVIVES a ranking is measuring how much of the answer was already
 present. That is a question to ask of every remaining axis before it is run, and
 it costs nothing to ask.
 
+### The cap number in that table was read off an unbracketed sweep, twice
+
+It has now been revised three times and the third revision is upward. The
+sequence is worth keeping because each revision came from the other machine and
+this one, alternately, and neither would have reached the third alone.
+
+First reading: improves seven of seven, monotone, large. Wrong, because tightening
+a term cap preferentially keeps the self hit, whose terms sit at the top of the
+ranking, so most of the pooled gain was concentration on the leak. That objection
+came from this side and it was correct about the mechanism: the top ten is 83 to
+96 per cent self-derived against 73.6 per cent uncapped.
+
+Second reading: real but small, +0.0024 on prot_t5 read on no knowledge. Wrong
+too, and this one is mine. Ten was the smallest cap that had been run, the sweep
+had not bracketed its optimum, and I drew a conclusion from a point inside an
+unbounded range in the same message where I warned that an edge optimum locates a
+direction rather than a value.
+
+Third reading, on no knowledge where the self hit contributes nothing, with the
+range extended until the curve turns:
+
+| model | uncapped | cap 2 | cap 4 | cap 7 | cap 10 | best |
+| --- | --- | --- | --- | --- | --- | --- |
+| prot_t5 | 0.4070 | 0.4120 | 0.4143 | 0.4119 | 0.4094 | 4 |
+| ankh_large | 0.4046 | | 0.4203 | 0.4121 | | 4 |
+| prostt5 | 0.3926 | 0.4100 | 0.4161 | 0.4042 | 0.3968 | 4 |
+| esmc_600m | 0.3839 | 0.3963 | 0.4057 | 0.3969 | 0.3913 | 4 |
+| esm2_650m | 0.3689 | 0.4000 | | | 0.3744 | 2 |
+| esm2_8m | 0.3427 | 0.3778 | 0.3767 | 0.3618 | 0.3540 | 2 |
+
+The optimum is interior, not at an edge: prot_t5 reads 0.4120 at two against
+0.4143 at four and 0.4119 at seven, so the curve turns. Gains at the optimum
+range from +0.0218 on esmc_600m to +0.0351 on esm2_8m, against a minimum
+detectable effect between 0.012 and 0.018 in those cells.
+
+So the cap is a real and large lever, and the largest leak-free effect this
+campaign has measured. Capping at two to four terms per protein says the
+transfer's top handful of predictions carry the signal and everything past them
+costs precision.
+
 The substrate result got stronger, the K result got sharper, and the cap result
-got weaker. A rule that only ever deflated findings would be a scepticism habit;
+got weaker and then much larger. A rule that only ever deflated findings would be a scepticism habit;
 one that moves in both directions is measuring something.
 
 **So the rule is that no ablation axis is read on a pooled mean.** Every axis
