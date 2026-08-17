@@ -503,32 +503,6 @@ if unknown:
     raise SystemExit(78)
 boxes = [machine if b == "self" else b for b in selected]
 
-# A sender that reposts a corrected task names the ids it replaces, and every
-# one of those becomes invisible to the scan. Expiry already removes a dead
-# message eventually and the schema keeps it on purpose, so that the record of
-# what was asked and never done survives. What was missing was any way to say a
-# message is dead BEFORE its expiry: a board once carried ten messages for three
-# real tasks, all of them live to a scanner, and the only thing marking the seven
-# dead ones was prose in a different message.
-superseded: dict[str, str] = {}
-for box in dict.fromkeys(boxes):
-    folder = os.path.join(repo, "inbox", box)
-    if not os.path.isdir(folder):
-        continue
-    for name in sorted(os.listdir(folder)):
-        if not name.endswith(".json"):
-            continue
-        try:
-            with open(os.path.join(folder, name), encoding="utf-8") as fh:
-                doc = json.load(fh)
-        except (OSError, ValueError):
-            continue
-        killed = doc.get("supersedes") or []
-        if not isinstance(killed, list):
-            killed = [killed]
-        for dead in killed:
-            superseded[str(dead)] = str(doc.get("id") or name)
-
 rows = []
 for box in dict.fromkeys(boxes):
     folder = os.path.join(repo, "inbox", box)
@@ -571,9 +545,6 @@ for box in dict.fromkeys(boxes):
         # period and anyone capable takes it afterwards. The lane holds while
         # both are up, and a machine being down costs throughput rather than
         # stalling the queue.
-        if mid in superseded:
-            print(f"skipping {mid}: superseded by {superseded[mid]}", file=sys.stderr)
-            continue
         prefer = str(msg.get("prefer") or "")
         if prefer and prefer != machine and grace:
             created = parsed(msg.get("created_at"))
