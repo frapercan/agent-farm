@@ -94,6 +94,10 @@ TASK_ID="${TASK_ID:?TASK_ID env required}"
 # reset path back inside a worktree this tick does not own.
 COORD_REPO="${COORD_REPO:-$HOME/Thesis2/farm-coord-keeper}"
 COORD_BRANCH="${COORD_BRANCH:-ledger}"
+# Which inboxes to consider, space or comma separated, from {self, any}.
+# Default is both. A conductor is given "any" so it can only take claimable
+# work; the session keeps the default and answers conversation.
+COORD_BOXES="${COORD_BOXES:-self any}"
 COORD_PULSE_BRANCH="${COORD_PULSE_BRANCH:-pulse}"
 COORD_REMOTE="${COORD_REMOTE:-origin}"
 # One name for this machine, and one place it comes from: the environment, or
@@ -453,9 +457,9 @@ claim_message() {
 # lint stay in shell. Prints priority, created_at, id, path, tab separated,
 # highest priority first and oldest first within a priority.
 list_candidates() {
-  python3 - "$COORD_REPO" "$COORD_MACHINE" "$COORD_CAPABILITIES" <<'PY'
+  python3 - "$COORD_REPO" "$COORD_MACHINE" "$COORD_CAPABILITIES" "$COORD_BOXES" <<'PY'
 import datetime, json, os, re, sys
-repo, machine, caps_raw = sys.argv[1:4]
+repo, machine, caps_raw, boxes_raw = sys.argv[1:5]
 caps = {c for c in caps_raw.replace(",", " ").split() if c}
 now = datetime.datetime.now(datetime.timezone.utc)
 # A message id becomes a path (claims/<id>.json), so it may not contain a
@@ -468,8 +472,29 @@ def parsed(value):
     except (TypeError, ValueError):
         return None
 
+# Which inboxes this tick will consider. Default is both, which is what a
+# session wants. A conductor is pointed at "any" alone so it can only ever take
+# claimable work, and a message addressed to a machine stays the business of the
+# one agent that answers for it.
+#
+# Without this the ordering is priority across BOTH boxes, so a high-priority
+# message addressed to this machine outranks every task on the shared board. It
+# did: a protocol message at 95 was claimed while four tasks at 70 sat untouched,
+# and the protocol it carried was the one saying conversation and work are
+# different channels.
+_ALLOWED = {"self", "any"}
+selected = [b for b in boxes_raw.replace(",", " ").split() if b]
+if not selected:
+    selected = ["self", "any"]
+unknown = sorted(set(selected) - _ALLOWED)
+if unknown:
+    print(f"unknown COORD_BOXES value(s) {unknown}; choose from self, any",
+          file=sys.stderr)
+    raise SystemExit(78)
+boxes = [machine if b == "self" else b for b in selected]
+
 rows = []
-for box in dict.fromkeys((machine, "any")):
+for box in dict.fromkeys(boxes):
     folder = os.path.join(repo, "inbox", box)
     if not os.path.isdir(folder):
         continue
