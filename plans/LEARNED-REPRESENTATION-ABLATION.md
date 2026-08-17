@@ -369,3 +369,61 @@ recording in this plan because the same trap is available to every stratified
 comparison it specifies: any restriction to the rows where a column is populated
 is a selection, and this project's registry has populated columns that track
 model family.
+
+### Second erratum on the storage figure, and the branch that doubles it
+
+The correction above replaced 3.30 GB with 4.06 GB by multiplying the protein
+count by the ceiling of the MEAN length over the grid. That is wrong for the same
+reason the original was, one level up: the ceiling is not linear, so the ceiling
+of an average is not the average of the ceilings.
+
+The failure is visible on its own terms. At any mean length that is a multiple of
+the grid the formula reports a correction of exactly 1.00, meaning none, which is
+false whenever a single protein's length is not itself a multiple. At a mean of
+512 it reports 1.06M cells against a naive 1.06M; at 625 it reports 1.58M against
+1.29M; at 768 it reports 1.58M against 1.58M. What it computes is where the mean
+falls inside a cell, not the rounding it was written to capture.
+
+The bounds are derivable and the point estimate is not:
+
+| bound | cells | storage, one model at 640 dimensions |
+| --- | --- | --- |
+| lower, exact if every length is a multiple of the grid | 1.29M | 3.31 GB |
+| upper, exact if none is | 1.82M | 4.66 GB |
+
+The true value is one grouped count away, a histogram of ceil(length / grid) over
+the corpus, and that number belongs in this plan rather than any estimate
+constructed from a summary statistic. Until it lands the figure is a range.
+
+**And the store does not cross normalize_residues.** Read on the trunk at
+PROTEA origin/develop, `_compute_embeddings_backends.py`: per-residue
+normalisation is applied to the residue tensor at line 220, before any chunking,
+while per-window normalisation is applied after pooling inside the span loop.
+Two different operations at two different points.
+
+Within one value of `normalize_residues` the reconstruction is exact, since a
+cell mean of raw residues reconstructs a window mean of raw residues by count
+weighting, and a cell mean of normalised residues does the same for normalised
+ones. Across values it cannot be made exact: the per-residue norms are gone once
+the cell is written, so a store built one way cannot serve a recipe that wants
+the other.
+
+`normalize_residues` is an axis in this campaign, so that is two stores rather
+than one, roughly 6.6 to 9.3 GB per model before the layer ladder multiplies it
+again. The alternative is to fix the axis at the live default and keep one store,
+which this plan does not recommend: it is a per-residue length normalisation and
+its interaction with the per-window one is the geometry question the campaign
+exists to ask. A factor of two on 4 GB is not a reason to close it.
+
+### A note on where this document's errors have been
+
+Five corrections have now landed on this plan and its discussion, and four of
+them share one shape: a nonlinear function applied to an aggregate and then
+reported as though it had been applied to the population. The capacity ordering
+took a rank over a sample selected by a NULL column. The first storage figure
+divided a total. The second took a ceiling of a mean. The exactness claim dropped
+the per-cell counts that make the weighting possible.
+
+Any figure in this plan that applies a minimum, a maximum, a ceiling, a threshold
+or a rank to an aggregate should be checked before it is used. That is not a
+caveat about care; it is where the errors have actually been.
