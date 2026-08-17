@@ -162,3 +162,157 @@ It will not touch five of the eight canonical models, so nothing here speaks to 
 It will not measure the interaction between K and the encoder, deliberately, because the mining radius is frozen at 30 to buy independence between those two axes, and that independence is worth more than the interaction.
 
 And a clean negative here will not be a verdict on sparse representations in general. It will be a verdict on a top-k selection over an affine projection of mean-pooled vectors, at the sparsity levels listed above, trained on a Lin target, scored by nearest-neighbour transfer at K equal to 3. That is the claim the thesis makes, and it is the claim this plan will settle.
+## 8. Addendum: the order axis, added after the author read the plan
+
+The plan above ablates a learned projection over one mean-pooled vector per
+protein, and section 7 admits it cannot say anything about pooling, chunking or
+residues because that vector is the deepest observable the lab has. The author's
+response was that the experiment he wants is precisely the one section 7
+excludes: a sparse code over residues, a sparse code over sequences, and
+learning over their composition. He is right that this is the better experiment,
+and the storage construction agreed with the other machine is what makes it
+affordable. This section is the axis, written after the fact and marked as such.
+
+### Why the order is an axis at all
+
+Taking the k largest components is not linear, so aggregation and sparsification
+do not commute:
+
+    top-k( mean_i x_i )  is not  mean_i( top-k(x_i) )
+
+Sequence-level sparsity is the first form. Aggregate, then sparsify, and the
+resulting support is a single compromise over the whole protein. Residue-level
+sparsity is the second. Every residue selects its own atoms, and the aggregation
+runs over supports that may not overlap at all.
+
+These are different objects and they assert different things. The first says
+this protein is of this type. The second says this protein has a region of this
+type and another of that one, which is much closer to how functional annotation
+actually works, since function is carried by domains rather than by proteins.
+Under the first form a protein with two unrelated domains gets one code that
+describes neither.
+
+### Three granularities, two of which are free
+
+The 256-residue cell store gives a middle point that neither the author nor the
+other machine named, and it costs nothing extra because it comes out of the same
+pass and the same artifact.
+
+| granularity | operation order | where it comes from |
+| --- | --- | --- |
+| sequence | aggregate everything, then sparsify | the cells, exactly |
+| cell | sparsify each cell, then aggregate | the cells, exactly |
+| residue | sparsify each residue, then aggregate | residues, probe set only |
+
+So the order axis has two full-corpus points at no additional forward cost, and
+only the residue extreme needs data that does not fit at corpus scale. That
+converts the requirement from "retain residues for everything" into "retain
+cells for everything and residues for a stratified probe set", which is the
+difference between 423 GB for one model and 3.30 GB.
+
+### The factorial, and why it is not two experiments
+
+The author asked for composition and interaction together. They compose as a two
+by two rather than as a sum, because a gain from running both at once cannot be
+attributed to either.
+
+Composition means the sequence code is a learned function of the residue or cell
+codes rather than their mean. That is the aggregator itself becoming a parameter,
+and it is where the author's own claim about aggregator order lives.
+
+Interaction means the sequence code modulates the local ones. Not as an outer
+product: at a 2048 dictionary with 128 active atoms that is 16,384 non-zeros per
+residue and 10.2 million per average protein, which is dead before it starts. As
+an elementwise gate, r_i (elementwise) s, it stays in the same dimension,
+preserves sparsity, and says something defensible, that the global type of the
+protein decides which local features count.
+
+|  | mean aggregator | learned aggregator |
+| --- | --- | --- |
+| **no gate** | anchor | composition alone |
+| **gate** | interaction alone | both |
+
+The anchor is what gives the other three meaning, and it is the current shipped
+arm relocated to the new granularity. The cell of both is interesting only if
+its gain exceeds the sum of the two singles. If it is additive they are two
+independent improvements and are reported separately. If it is subadditive they
+are competing for the same signal.
+
+Order of execution is composition first. Testing a gate on an aggregator that
+has not been shown to work reports nothing about the gate.
+
+### The gate forces the dictionary and the sparsity level to move together
+
+The support of an elementwise gate is the intersection of two supports, whose
+expected size is k squared over D. That is not a detail, it is a constraint on
+which cells of the sparsity surface the gated arm can even occupy.
+
+| D | k | expected support after gating |
+| --- | --- | --- |
+| 2048 | 128 | 8 |
+| 2048 | 256 | 32 |
+| 2048 | 362 | 64 |
+| 1024 | 128 | 16 |
+| 512 | 128 | 32 |
+| 256 | 128 | 64 |
+
+At the shipped configuration the gated code would carry eight atoms, which is
+close to empty and would report as a flat result for a reason that has nothing
+to do with the hypothesis. So the gated arm is not another point on the existing
+surface. It requires D and k chosen together, decided before the run rather than
+discovered when everything comes out flat.
+
+This is the same collision arithmetic section 3 uses for the sparsity surface,
+applied in the opposite direction, and it is a good sign that the two agree.
+
+### The full corpus, which the author has decided
+
+Training draws on the whole annotated corpus rather than the 60,000 references
+of the previous run. The measured cost of that decision is small enough that it
+should have been the default:
+
+| model | dimension | pooled, float32 | cells at 256, mean and max, fp16 |
+| --- | --- | --- | --- |
+| esm2_150m | 640 | 1.35 GB | 3.30 GB |
+| prot_t5 | 1024 | 2.16 GB | 5.28 GB |
+| esm2_650m | 1280 | 2.70 GB | not costed |
+| esm2_3b | 2560 | 5.41 GB | not costed |
+
+The fit cost is governed by the pair budget rather than by the pool, so a larger
+pool changes the sampling distribution and the information-content estimate
+rather than the wall clock. What it does change is that the information content
+can finally be computed once over the full annotated set and frozen as an
+artifact, instead of being re-estimated from whatever pool a run happened to
+draw, which is one of the reproducibility defects section 1 records.
+
+Two things must be fixed before a full-corpus draw works at all. The modulo
+divisor is derived from ref_n and floors to zero at large values, where the
+max() pins it at 2 and caps the candidate pool near half the corpus however many
+references are asked for. And the draw needs its ORDER BY, without which the
+seed shuffles a differently ordered list every run. Both now warn or are fixed in
+protea-reranker-lab pull request 118.
+
+### Cost of this section
+
+Four arms at two full-corpus granularities at five seeds is 40 fits, plus the
+same four arms at residue granularity on the probe set for 20 more. The fits
+themselves are minutes each at the reference point, so the axis is bounded by
+scoring rather than by training, which is the same shape as the rest of the plan.
+
+The probe set is the only new storage: a length-stratified sample sized to
+answer the residue question, not a corpus.
+
+### What this addendum does not answer
+
+Whether a learned aggregator generalises across substrates, since it runs on the
+substrate ladder's bridge rung only. Whether the gate is the right form of
+interaction, as against a low-rank factorised one, which is a different
+parameterisation with its own controls. And nothing about attention over
+residues, which does not decompose over disjoint cells and therefore needs the
+probe set rather than the corpus, exactly as the storage construction predicts.
+
+Both new arms add capacity against a target derived from labels, so both inherit
+section 3's warning without modification: a larger encoder that scores better may
+be memorising the Lin target rather than learning structure. The marginal null
+and the shuffled target in the objective battery are not optional for these arms,
+they are the only thing separating the two readings.
