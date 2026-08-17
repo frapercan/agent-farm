@@ -219,3 +219,79 @@ def test_an_unparsable_grace_falls_back_rather_than_crashing(tmp_path: Path):
     _, code = _run(repo, "any", grace="soon", machine="laptop")
 
     assert code == 0
+
+
+# --------------------------------------------------------------------------- supersedes
+
+def _two_generations(tmp_path: Path, supersedes) -> Path:
+    (tmp_path / "inbox" / "any").mkdir(parents=True)
+    (tmp_path / "inbox" / "desktop").mkdir(parents=True)
+    (tmp_path / "inbox" / "any" / "old.json").write_text(
+        json.dumps(_message("FIRST_TRY", "any", 70))
+    )
+    fixed = _message("CORRECTED", "any", 70)
+    if supersedes is not None:
+        fixed["supersedes"] = supersedes
+    (tmp_path / "inbox" / "any" / "new.json").write_text(json.dumps(fixed))
+    return tmp_path
+
+
+def test_a_repost_hides_the_generation_it_replaces(tmp_path: Path):
+    """The regression, and it comes from a real board.
+
+    Ten messages once sat on this board for three real tasks, every one of them
+    live to a scanner, and the only thing marking the seven dead was prose in a
+    different message.
+    """
+    repo = _two_generations(tmp_path, ["FIRST_TRY"])
+
+    ids, code = _run(repo, "any")
+
+    assert code == 0
+    assert ids == ["CORRECTED"]
+
+
+def test_without_the_field_both_generations_stay_visible(tmp_path: Path):
+    """So the behaviour is opt-in and nothing already on a board changes."""
+    repo = _two_generations(tmp_path, None)
+
+    ids, _ = _run(repo, "any")
+
+    assert set(ids) == {"FIRST_TRY", "CORRECTED"}
+
+
+def test_a_bare_string_is_accepted_as_well_as_a_list(tmp_path: Path):
+    """A sender replacing one message should not have to remember to wrap it."""
+    repo = _two_generations(tmp_path, "FIRST_TRY")
+
+    ids, _ = _run(repo, "any")
+
+    assert ids == ["CORRECTED"]
+
+
+def test_superseding_reaches_across_boxes(tmp_path: Path):
+    """A task moved from a machine inbox to the board must not leave a twin behind."""
+    (tmp_path / "inbox" / "any").mkdir(parents=True)
+    (tmp_path / "inbox" / "desktop").mkdir(parents=True)
+    (tmp_path / "inbox" / "desktop" / "old.json").write_text(
+        json.dumps(_message("ADDRESSED", "desktop", 70))
+    )
+    fixed = _message("ON_THE_BOARD", "any", 70)
+    fixed["supersedes"] = ["ADDRESSED"]
+    (tmp_path / "inbox" / "any" / "new.json").write_text(json.dumps(fixed))
+
+    ids, _ = _run(repo=tmp_path, boxes="self any")
+
+    assert "ADDRESSED" not in ids
+    assert "ON_THE_BOARD" in ids
+
+
+def test_an_unreadable_neighbour_does_not_stop_the_scan(tmp_path: Path):
+    """One corrupt file must not make the whole board invisible."""
+    repo = _two_generations(tmp_path, ["FIRST_TRY"])
+    (repo / "inbox" / "any" / "broken.json").write_text("{ not json")
+
+    ids, code = _run(repo, "any")
+
+    assert code == 0
+    assert ids == ["CORRECTED"]
