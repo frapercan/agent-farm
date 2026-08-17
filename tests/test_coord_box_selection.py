@@ -43,13 +43,15 @@ def _selection_block() -> str:
     raise AssertionError("no candidate-listing block found in coord-tick.sh")
 
 
-def _message(mid: str, to: str, priority: int, minutes_ahead: int = 60) -> dict:
+def _message(mid: str, to: str, priority: int, minutes_ahead: int = 60,
+             prefer: str | None = None, age_min: int = 0) -> dict:
     now = datetime.now(UTC)
-    return {
+    created = now - timedelta(minutes=age_min)
+    doc = {
         "schema": "farm.coord/1",
         "id": mid,
         "kind": "task",
-        "created_at": now.isoformat().replace("+00:00", "Z"),
+        "created_at": created.isoformat().replace("+00:00", "Z"),
         "from": "laptop",
         "to": to,
         "requires": [],
@@ -58,6 +60,9 @@ def _message(mid: str, to: str, priority: int, minutes_ahead: int = 60) -> dict:
         "subject": f"{to} at {priority}",
         "body": "",
     }
+    if prefer:
+        doc["prefer"] = prefer
+    return doc
 
 
 @pytest.fixture
@@ -74,9 +79,10 @@ def repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def _run(repo: Path, boxes: str) -> tuple[list[str], int]:
+def _run(repo: Path, boxes: str, grace: str = "900",
+         machine: str = "desktop") -> tuple[list[str], int]:
     proc = subprocess.run(
-        [sys.executable, "-c", _selection_block(), str(repo), "desktop", "", boxes],
+        [sys.executable, "-c", _selection_block(), str(repo), machine, "", boxes, grace],
         capture_output=True, text=True, timeout=60,
     )
     ids = [line.split("\t")[2] for line in proc.stdout.splitlines() if line.strip()]
@@ -153,3 +159,63 @@ def test_an_expired_board_task_is_still_skipped(repo: Path):
 
     assert "STALE" not in ids
     assert ids == ["BOARDWORK"]
+
+
+# --------------------------------------------------------------------------- preference
+
+def _board(tmp_path: Path, **kw) -> Path:
+    (tmp_path / "inbox" / "any").mkdir(parents=True)
+    (tmp_path / "inbox" / "desktop").mkdir(parents=True)
+    (tmp_path / "inbox" / "any" / "p.json").write_text(
+        json.dumps(_message("PREFERRED", "any", 70, **kw))
+    )
+    return tmp_path
+
+
+def test_a_preference_defers_the_other_machine_while_it_is_fresh(tmp_path: Path):
+    """The lane holds while both machines are up."""
+    repo = _board(tmp_path, prefer="desktop")
+    ids, code = _run(repo, "any", machine="laptop")
+
+    assert code == 0
+    assert ids == []
+
+
+def test_the_preferred_machine_is_never_deferred(tmp_path: Path):
+    repo = _board(tmp_path, prefer="desktop")
+    ids, _ = _run(repo, "any", machine="desktop")
+
+    assert ids == ["PREFERRED"]
+
+
+def test_the_preference_expires_so_a_machine_being_down_costs_throughput(tmp_path: Path):
+    """The whole reason this is a head start and not a filter.
+
+    A capability list that lied about ability would leave the board unable to
+    route anything when the preferred machine is off, and nothing would say why.
+    """
+    repo = _board(tmp_path, prefer="desktop", age_min=20)
+    ids, _ = _run(repo, "any", machine="laptop")
+
+    assert ids == ["PREFERRED"]
+
+
+def test_a_zero_grace_disables_deferral_entirely(tmp_path: Path):
+    repo = _board(tmp_path, prefer="desktop")
+    ids, _ = _run(repo, "any", grace="0", machine="laptop")
+
+    assert ids == ["PREFERRED"]
+
+
+def test_a_message_without_a_preference_is_never_deferred(tmp_path: Path):
+    repo = _board(tmp_path)
+    ids, _ = _run(repo, "any", machine="laptop")
+
+    assert ids == ["PREFERRED"]
+
+
+def test_an_unparsable_grace_falls_back_rather_than_crashing(tmp_path: Path):
+    repo = _board(tmp_path, prefer="desktop")
+    _, code = _run(repo, "any", grace="soon", machine="laptop")
+
+    assert code == 0

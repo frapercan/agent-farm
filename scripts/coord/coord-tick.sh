@@ -98,6 +98,11 @@ COORD_BRANCH="${COORD_BRANCH:-ledger}"
 # Default is both. A conductor is given "any" so it can only take claimable
 # work; the session keeps the default and answers conversation.
 COORD_BOXES="${COORD_BOXES:-self any}"
+# How long the machine named in a message's `prefer` field keeps first refusal
+# on it. After this the message is claimable by anyone whose capabilities match,
+# so a preference is a head start rather than a filter and a machine being down
+# costs throughput instead of stalling the board. Zero disables deferral.
+COORD_PREFER_GRACE_SEC="${COORD_PREFER_GRACE_SEC:-900}"
 COORD_PULSE_BRANCH="${COORD_PULSE_BRANCH:-pulse}"
 COORD_REMOTE="${COORD_REMOTE:-origin}"
 # One name for this machine, and one place it comes from: the environment, or
@@ -457,9 +462,14 @@ claim_message() {
 # lint stay in shell. Prints priority, created_at, id, path, tab separated,
 # highest priority first and oldest first within a priority.
 list_candidates() {
-  python3 - "$COORD_REPO" "$COORD_MACHINE" "$COORD_CAPABILITIES" "$COORD_BOXES" <<'PY'
+  python3 - "$COORD_REPO" "$COORD_MACHINE" "$COORD_CAPABILITIES" "$COORD_BOXES" \
+           "$COORD_PREFER_GRACE_SEC" <<'PY'
 import datetime, json, os, re, sys
-repo, machine, caps_raw, boxes_raw = sys.argv[1:5]
+repo, machine, caps_raw, boxes_raw, grace_raw = sys.argv[1:6]
+try:
+    grace = max(0, int(grace_raw))
+except (TypeError, ValueError):
+    grace = 900
 caps = {c for c in caps_raw.replace(",", " ").split() if c}
 now = datetime.datetime.now(datetime.timezone.utc)
 # A message id becomes a path (claims/<id>.json), so it may not contain a
@@ -527,6 +537,21 @@ for box in dict.fromkeys(boxes):
         if not requires <= caps:
             print(f"not for us {mid}: requires {sorted(requires - caps)}", file=sys.stderr)
             continue
+        # A preference is policy, not ability. Capabilities answer whether a
+        # machine CAN do the work and must stay honest, because a machine that
+        # stops advertising a card it owns creates a silent gap the next time
+        # the other one is down: the board simply routes nothing and nothing
+        # says why. So the preferred machine gets first refusal for a grace
+        # period and anyone capable takes it afterwards. The lane holds while
+        # both are up, and a machine being down costs throughput rather than
+        # stalling the queue.
+        prefer = str(msg.get("prefer") or "")
+        if prefer and prefer != machine and grace:
+            created = parsed(msg.get("created_at"))
+            if created is not None and (now - created).total_seconds() < grace:
+                print(f"deferring {mid} to {prefer} for "
+                      f"{grace - int((now - created).total_seconds())}s", file=sys.stderr)
+                continue
         try:
             priority = int(msg.get("priority", 0))
         except (TypeError, ValueError):
