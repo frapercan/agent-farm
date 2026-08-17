@@ -316,3 +316,56 @@ section 3's warning without modification: a larger encoder that scores better ma
 be memorising the Lin target rather than learning structure. The marginal null
 and the shuffled target in the objective battery are not optional for these arms,
 they are the only thing separating the two readings.
+
+### Errata on section 8, found by the other machine within the hour
+
+Three corrections, recorded rather than edited away, in keeping with the rest of
+this document.
+
+**The cell figure was 3.30 GB and the honest one is 4.06 GB.** The tell is that
+423 divided by 3.30 is exactly 128, which is the grid over 2, so the figure was
+total residues divided by the grid times two for mean and max. That assumes every
+protein's residues pack into whole cells. They do not: every protein occupies at
+least one cell and its last cell is partial, so the count is the sum of
+ceil(L / 256) rather than the total over 256. At a mean length of 625 that is
+1.58M cells rather than 1.29M, 1.23 times more.
+
+**The reconstruction is exact only with the per-cell residue counts stored**, and
+the paragraph above omitted them. The mean over a window is the count-weighted
+mean of its cells; without the counts only an unweighted mean is available, and
+that is wrong precisely because the last cell is partial. The counts cost 0.01
+GB, so this was never a size decision, and calling the sequence row exact without
+them was false as written. The other machine's original construction included
+them; this document's summary of it dropped them.
+
+**The anchor of the two by two is not the shipped arm relocated.** The shipped
+configuration normalises inside the span loop, per window, before storage. A cell
+reconstruction stores un-normalised and normalises once at the end. Those are
+different operations, so the anchor computed from cells is a fourth object rather
+than a known one, and a factorial whose anchor connects to nothing already
+measured can only report its own internals.
+
+The fix is to carry two reconstructions: the un-normalised one, which is the
+anchor for the factorial's internal contrasts, and a per-window-normalised one,
+which is the bridge to the number already on the board. The difference between
+them is reported rather than assumed to be zero, and it is itself a measurement
+of what per-window normalisation does, which the campaign has wanted since the
+chunk axis was identified as a length-equalising reweighting.
+
+### And a withdrawal from the propagation thread that touches this plan
+
+An ordering was reported here in an earlier revision of the campaign discussion,
+in which the drop on the propagation axis fell monotonically with substrate
+capacity across five models at p equal to 0.0083. It does not survive.
+
+The five were the models whose param_count the registry carries, and that column
+is not missing at random: it is NULL for the T5 family, which is exactly the
+family that falsifies the trend. prot_t5, at roughly 1.2B as the encoder-only
+half of a 3B checkpoint, sits beside ankh_large in capacity and loses five times
+as much; prostt5 at 3B loses more than every model above 500M.
+
+So the sample was selected on a variable correlated with the outcome. It is worth
+recording in this plan because the same trap is available to every stratified
+comparison it specifies: any restriction to the rows where a column is populated
+is a selection, and this project's registry has populated columns that track
+model family.
