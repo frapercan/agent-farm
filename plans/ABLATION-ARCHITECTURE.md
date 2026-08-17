@@ -328,3 +328,61 @@ already had.
 This is the same finding as the campaign's own nine-cell regime map arriving from
 a different direction, and it is why that map is a map of regimes rather than a
 stratification for tidiness.
+
+## The substrate ranking is not a property of the substrates alone
+
+This is the most consequential thing the day produced and it invalidates the
+form, though not the existence, of the campaign's substrate claim.
+
+Every substrate comparison this project has quoted was measured **uncapped**,
+which the term-cap sweep now identifies as the worst setting of that axis. At the
+optimum the ranking is different:
+
+| model | uncapped | at a common cap of 4 | gain |
+| --- | --- | --- | --- |
+| prot_t5 | 0.4070 | 0.4143 | +0.0073 |
+| ankh_large | 0.4046 | 0.4203 | +0.0157 |
+| prostt5 | 0.3926 | 0.4161 | +0.0235 |
+| esmc_600m | 0.3839 | 0.4057 | +0.0218 |
+| esm2_8m | 0.3427 | 0.3767 | +0.0340 |
+
+Uncapped the order is prot_t5, ankh_large, prostt5. At a cap of four it is
+ankh_large, prostt5, prot_t5. The leader changes and the previous leader falls
+two places.
+
+The mechanism is visible in the last column and it is an interaction rather than
+a nuisance. The gain shrinks 4.66-fold as the substrate improves, from +0.0340 on
+the smallest model to +0.0073 on the largest. A cap removes low-confidence
+predictions, a weaker substrate produces more of them, so the cap returns more to
+a weaker model. That compresses the ranking, and a compressed ranking reorders.
+
+### What this does and does not invalidate
+
+It does not say substrate does not matter. The spread at a cap of four is 0.0436
+across those five models, against 0.0643 uncapped, so the axis survives and
+narrows.
+
+It does say that **a model ranking quoted without its cap is not a statement
+about the models.** Every ranking in this campaign, including the paired
+five-fold analysis at K equal to 3 that separated models at t between 5 and 10,
+was measured at the setting the sweep now calls worst, and none of them carries
+that qualifier.
+
+### The rule that follows, and how it differs from the regime one
+
+The ranking is stable across information-accretion regimes and unstable across
+the term cap. Those are different facts about different axes and neither
+generalises to the other:
+
+- IA regime: the ordering is free of it, the magnitudes are not. So an absolute
+  number states its regime and a ranking claim need not.
+- Term cap: the ordering is NOT free of it. So every ranking states its cap, and
+  a ranking measured at one cap says nothing about another.
+
+The reason the two differ is worth keeping. The IA regime reweights terms
+uniformly across models, so it moves every score together. The cap interacts with
+substrate quality, so it moves scores by different amounts and can cross them.
+
+**Before any axis is quoted as a ranking, ask whether it interacts with substrate
+quality.** If it does, the ranking is a joint property and the axis has to be at
+its optimum, or held at a declared constant, before models are compared at all.
