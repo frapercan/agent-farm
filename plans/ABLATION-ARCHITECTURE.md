@@ -231,3 +231,41 @@ It will not support a claim about any two axes jointly. Length and reach togethe
 It will not touch the two largest measured unexploited levers on record, the text-aligned model as a primary retrieval space and the triple combination at retrieval. Both are outside a sequence-only language-model ablation and neither can ride the window bank, since one of the backends honours only the final normalisation. Naming the cost of that exclusion is more useful than pretending the grid covers it.
 
 And it will not, on its own, make the low-knowledge panels large enough. What it will do is produce the number that fixes them. For every panel and every level of every axis the report prints the count, the detectable effect, and the number of additional targets required to bring that level to 129 proteins. No-knowledge CCO holds 161 and needs no more overall, but its smallest reach level will hold a few dozen and will need one to two hundred more. That list, published before the grid runs and updated after, is the input the campaign's directed case mining has been missing: the axis catalogue is not only a partition of the proteins we happen to have, it is a specification for the proteins we still need.
+## A reporting rule the day produced, stated once so it is not rediscovered
+
+Three separate results changed when read on the no-knowledge cells rather than
+pooled, and they changed in both directions, which is what makes this a rule
+rather than a caveat.
+
+**The self hit dominates the pooled number.** At K equals 3, 73.6 per cent of
+predicted rows come from the protein's own earlier annotations, retrieved at
+distance zero. That contribution is identical for every model, because every
+encoder finds the same identical sequence.
+
+**It concentrates toward the top of the ranking.** By rank depth on prot_t5:
+96.1 per cent of rows in the top two, 93.9 in ranks three and four, 89.6 in five
+to seven, 83.1 in eight to ten, 68.3 in eleven to thirty, and 59.4 beyond thirty.
+So any operation that keeps the highest-scoring predictions keeps a larger share
+of the self hit than the population it was drawn from.
+
+The three results:
+
+| result | pooled reading | on no knowledge |
+| --- | --- | --- |
+| substrate separation | t between 5 and 10 | the same separation, carried by a quarter of the mass, so the effect within what can vary is roughly four times larger |
+| `max_terms` cap | +0.0102 on prot_t5, 7 of 7 improve | +0.0024, six of seven improve, three quarters of the gain was concentration on the self hit |
+| K equals 3 | wins on score | wins on score, and the margin is not a retrieval claim because the self hit falls from 73.6 to 17.4 per cent across K |
+
+The substrate result got stronger and the cap result got weaker. A rule that only
+ever deflated findings would be a scepticism habit; one that moves both ways is
+measuring something.
+
+**So the rule is that no ablation axis is read on a pooled mean.** Every axis
+reports on no knowledge, or reports the self-hit share of the surviving rows
+beside its number, and preferably both. An axis that improves the pooled score
+and not the no-knowledge score has improved the retrieval of answers the method
+already had.
+
+This is the same finding as the campaign's own nine-cell regime map arriving from
+a different direction, and it is why that map is a map of regimes rather than a
+stratification for tidiness.
