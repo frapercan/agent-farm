@@ -4,11 +4,51 @@
 
 Before writing a line of this plan I read the project's own artefact at `agent-farm/plans/farm-platform/artefacts/knn_226_227_fmicrow.csv`, which carries a measured per-cell population for every one of the nine category-by-aspect cells. The counts are 354, 161 and 243 for no-knowledge BPO, CCO and MFO; 307, 181 and 180 for limited-knowledge; and 2,382, 809 and 1,057 for prior-knowledge. They sum to 5,674 protein-aspect units, of which 4,248 (74.9 per cent) are prior-knowledge. Every design that reached me assumed between 11,800 and 13,054 units, derived from an assumed 1.9 to 2.1 aspects per protein. The real figure is 0.913 aspects per protein, and the low-knowledge cells that carry the entire thesis claim hold between 161 and 354 proteins each.
 
-From the same artefact I extracted the between-model spread at K equals 3, restricted to the five models whose K equals 3 row was scored on the full cohort. In prior-knowledge BPO the eight-model range is 0.0046 Fmax points; in prior-knowledge MFO it is 0.0046; in prior-knowledge CCO it is 0.0082. In limited-knowledge CCO it is 0.0494 and in limited-knowledge BPO 0.0440. The representation effect is roughly ten times larger in the cells with two hundred proteins than in the cells with two thousand. That inversion, measured rather than assumed, decides the reporting geometry, the retention decision and the grid, and it is the reason this plan does not cross a third axis with anything.
+From the same artefact I extracted the between-model spread at K equals 3, restricted to the five models whose K equals 3 row was scored on the full cohort. In prior-knowledge BPO the five-model range is 0.0046 Fmax points; in prior-knowledge MFO it is 0.0046; in prior-knowledge CCO it is 0.0082. In limited-knowledge CCO it is 0.0494 and in limited-knowledge BPO 0.0440. The representation effect is roughly ten times larger in the cells with two hundred proteins than in the cells with two thousand. That inversion, measured rather than assumed, decides the reporting geometry, the retention decision and the grid, and it is the reason this plan does not cross a third axis with anything.
 
 While reading that file I also found that the K comparison the brief hands me as settled is not settled. For ankh_base the K equals 5 rows carry populations of 124, 69, 90, 145, 60, 99, 942, 308 and 401, summing to 2,238, against 5,674 for the K equals 3 rows. For ankh_large the K equals 3 rows sum to 1,472 and one cell is marked `no_positives`. For prostt5 and esmc_600m the K equals 3 rows are on the 2,238 subcohort while their K equals 10 rows are on the full one. Four models (esm2_150m, esm2_3b, esm2_650m, prot_t5) have all three K rows on the full cohort and K equals 3 wins in all four. One more (ankh_base) has a clean K equals 3 against K equals 10 and K equals 3 wins. The remaining three have no matched K comparison at all. So the honest statement is that K equals 3 wins in five of eight models on a matched cohort and is untested in three, and the "seven of eight" figure compares arms scored on different populations under the same column heading. That is precisely the failure this plan exists to make impossible, and it is why K becomes a free axis derived from stored neighbour lists rather than a constant chosen once.
 
 ---
+
+## Erratum, recorded rather than corrected away
+
+Two defects were found in the preamble above after it was written, both by the
+other machine, and the section 1 power table is provisional until the second is
+resolved. They are recorded here because a plan that quietly repairs itself
+teaches nothing about how it failed.
+
+The first is a mislabel and it is now fixed in place. The spread figures were
+computed over the five models whose K equals 3 row was scored on the full cohort,
+which is the right computation, and they were then described as the eight-model
+range, which they are not. Over all eight models in the same file the ranges are
+0.0284 in prior-knowledge BPO, 0.1011 in prior-knowledge MFO and 0.1480 in
+prior-knowledge CCO. Read literally, the original label inverted the paragraph's
+own conclusion, since 0.0284 sits six times above the stated detectable effect.
+This is the same failure the plan warns about two pages later: a correct number
+whose frame is mislabelled in the sentence carrying it.
+
+The second is open and it governs the table. A matched re-run on the live store,
+with the ground-truth restriction disabled, returned 27 of 29 cells bit-identical
+to four decimals and coverage of 6,216 of 6,216 in every cell. So no ground-truth
+protein is being dropped, the evaluated population is the full set at every K,
+and `n_proteins` is not the scoring denominator there. If it is a diagnostic
+counter rather than a population, then the five-model restriction was unnecessary
+and the eight-model spreads apply, and the minimum detectable effects and the
+floor of 129 are all computed from a quantity that is not the count it is named
+after. Those two consequences push the conclusion in opposite directions, so the
+table cannot be patched by adjusting either one alone.
+
+What settles it is nine numbers: the distinct proteins holding ground truth in
+each category-by-aspect panel at the cut, independent of model and of K, compared
+against the `n_proteins` the rows carry. Until those land, section 1 is a method
+for sizing the grid and not a sizing of it, and the forecast in it is not yet
+pre-registered.
+
+Note also that the artefact read here is a July export of the embedding registry
+that the clean run replaced. It carries esm2_150m and esm2_3b, which the live
+registry does not, and lacks esm2_8m and protst, which it does. It is therefore a
+surviving record of configurations that no longer exist, which makes it evidence
+rather than merely stale, and it should not be regenerated over.
 
 ## 1. The axis catalogue
 
@@ -30,7 +70,7 @@ Two things about that floor must be said rather than buried. First, sigma_d is a
 
 Second, the useful statistic is not the floor but its inverse, the minimum detectable effect per cell, which is 2.8016 times sigma_d divided by the square root of n, that is 0.22693 over the square root of n at the measured sigma_d. The nine panels give the following, and this table is the spine of the whole plan.
 
-| panel | n | minimum detectable effect | measured eight-model spread at K equals 3 |
+| panel | n | minimum detectable effect | measured five-model spread at K equals 3 |
 |---|---|---|---|
 | prior, BPO | 2,382 | 0.0047 | 0.0046 |
 | prior, MFO | 1,057 | 0.0070 | 0.0046 |
@@ -182,7 +222,7 @@ It will not tell you whether a longer context helps. The ESM family stays at its
 
 It will not tell you anything about a chunk geometry that is not a multiple of 128, or about per-residue normalisation combined with multi-rung layer aggregation, or about maximum pooling at any rung except the one where maxima are stored, or about residue-level late interaction at corpus scale, or about any layer outside the four the pilot chooses. Each of those costs a fresh corpus pass for the model in question.
 
-It will not resolve any representation difference inside the prior-knowledge panels. The measured eight-model spread there is 0.0046, 0.0046 and 0.0082 Fmax points against detectable effects of 0.0047, 0.0070 and 0.0080, so the grid will confirm that nothing separates and will not be able to claim that something does. Three quarters of the evaluation units live in those panels, which means three quarters of the benchmark is, for the purposes of this thesis claim, inert.
+It will not resolve any representation difference inside the prior-knowledge panels. The measured five-model spread there is 0.0046, 0.0046 and 0.0082 Fmax points against detectable effects of 0.0047, 0.0070 and 0.0080, so the grid will confirm that nothing separates and will not be able to claim that something does. This sentence is the one most exposed to the erratum recorded in the preamble: over all eight models in the same file the prior-knowledge BPO spread is 0.0284, which would resolve, and which of the two figures applies depends on what `n_proteins` counts. Three quarters of the evaluation units live in those panels, which means three quarters of the benchmark is, for the purposes of this thesis claim, inert.
 
 It will not resolve any post-forward knob in the low-knowledge panels. The largest previously measured post-forward effect, chunked against mean under the learned encoder, was at or below 0.008 in absolute Fmax, against detectable effects of 0.0121 to 0.0179 in those six panels. The 556-configuration screen therefore selects a champion, it does not certify a difference, and the thesis will say that in those words. If that survives the run it is itself a result, and a strong one: it locates the representation effect in the backbone rather than in the aggregation.
 
