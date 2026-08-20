@@ -26,7 +26,11 @@
 #   gate       floor: what must be true for the result to mean anything
 #              rank: what the winner is chosen by
 #   winner     per_cell or global
-#   status     declared | running | closed | reopened
+#   status     declared | running | closed | reopened | parked
+#              parked means deliberately not now, with the reason and the
+#              cost recorded, so it reads as a decision rather than as an
+#              oversight. The difference between those two is what this
+#              file exists for.
 
 version: 2
 source: plans/CAMPAIGN.md section 5
@@ -235,4 +239,28 @@ rungs:
       The alignment retriever is a registered operation, per the campaign
       invariant that no artifact exists without one.
     winner: per_cell
-    status: declared
+    status: parked
+    parked:
+      on: 2026-08-20
+      by: the author
+      reason: >
+        Deliberately not now. It is the experiment that tests the title and
+        it deserves its own chapter rather than a corner of a rung that is
+        already running, and it cannot be read until the scoring axis names
+        a winner to hold fixed.
+      cost_when_resumed:
+        retrieval: >
+          22,498 queries against 528,294 bank sequences. Minutes on 16 cores
+          with DIAMOND or MMseqs2. Neither is installed; both are a new
+          external dependency and would have to be a registered operation.
+        not_reusable: >
+          The 2,059,944 pairs in the alignment cache are exactly the pairs
+          the embedding retriever proposed, so they are a sample biased by
+          the hypothesis under test and cannot serve as the search.
+        infeasible_alternative: >
+          Pairwise parasail, which is what the project has, would be 11.9
+          billion alignments.
+      outcomes:
+        - the embedding retrieves better, and the contribution is retrieval rather than discrimination
+        - they tie, and the contribution is cost, since vector search is orders of magnitude cheaper
+        - alignment retrieves better, and the premise is restated before a viva rather than during one

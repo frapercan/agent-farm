@@ -106,3 +106,27 @@ class TestShape:
 
     def test_an_empty_ladder_is_refused(self):
         assert mod._offences({"rungs": []}) == ["no rungs declared"]
+
+
+class TestParkedIsADecision:
+    def test_parked_without_a_reason_is_refused(self):
+        # The distinction this file exists for: a rung nobody got to and a
+        # rung someone decided against look identical unless the reason is
+        # written down.
+        doc = {"rungs": [_rung(status="parked")]}
+        assert any("indistinguishable from forgotten" in o for o in mod._offences(doc))
+
+    def test_parked_with_a_reason_is_fine(self):
+        doc = {"rungs": [_rung(status="parked", parked={"reason": "its own chapter, another day"})]}
+        assert mod._offences(doc) == []
+
+    def test_the_parked_rung_in_the_real_ladder_carries_its_cost(self):
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        parked = [r for r in doc["rungs"] if r["status"] == "parked"]
+        assert parked, "expected at least one parked rung"
+        for rung in parked:
+            # Resuming should not require rediscovering what it costs.
+            assert rung["parked"]["reason"]
+            assert rung["parked"]["cost_when_resumed"]

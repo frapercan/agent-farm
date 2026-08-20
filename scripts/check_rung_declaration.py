@@ -26,7 +26,10 @@ import yaml
 DECLARATION = Path(__file__).resolve().parents[1] / "plans" / "rungs.yaml"
 
 _REQUIRED = ("number", "title", "question", "axes", "held", "gate", "winner", "status")
-_STATUSES = {"declared", "running", "closed", "reopened"}
+#: ``parked`` is deliberately not now, and it has to carry its reason:
+#: the whole point of the distinction is that a parked rung reads as a
+#: decision rather than as something nobody got to.
+_STATUSES = {"declared", "running", "closed", "reopened", "parked"}
 _WINNERS = {"per_cell", "global"}
 
 
@@ -50,6 +53,8 @@ def _offences(doc: dict[str, Any]) -> list[str]:
 
         if rung.get("status") not in _STATUSES:
             out.append(f"rung {n}: status {rung.get('status')!r} is not one of {sorted(_STATUSES)}")
+        if rung.get("status") == "parked" and not (rung.get("parked") or {}).get("reason"):
+            out.append(f"rung {n}: parked without a reason, which is indistinguishable from forgotten")
         if rung.get("winner") not in _WINNERS:
             out.append(f"rung {n}: winner {rung.get('winner')!r} is not one of {sorted(_WINNERS)}")
 
