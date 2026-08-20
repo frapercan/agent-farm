@@ -170,3 +170,12 @@ class TestStratifiedReportingIsALadderProperty:
         doc = yaml.safe_load(mod.DECLARATION.read_text())
         titles = [r["title"].lower() for r in doc["rungs"]]
         assert not any("per-stratum policy" == t for t in titles)
+
+    def test_length_is_named_as_not_a_substitute(self):
+        # A table stratified by length looks like a stratified table.
+        # Measured: homology spans a factor of 8.5 and length ties, and the
+        # extremes inside each length band are the twilight cells.
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        assert "length" in doc["reporting"]["length_is_not_a_substitute"]

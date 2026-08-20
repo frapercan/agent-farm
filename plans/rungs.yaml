@@ -82,6 +82,23 @@ reporting:
     including nulls: on 2026-08-20 stratification inverted one conclusion
     and confirmed another, which is what makes it a check rather than a
     preference.
+  # The objection nobody has raised yet: this project already stratifies.
+  # It does, on length, and length does not separate. Same computation,
+  # same arms, spread across the eight representations per cell:
+  #
+  #     by homology   <=30 0.1316   30-60 0.0388   60-90 0.0293   >90 0.0155
+  #     by length    <=512 0.0323   512-1024 0.0388   1024-2048 0.1336 (2 cells)
+  #
+  # Homology is monotone over a factor of 8.5. Length ties. And the largest
+  # spread inside each length band, 0.1733 and 0.1641, IS the twilight
+  # maximum, so the variation length appears to carry is homology's,
+  # scattered across length bands. A table stratified by length looks like
+  # a stratified table and hides the effect exactly as an aggregate would.
+  # The rule was not ignored; it was honoured on the inert axis, and that
+  # is what made the omission invisible.
+  length_is_not_a_substitute: >
+    Stratifying by length does not discharge this requirement. Homology is
+    the axis that separates; length redistributes it.
   self_match: >
     Homology bands exclude the query's own sequence, by sequence_id rather
     than by accession, because isoforms and re-annotations carry the same
