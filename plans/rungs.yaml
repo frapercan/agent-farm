@@ -49,6 +49,46 @@ revision_note: >
 # against the task twice with both sides separating. Retrieval quality is
 # kept as a FLOOR, which is what a gate properly is, and ranking moves to
 # the task metric.
+# How every rung reports. Not a rung: a property of all of them.
+#
+# CLAUDE.md already says "ALWAYS stratify every reported metric; there is
+# no such thing as an aggregate result", and CAMPAIGN.md rung 1 already
+# says per-cell winner rather than global. Neither was being done, and on
+# 2026-08-20 the cost was measured.
+#
+# Chapter 6 concludes from a global backbone spread of 0.0188 that the
+# representation barely matters, and sets a ceiling on what later rungs can
+# gain from swapping language models. Split by identity band, at K=1, in
+# the no-knowledge cell:
+#
+#     twilight <=30       best 0.2893  worst 0.2045   spread 0.0848
+#     near-identical >90   best 0.3745  worst 0.3664   spread 0.0081
+#
+# Ten and a half times. Per-cell medians run 0.1316, 0.0388, 0.0293, 0.0155
+# down the identity axis. The global number is dominated by the band where
+# a near-identical donor already exists, where an 8M-parameter model sits
+# 0.4 points off a 650M one and the choice genuinely does not matter. In
+# the band this project exists to serve, the same model is 8.5 points
+# behind and last.
+#
+# The conclusion was not distorted by aggregation. It was inverted by it.
+reporting:
+  stratify: required
+  axes: [category, aspect, length, homology]
+  winner: per_cell
+  forbidden: >
+    A spread, a ceiling or a null reported over the whole population. Any
+    such number already on record is provisional until stratified,
+    including nulls: on 2026-08-20 stratification inverted one conclusion
+    and confirmed another, which is what makes it a check rather than a
+    preference.
+  self_match: >
+    Homology bands exclude the query's own sequence, by sequence_id rather
+    than by accession, because isoforms and re-annotations carry the same
+    sequence under a different name. Including it moves the median identity
+    from 41.2 to 100.0 and puts 88 per cent of the corpus in the
+    near-identical band.
+
 gate_policy:
   floor: retrieval quality, asking only whether enough was retrieved that success is possible
   rank: the task metric
@@ -179,33 +219,14 @@ rungs:
 
   # Rungs 6 and 7 are new. Neither is in CAMPAIGN.md prose yet and both came
   # out of measurement rather than design.
-  - number: 6
-    title: per-stratum policy
-    question: What should be done differently in the twilight stratum, rather than globally?
-    new: true
-    rationale: >
-      The largest variation anyone has measured on this corpus is not on the
-      ladder. Within one cell, the twilight identity band scores 0.0535
-      against 0.1978 for the close band, a factor of nearly four, while the
-      spread across eight backbones is 0.022 and across seven scorers 0.070.
-      It is also the only lever here that is not a setting: no choice moves a
-      protein from twilight to close identity, because it is a property of
-      the query. A global optimum is therefore the optimum of the majority
-      stratum, and the cell this project cares about is not the majority.
-    axes:
-      - name: routing_policy
-        field: null
-        note: >
-          A route, not a sweep. Written as a sweep it becomes another global
-          knob, which is the thing this rung exists because global knobs
-          cannot fix.
-    held:
-      - what: everything rungs 1 to 5 selected
-        value: their winners
-        decided_by: rungs 1-5
-    gate: per-stratum improvement without global regression
-    winner: per_cell
-    status: declared
+  # Rung 6 was per-stratum policy. It has been withdrawn as a rung and
+  # promoted into `reporting` above, because the measurement that motivated
+  # it also showed it was the wrong shape: if a global number can invert
+  # under stratification, then stratification is not a step to take after
+  # the others, it is the condition under which any of them mean anything.
+  # What remains genuinely open is what to DO differently per stratum, and
+  # that is a question for a rung to be written once the ladder's own
+  # numbers are stratified and we can see where the gaps are.
 
   - number: 7
     title: the retriever

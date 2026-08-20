@@ -130,3 +130,43 @@ class TestParkedIsADecision:
             # Resuming should not require rediscovering what it costs.
             assert rung["parked"]["reason"]
             assert rung["parked"]["cost_when_resumed"]
+
+
+class TestStratifiedReportingIsALadderProperty:
+    """Not a rung. The measurement that motivated one showed it was the
+    wrong shape: a global number that inverts under stratification means
+    stratification is the condition under which any rung means anything,
+    not a step to take after the others."""
+
+    def test_the_ladder_declares_how_it_reports(self):
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        rep = doc["reporting"]
+        assert rep["stratify"] == "required"
+        assert rep["winner"] == "per_cell"
+        assert "homology" in rep["axes"]
+
+    def test_it_says_aggregates_are_forbidden_rather_than_discouraged(self):
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        assert doc["reporting"]["forbidden"]
+
+    def test_the_self_match_rule_is_written_down(self):
+        # The band is meaningless without it: including the query's own
+        # sequence moves the median identity from 41.2 to 100.0 and puts
+        # 88 per cent of the corpus in the near-identical band.
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        assert "sequence_id" in doc["reporting"]["self_match"]
+
+    def test_no_rung_duplicates_the_reporting_rule(self):
+        # Per-stratum policy was rung 6 and is now a property. If it comes
+        # back as a rung, one of the two is wrong.
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        titles = [r["title"].lower() for r in doc["rungs"]]
+        assert not any("per-stratum policy" == t for t in titles)
