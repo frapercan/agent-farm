@@ -179,3 +179,29 @@ class TestStratifiedReportingIsALadderProperty:
 
         doc = yaml.safe_load(mod.DECLARATION.read_text())
         assert "length" in doc["reporting"]["length_is_not_a_substitute"]
+
+
+class TestWhatCarriesTheHardBand:
+    """The sharpest statement of what the method contributes, and it is
+    neither of the two things the project is usually described by."""
+
+    def test_the_finding_is_written_down(self):
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        claim = doc["reporting"]["what_carries_the_hard_band"]
+        assert "consensus" in claim
+        # Named as NOT the two obvious candidates, because both are what a
+        # reader would assume and both were measured weaker.
+        assert "identity" in claim and "similarity" in claim
+
+    def test_the_retriever_rung_asks_about_agreement_too(self):
+        # If consensus carries twilight, a retriever whose top hit is right
+        # and whose neighbourhood disagrees loses the band it was brought in
+        # to win. Measuring only top-hit accuracy answers another question.
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        rung = next(r for r in doc["rungs"] if r["title"] == "the retriever")
+        assert "secondary_question" in rung
+        assert "AGREES" in rung["secondary_question"]

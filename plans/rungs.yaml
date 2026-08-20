@@ -96,6 +96,37 @@ reporting:
   # a stratified table and hides the effect exactly as an aggregate would.
   # The rule was not ignored; it was honoured on the inert axis, and that
   # is what made the omission invisible.
+  # What carries the hard band, measured 2026-08-20 at K=30 inside the
+  # twilight no-knowledge cell. Precision at the head of each protein's own
+  # ranking, chance at 0.031:
+  #
+  #     composite        top-1 0.239   vote_fraction   0.220
+  #     embedding_only         0.156   alignment_only  0.059
+  #
+  # Three things follow and none of them was obvious.
+  #
+  # alignment_only is not failing to order. It resolves 26 distinct values
+  # per protein against vote_fraction's 14, and still lands at 1.9 times
+  # chance where the others reach 5 to 7.7. Below thirty per cent identity
+  # the alignment score orders donors almost at RANDOM, which is a
+  # different claim from failing to discriminate and the one the data
+  # supports.
+  #
+  # Few values used well beat many used badly, so scorer resolution was
+  # never the variable.
+  #
+  # And embedding_only, the embedding's own similarity, is a weak ranker
+  # there at 0.156 while vote_fraction reaches 0.220. What carries the band
+  # is the AGREEMENT among the neighbours the embedding retrieved, which is
+  # derived from the embedding and is not its similarity. In the band this
+  # project exists to serve, the useful signal is neither sequence identity
+  # nor embedding similarity. It is neighbourhood consensus.
+  what_carries_the_hard_band: >
+    Neighbourhood consensus, not sequence identity and not embedding
+    similarity. Any arm judged on twilight is judged on whether the
+    neighbourhood it produces agrees, and an arm optimised for a correct
+    top hit is optimised for something else.
+
   length_is_not_a_substitute: >
     Stratifying by length does not discharge this requirement. Homology is
     the axis that separates; length redistributes it.
@@ -262,6 +293,17 @@ rungs:
       retrieves better, and the contribution is retrieval; they tie, and the
       contribution is cost; alignment retrieves better, and the premise
       needs restating before a viva rather than during one.
+    # Reframed 2026-08-20. The question is no longer only whether the
+    # embedding proposes better candidates than alignment does. Consensus
+    # is what carries the twilight band, so what matters about a retriever
+    # there is whether the neighbourhood it returns AGREES, not whether its
+    # top hit is right. Those are different objectives and a retriever can
+    # win one while losing the other, so the rung has to measure both or it
+    # will answer a question nobody asked.
+    secondary_question: >
+      Does alignment retrieval produce a neighbourhood that AGREES as well
+      as one whose top hit is right? Measured as consensus among the
+      returned donors, not as top-hit accuracy.
     axes:
       - name: retriever
         field: payload.search_backend
