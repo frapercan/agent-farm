@@ -38,7 +38,28 @@ set +a
 : "${PROTEA_DB_URL:?the environment file does not define PROTEA_DB_URL}"
 : "${PROTEA_AMQP_URL:?the environment file does not define PROTEA_AMQP_URL}"
 
-REPO="${PROTEA_REPO:-${HOME}/Thesis2/repositories/PROTEA}"
+# Prefer the deploy slot, and say so loudly when there is none.
+#
+# The default used to be the developer's checkout, which meant the workers ran
+# whatever happened to be checked out there: their version was decided by someone
+# editing rather than by a deploy, silently, and a worker could be twenty commits
+# behind the branch that had just been merged. Nothing said so, because from the
+# outside a worker serving old code and a worker serving new code look identical.
+#
+# The slot has to be created by hand and nothing creates it, so the fallback stays,
+# but it now announces which of the two is in use.
+REPO="${PROTEA_REPO:-}"
+if [[ -z "${REPO}" ]]; then
+  DEPLOY_SLOT="${HOME}/Thesis2/worktrees/protea-deploy"
+  if [[ -d "${DEPLOY_SLOT}" ]]; then
+    REPO="${DEPLOY_SLOT}"
+  else
+    REPO="${HOME}/Thesis2/repositories/PROTEA"
+    echo "protea-lab-worker: no deploy slot at ${DEPLOY_SLOT}, serving from the" \
+         "developer checkout at ${REPO}. Its version is whatever is checked out" \
+         "there, which is decided by editing rather than by deploying." >&2
+  fi
+fi
 if [[ ! -d "${REPO}" ]]; then
   echo "protea-lab-worker: no PROTEA checkout at ${REPO}" >&2
   exit 78
