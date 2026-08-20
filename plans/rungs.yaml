@@ -127,6 +127,36 @@ reporting:
     neighbourhood it produces agrees, and an arm optimised for a correct
     top hit is optimised for something else.
 
+  # What a comparison costs, measured 2026-08-20. Two arms on the same
+  # proteins do not buy the same resolution, and the difference is a
+  # property of what varies rather than of the machinery:
+  #
+  #     comparing two SCORERS    median half-width 0.0040 on 382-669 proteins
+  #     comparing two ENCODERS                     0.0262 on 649 proteins
+  #
+  # A scorer comparison holds retrieval fixed, so the pairing absorbs the
+  # same donors, the same candidate terms and the same protein, and only
+  # the weighting varies. An encoder comparison changes which donors are
+  # retrieved, so the paired difference carries the retrieval's own
+  # variance. Six times the half-width means roughly thirty-six times the
+  # proteins for equal resolution.
+  #
+  # It bites because the largest per-cell effect this ladder has produced
+  # is 0.0088. An encoder test at 0.026 cannot detect any lever the
+  # campaign has found, so a null from one is not a negative result at
+  # this scale: it measured nothing.
+  #
+  # And the obvious remedy does not work. The windows are NESTED in time,
+  # so pooling them buys 3.7 per cent rather than the eighty per cent a
+  # naive sum suggests: union 1,869 against 2,367 if disjoint. Only a
+  # window ending at or before this one's t0 adds population, and that is
+  # a different frame needing its own exchangeability argument.
+  what_a_comparison_costs: >
+    Hold retrieval fixed and a comparison resolves 0.004; let it vary and
+    the same proteins resolve 0.026. Plan the population from what varies,
+    not from the sample size, and check whether candidate windows are
+    nested before counting on their sum.
+
   length_is_not_a_substitute: >
     Stratifying by length does not discharge this requirement. Homology is
     the axis that separates; length redistributes it.
