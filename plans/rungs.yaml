@@ -1,0 +1,304 @@
+# THE LADDER, IN A FORM SOMETHING CAN CHECK
+#
+# CAMPAIGN.md section 5 declares five rungs, each with one question and one
+# gate. It has been right and unread: on the night of 2026-08-19 a grid ran
+# 48 arms of the declared rung 1 while varying two of its three axes, the
+# third pinned by omission to the weakest available value, and nothing
+# objected. Four hundred jobs were then tagged with a rung number invented
+# at dispatch time and nothing objected to that either.
+#
+# The failure was not that the design was missing. It was that the design
+# was prose, and prose cannot refuse a job.
+#
+# This file is the same ladder in a form CI can read. It does not replace
+# CAMPAIGN.md, which carries the reasoning; it carries the claims that have
+# to hold, so that a job whose varied axes contradict its declared rung
+# fails before it runs rather than after it publishes.
+#
+# Fields per rung:
+#   question   what the rung asks, in one sentence
+#   axes       what VARIES. Each names the payload or config field that
+#              carries it, so a dispatched job can be checked against it.
+#   held       what is FIXED, and which rung decided it. This is what makes
+#              the ladder a ladder: rung N's held constants are rung N-1's
+#              answers, so an answer that later changes invalidates every
+#              rung standing on it.
+#   gate       floor: what must be true for the result to mean anything
+#              rank: what the winner is chosen by
+#   winner     per_cell or global
+#   status     declared | running | closed | reopened | parked
+#              parked means deliberately not now, with the reason and the
+#              cost recorded, so it reads as a decision rather than as an
+#              oversight. The difference between those two is what this
+#              file exists for.
+
+version: 2
+source: plans/CAMPAIGN.md section 5
+revised: 2026-08-20
+revision_note: >
+  Renumbered to the document after two months of drift. The scoring axis
+  was being called rung 2 and is rung 1's third declared axis; the encoding
+  grid was being called rung 3 and is the declared rung 2. Rungs 6 and 7 are
+  new and are not in CAMPAIGN.md prose yet.
+
+# The gate, revised. CAMPAIGN.md says the gate is retrieval quality until
+# the last rung, on the premise that the board metric is a poor instrument
+# for ranking mechanisms. Measured on this corpus the retrieval proxy is
+# worse: neighbour purity divides by the neighbour's own annotation count,
+# so it rewards retrieving sparsely annotated donors, and it inverted
+# against the task twice with both sides separating. Retrieval quality is
+# kept as a FLOOR, which is what a gate properly is, and ranking moves to
+# the task metric.
+# How every rung reports. Not a rung: a property of all of them.
+#
+# CLAUDE.md already says "ALWAYS stratify every reported metric; there is
+# no such thing as an aggregate result", and CAMPAIGN.md rung 1 already
+# says per-cell winner rather than global. Neither was being done, and on
+# 2026-08-20 the cost was measured.
+#
+# Chapter 6 concludes from a global backbone spread of 0.0188 that the
+# representation barely matters, and sets a ceiling on what later rungs can
+# gain from swapping language models. Split by identity band, at K=1, in
+# the no-knowledge cell:
+#
+#     twilight <=30       best 0.2893  worst 0.2045   spread 0.0848
+#     near-identical >90   best 0.3745  worst 0.3664   spread 0.0081
+#
+# Ten and a half times. Per-cell medians run 0.1316, 0.0388, 0.0293, 0.0155
+# down the identity axis. The global number is dominated by the band where
+# a near-identical donor already exists, where an 8M-parameter model sits
+# 0.4 points off a 650M one and the choice genuinely does not matter. In
+# the band this project exists to serve, the same model is 8.5 points
+# behind and last.
+#
+# The conclusion was not distorted by aggregation. It was inverted by it.
+reporting:
+  stratify: required
+  axes: [category, aspect, length, homology]
+  winner: per_cell
+  forbidden: >
+    A spread, a ceiling or a null reported over the whole population. Any
+    such number already on record is provisional until stratified,
+    including nulls: on 2026-08-20 stratification inverted one conclusion
+    and confirmed another, which is what makes it a check rather than a
+    preference.
+  # The objection nobody has raised yet: this project already stratifies.
+  # It does, on length, and length does not separate. Same computation,
+  # same arms, spread across the eight representations per cell:
+  #
+  #     by homology   <=30 0.1316   30-60 0.0388   60-90 0.0293   >90 0.0155
+  #     by length    <=512 0.0323   512-1024 0.0388   1024-2048 0.1336 (2 cells)
+  #
+  # Homology is monotone over a factor of 8.5. Length ties. And the largest
+  # spread inside each length band, 0.1733 and 0.1641, IS the twilight
+  # maximum, so the variation length appears to carry is homology's,
+  # scattered across length bands. A table stratified by length looks like
+  # a stratified table and hides the effect exactly as an aggregate would.
+  # The rule was not ignored; it was honoured on the inert axis, and that
+  # is what made the omission invisible.
+  length_is_not_a_substitute: >
+    Stratifying by length does not discharge this requirement. Homology is
+    the axis that separates; length redistributes it.
+  self_match: >
+    Homology bands exclude the query's own sequence, by sequence_id rather
+    than by accession, because isoforms and re-annotations carry the same
+    sequence under a different name. Including it moves the median identity
+    from 41.2 to 100.0 and puts 88 per cent of the corpus in the
+    near-identical band.
+
+gate_policy:
+  floor: retrieval quality, asking only whether enough was retrieved that success is possible
+  rank: the task metric
+  standing_rule: >
+    Two different architectures are never ranked on a retrieval proxy.
+    Measured inversions: +0.0122 purity against -0.0237 Fmax on one arm,
+    both separating.
+
+rungs:
+  - number: 1
+    title: the weighted-score benchmark
+    question: >
+      Across protein language models, neighbourhood sizes and score
+      weightings, which combination retrieves the best candidate set?
+    axes:
+      - name: backbone
+        field: payload.embedding_config_id
+        measured_spread: 0.022
+        note: at K=1. Close to a null; an 8M-parameter model sits 2.2 points off the best.
+      - name: neighbourhood_size
+        field: payload.limit_per_entry
+        measured_spread: 0.099
+        note: >
+          Under the None-scoring fallback this is close to an arithmetic
+          property rather than a finding: neighbours arrive in distance
+          order and nothing aggregates them, so raising K can only append
+          lower-scored candidates. Re-measure after the scoring axis closes.
+      - name: score_weighting
+        field: payload.scoring_config_id
+        measured_spread: 0.070
+        note: >
+          Never varied until 2026-08-20. Absent means the None fallback,
+          which is arithmetically embedding_only, second from bottom of the
+          seven configs. Absence is a choice and must be declared.
+    held:
+      - what: temporal window
+        value: GOA 220 to GOA 230
+        decided_by: campaign
+      - what: retriever
+        value: embedding k-nearest-neighbour
+        decided_by: campaign
+        note: >
+          Held in every arm ever run and never declared as a choice until
+          now. Rung 7 is what tests it.
+    gate: one frozen substrate, chosen on validation, per cell
+    winner: per_cell
+    status: running
+
+  - number: 2
+    title: the learned representation as the lever
+    question: Does the learned sparse encoder beat the winner of rung 1 at equal input?
+    axes:
+      - name: encoding
+        field: payload.embedding_config_id
+        note: dense pretrained, dense fitted control, sparse pooled, sparse per residue
+      - name: layer
+        field: embedding_config.layer_indices
+        note: >
+          Two recorded ablations disagree and neither has been reconciled:
+          on pooled embeddings mid layers win, on the per-residue sparse
+          code the last layer wins. Fixing it by assumption inside the rung
+          whose purpose is to settle the encoding repeats rung 1's mistake.
+      - name: quantisation
+        field: embedding_config
+        note: separate configs, never a property of one, so an artifact is identified by its id
+    held:
+      - what: score weighting
+        value: the winner of rung 1
+        decided_by: rung 1
+        note: >
+          Blocking. The encoding null on record was measured against the
+          fallback scorer, not against rung 1's winner, so the comparison
+          this rung specifies has not yet been made.
+      - what: neighbourhood size
+        value: the winner of rung 1
+        decided_by: rung 1
+    gate: >
+      Every fitted artifact declares the annotation release it was fitted
+      against, and CI refuses one whose cut falls inside the frame it is
+      about to be scored in.
+    winner: per_cell
+    status: declared
+
+  - number: 3
+    title: the functional classifier
+    question: What does a full-vocabulary classifier add that neighbour retrieval cannot reach?
+    axes:
+      - name: generator
+        field: payload.compute_classifier
+    held:
+      - what: encoding
+        value: the winner of rung 2
+        decided_by: rung 2
+    gate: candidate-set improvement per cell, at matched volume, with intervals
+    winner: per_cell
+    status: declared
+
+  - number: 4
+    title: signal integration
+    question: Which signals compose, and where?
+    axes:
+      - name: feature_family
+        field: payload.compute_*
+        note: measured by removal, per cell, with an interval
+    held:
+      - what: generators
+        value: everything rungs 1 to 3 selected
+        decided_by: rungs 1-3
+    gate: composition measured, not assumed
+    winner: per_cell
+    deliverable: the signal registry, which is the product of this rung rather than a by-product
+    status: declared
+
+  - number: 5
+    title: ensembling
+    question: Does combining models beat the best single model, by a mechanism we can name?
+    axes:
+      - name: ensemble_form
+        field: null
+        note: seed, representation and generator ensembling, measured separately because they fail differently
+    held:
+      - what: composition
+        value: the winner of rung 4
+        decided_by: rung 4
+    gate: named mechanism, not a score
+    winner: global
+    status: declared
+
+  # Rungs 6 and 7 are new. Neither is in CAMPAIGN.md prose yet and both came
+  # out of measurement rather than design.
+  # Rung 6 was per-stratum policy. It has been withdrawn as a rung and
+  # promoted into `reporting` above, because the measurement that motivated
+  # it also showed it was the wrong shape: if a global number can invert
+  # under stratification, then stratification is not a step to take after
+  # the others, it is the condition under which any of them mean anything.
+  # What remains genuinely open is what to DO differently per stratum, and
+  # that is a question for a rung to be written once the ladder's own
+  # numbers are stratified and we can see where the gaps are.
+
+  - number: 7
+    title: the retriever
+    question: >
+      Does embedding retrieval propose better candidates than alignment
+      retrieval, at equal bank and equal scoring?
+    new: true
+    rationale: >
+      Every arm ever run retrieved by embedding k-nearest-neighbour. It was
+      never varied and never declared as a choice. Measured on one rung-1
+      set, 657,362 of 657,362 candidate rows carry an embedding distance and
+      a named donor, so there is no other generator: an alignment score can
+      only rank a donor the embedding already retrieved. That makes every
+      result to date a statement about scoring, and leaves the title's claim
+      untested. Three outcomes and all three are publishable: the embedding
+      retrieves better, and the contribution is retrieval; they tie, and the
+      contribution is cost; alignment retrieves better, and the premise
+      needs restating before a viva rather than during one.
+    axes:
+      - name: retriever
+        field: payload.search_backend
+        note: >
+          Requires a backend that is not vector search. numpy and faiss are
+          both vector search. Pairwise parasail cannot do it: 22,498 queries
+          against 528,294 bank sequences is 11.9 billion alignments.
+    held:
+      - what: bank, queries, scoring, temporal window
+        value: identical to rung 1
+        decided_by: rung 1
+    gate: >
+      The alignment retriever is a registered operation, per the campaign
+      invariant that no artifact exists without one.
+    winner: per_cell
+    status: parked
+    parked:
+      on: 2026-08-20
+      by: the author
+      reason: >
+        Deliberately not now. It is the experiment that tests the title and
+        it deserves its own chapter rather than a corner of a rung that is
+        already running, and it cannot be read until the scoring axis names
+        a winner to hold fixed.
+      cost_when_resumed:
+        retrieval: >
+          22,498 queries against 528,294 bank sequences. Minutes on 16 cores
+          with DIAMOND or MMseqs2. Neither is installed; both are a new
+          external dependency and would have to be a registered operation.
+        not_reusable: >
+          The 2,059,944 pairs in the alignment cache are exactly the pairs
+          the embedding retriever proposed, so they are a sample biased by
+          the hypothesis under test and cannot serve as the search.
+        infeasible_alternative: >
+          Pairwise parasail, which is what the project has, would be 11.9
+          billion alignments.
+      outcomes:
+        - the embedding retrieves better, and the contribution is retrieval rather than discrimination
+        - they tie, and the contribution is cost, since vector search is orders of magnitude cheaper
+        - alignment retrieves better, and the premise is restated before a viva rather than during one
