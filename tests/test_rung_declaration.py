@@ -205,3 +205,14 @@ class TestWhatCarriesTheHardBand:
         rung = next(r for r in doc["rungs"] if r["title"] == "the retriever")
         assert "secondary_question" in rung
         assert "AGREES" in rung["secondary_question"]
+
+    def test_what_a_comparison_costs_is_recorded(self):
+        # An encoder test bounded at 0.026 cannot see any lever this
+        # ladder has produced, the largest being 0.0088. Planning a
+        # population from sample size alone is how that gets missed.
+        import yaml
+
+        doc = yaml.safe_load(mod.DECLARATION.read_text())
+        claim = doc["reporting"]["what_a_comparison_costs"]
+        assert "0.004" in claim and "0.026" in claim
+        assert "nested" in claim
