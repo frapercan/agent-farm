@@ -331,10 +331,31 @@ rungs:
         map at 128 of 2048 atoms, sparse per-residue. Six values of K, nine
         weightings, three knowledge regimes, banded by identity.
       layer: >
-        two levels on ankh-base, [0] and [10] of 48 under the reverse
-        convention. Never varied before this rung: all eleven configs in
-        the database carried [0], including rung 1's eight backbones, so
-        the axis had been pinned by omission exactly as rung 1's was.
+        two levels on ankh-base, and they are CLOSER TOGETHER than the
+        labels suggest. The platform indexes in reverse,
+        hidden_states[-(li + 1)] in all four backends, so over 49 hidden
+        states from 48 layers:
+
+          layer_indices [0]  -> depth 48, the last layer
+          layer_indices [10] -> depth 38
+          layer_indices [24] -> depth 24, the true midpoint
+
+        The arm that ran is [10], which is DEPTH 38, not depth 10. It was
+        chosen to match a retrieval probe that indexes forward and whose
+        "layer 10" is depth 10, so the two sample points are 28 layers
+        apart and neither checks the other. The intent was a mid-layer
+        comparison and the measurement is a near-top one.
+
+        So what is settled is narrower than first reported: the last layer
+        beats depth 38 in all sixteen comparisons, and the effect attenuates
+        through the winning weighting as the encoding's does. Whether a
+        mid-depth layer beats the last one is NOT settled by this rung, and
+        the two recorded ablations the rung set out to reconcile remain
+        unreconciled at mid depth.
+
+        Never varied before this rung either way: all eleven configs in the
+        database carried [0], including rung 1's eight backbones, so the
+        axis had been pinned by omission exactly as rung 1's was.
       quantisation: >
         NOT registered as separate configs, which is what this rung asks
         for. Measured as an analysis: 4 bits at 240 bytes against 688,
