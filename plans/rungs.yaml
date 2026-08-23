@@ -31,6 +31,40 @@
 #              cost recorded, so it reads as a decision rather than as an
 #              oversight. The difference between those two is what this
 #              file exists for.
+#
+# WHY EACH RUNG HOLDS AN AXIS THAT MOVES THE SCORE MORE THAN THE ONE IT
+# VARIES, WHICH IS NOT AN ACCIDENT AND WILL KEEP HAPPENING
+#
+# Measured, three rungs in:
+#
+#   rung 1   backbone spread at the best K   0.0230
+#            spread within a backbone across K   0.0527
+#   rung 2   the fitted map buys              +0.0022 on the aggregate
+#            K takes every arm from 0.32 to 0.27 across the same sweep
+#
+# So in both cases the held axis moved the number more than the studied
+# one, by a factor of two and then of fifteen. A reader meeting that
+# three times will ask whether the ladder is ordered by importance, and
+# the honest answer is that it is not.
+#
+# It is ordered by WHAT HAS TO BE DECIDED BEFORE THE NEXT THING CAN BE
+# BUILT. The encoding has to be settled before a classifier can be
+# trained on top of it, whether or not the encoding is where the points
+# are. A rung is a decision the following rung stands on, and a decision
+# can be small and still be load-bearing.
+#
+# Two consequences worth stating rather than discovering:
+#
+#   A rung can be worth running and produce a flat table. Rung 2's
+#   aggregate is nearly flat across three encodings and the finding is
+#   underneath it, in the identity bands, where the same arms differ by
+#   +0.0091 and -0.0023 with opposite signs. A flat aggregate is a
+#   result about the population, not about the arms.
+#
+#   The size of an axis is not an argument for varying it. K moves the
+#   score most and is held everywhere after rung 1, because rung 1
+#   settled it and re-opening it in every later rung would measure the
+#   same thing repeatedly instead of measuring what is new.
 
 version: 2
 source: plans/CAMPAIGN.md section 5
