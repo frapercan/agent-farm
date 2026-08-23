@@ -359,13 +359,38 @@ rungs:
         budgets. With the residue consumer's earlier depth 10, the axis is
         monotone:
 
-          depth 10   loses by 0.042 to 0.045   residue consumer
-          depth 38   loses by 0.005 to 0.010   pooled consumer
-          depth 48   wins                      the last layer
+          depth 10   loses by 0.042 to 0.045
+          depth 38   loses by 0.005 to 0.010
+          depth 48   wins, the last layer
 
         The loss shrinks four to eightfold as depth grows. The frozen
         recipe's layer field is measured rather than inherited and stays
         at [0].
+
+        ALL THREE DEPTHS ARE THE POOLED CONSUMER, WHICH IS WHAT LICENSES
+        READING THEM AS ONE CURVE. Depth 10 was first reported as the
+        residue consumer, which would have made the curve a comparison
+        between two different quantities. It is not: the depth-10 arm
+        means over residues and L2-normalises before retrieval, so it
+        pools the probe's residues after the fact, while depth 38 reads
+        vectors the platform pooled on the card. Different provenance,
+        same measured quantity.
+
+        The two pipelines were then checked where they overlap, on the
+        last layer, which both hold:
+
+          budget    probe, pooled after    platform, pooled on card    diff
+            10           0.6020                   0.6011              0.0009
+            25           0.6285                   0.6294              0.0009
+            50           0.6767                   0.6767              0.0000
+
+        Float32 residues pooled afterwards against a bfloat16 forward pass
+        pooled on the card and cast to halfvec for storage, on the same
+        populations under the same metric. They agree BELOW the study's
+        0.0013 resolution floor, so the shared arm is not two arms. This
+        also retires the concern raised in PR 243 that the redundancy
+        claim spanned two extraction pipelines whose same-protein cosine
+        was about 0.28; whatever those were, they are not these.
 
         AND THE TWO CONSUMERS AGREE BY BAND, WHICH NEITHER SHOWS ALONE.
         Depth 38 minus the last layer:
@@ -389,6 +414,32 @@ rungs:
         Never varied before this rung either way: all eleven configs in the
         database carried [0], including rung 1's eight backbones, so the
         axis had been pinned by omission exactly as rung 1's was.
+
+        THE MIDPOINT IS BEING MEASURED RATHER THAN ASSUMED AWAY. Depth 24
+        is the one point the rung's own declared reconciliation named and
+        the three measured depths do not contain. It is running on the
+        pooled consumer, and it is cheap for a reason worth recording:
+        the residues do not have to be written. Depths 10 and 48 came off
+        a residue probe because the sparse arms needed one; the midpoint
+        is wanted only for the pooled curve, so it is averaged as it comes
+        off the card and never stored, turning 129 GB of disk into 270 MB
+        and leaving the forward pass as the only cost. 89,013 proteins and
+        46.6 million residues at a measured 203,000 residues per minute is
+        3.8 hours, against about 17 for the corpus-scale platform route
+        that this question does not need.
+
+        Depth 24 is also the fixed point of the two conventions: the
+        platform's depth d is layer_indices [48 - d], so at d = 24 both
+        readings coincide and the reversal that put a corpus-scale run at
+        depth 38 cannot fire again. The lab loads ankh in float32 rather
+        than bfloat16, so the mid-layer activations near 490,000 are
+        represented exactly rather than clipped, with a per-protein
+        finiteness check that exits rather than writing a quiet NaN.
+
+        A monotone curve over 10, 38 and 48 makes a mid peak unlikely,
+        since a bump at 24 would have to be invisible to both neighbours.
+        Unlikely is not measured, and this file already carries a note
+        about fixing an axis by assumption.
 
         ON WHICH FLOOR APPLIES, BECAUSE IT CUTS BOTH WAYS. A two-arm
         comparison decided before it ran is held to the study's resolution
