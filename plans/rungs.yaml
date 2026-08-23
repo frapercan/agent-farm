@@ -248,7 +248,49 @@ rungs:
       against, and CI refuses one whose cut falls inside the frame it is
       about to be scored in.
     winner: per_cell
-    status: declared
+    status: closed
+    result: >
+      No arm beats any other. Across the nine category-by-aspect cells at
+      K=1, over 104 arms per cell, the margin between first and second
+      never exceeds 0.0015, and in five of the nine the second place is the
+      SAME encoding under a different weighting. The winner this rung
+      declares per cell cannot be determined, and that is the finding
+      rather than a gap in the measurement.
+
+      What separates arms is the channel, not the encoding. Holding the
+      weighting fixed, the four encodings spread 0.0540 under
+      embedding_only at K=30 and 0.0025 under composite_no_embedding, whose
+      weight on embedding similarity is exactly 0.0 and which wins 72.7 per
+      cent of cells. The layer axis reproduces it: layer 48 beats layer 10
+      in all sixteen comparisons, by 0.0307 through embedding_only at K=3
+      and 0.0026 through composite_no_embedding, an attenuation of about
+      twelve.
+
+      And in half the prior-knowledge cells the four encodings score
+      IDENTICALLY to six decimals, which is stronger than a small
+      difference because it is falsifiable: they retrieve the same
+      neighbours and transfer the same terms. In the regime this project
+      names as its frontier, the representation does not participate.
+
+      So the retrieval axis is closed by measurement. What limits the
+      result is the ordering of candidates already retrieved, which rung 3
+      is the first rung to address.
+    axes_measured:
+      encoding: >
+        four levels: pretrained ankh-base, dense fitted map, sparse pooled
+        map at 128 of 2048 atoms, sparse per-residue. Six values of K, nine
+        weightings, three knowledge regimes, banded by identity.
+      layer: >
+        two levels on ankh-base, [0] and [10] of 48 under the reverse
+        convention. Never varied before this rung: all eleven configs in
+        the database carried [0], including rung 1's eight backbones, so
+        the axis had been pinned by omission exactly as rung 1's was.
+      quantisation: >
+        NOT registered as separate configs, which is what this rung asks
+        for. Measured as an analysis: 4 bits at 240 bytes against 688,
+        65 per cent saving, free on the metric in every band and preserving
+        the tie structure, where 1 bit degenerates the ranking. The finding
+        stands; its registration as identifiable artifacts does not.
 
   - number: 3
     title: the functional classifier
@@ -258,8 +300,25 @@ rungs:
         field: payload.compute_classifier
     held:
       - what: encoding
-        value: the winner of rung 2
-        decided_by: rung 2
+        value: the sparse pooled map, 128 of 2048 atoms
+        decided_by: chosen, NOT measured
+        note: >
+          Rung 2 closed without a winner: nine cells, 104 arms each, and no
+          margin above 0.0015. So this value is a CHOICE and is recorded as
+          one, because a held constant that reads as an answer when it was a
+          preference is how a ladder starts carrying claims it never made.
+
+          Chosen on three grounds, none of them a score. It is
+          indistinguishable from every other arm on the metric. It reaches
+          that on 128 atoms of 2048, so it is the cheapest to serve and to
+          store. And it leads the other three in three of the four identity
+          bands of the no-knowledge regime, which is where this rung's own
+          question lives.
+
+          Anything rung 3 concludes must survive substituting another
+          encoding, since rung 2 says they are interchangeable. If it does
+          not, the conclusion is about the encoding rather than about the
+          classifier, and this note is where a reader should be sent.
     gate: candidate-set improvement per cell, at matched volume, with intervals
     winner: per_cell
     status: declared
