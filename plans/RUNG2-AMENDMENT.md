@@ -459,3 +459,146 @@ So a plan that depends on real-time coordination has no mechanism behind it. Wha
 works is this file: committed here, pulled there, read by whoever runs. Any
 instruction that must reach the other machine belongs in a repository, and
 somebody has to pull.
+
+## Reconciliation 2026-08-23: what eleven days did to this file
+
+Written against the state of 2026-08-12. Rung 2 has since run, the layer axis has
+been varied, and one of the file's own load-bearing numbers has been withdrawn.
+Nothing above is deleted. Each claim is marked.
+
+### Confirmed, and now load-bearing
+
+**The selection floor is the explanation for rung 2.** The file prices the
+expected maximum of 120 null arms at about 0.0094 against a declared noise floor
+of 0.0034, and uses it to argue that choosing depth, pooling and k by maximising
+a GO metric is fitting by discrete search. Calibrated to the grid that actually
+ran: about 0.0093 for the 104 arms in one cell, about 0.0108 for the 528 in the
+whole grid. Every margin rung 2 measured:
+
+| margin | value |
+|---|---|
+| largest first-to-second across the nine cells | 0.0015 |
+| best backbone over the second | 0.0021 |
+| spread between the four encodings at K=1 | 0.0019 |
+
+Five to seven times below the floor. So the absence of a winner in rung 2 is the
+outcome this grid should have been expected to produce. The rung closes with an
+explanation and not only with evidence, and the explanation was written eleven
+days before the rung ran.
+
+**The homology price held.** 0.9 ms per alignment survived contact: all 3,031
+no-knowledge targets of the current window are banded from `identity_nw`, and the
+band cut is what separates the encoder arms at all. The per-pair cache note
+turned into a measured confound rather than an optimisation: the cache is keyed
+on the sequence pair alone, with no backbone and no k, so run timings taken
+across arms measure the cache and not the run.
+
+### Overtaken
+
+**The stratification module has callers now, and the guard still does not.**
+`protea/core/strata.py` is imported by `operations/stratify_evaluation.py`,
+`operations/_run_cafa_strata.py` and `operations/_run_cafa_data_helpers.py`.
+Steps 1 and 2 of the wiring landed. `assert_stratified` still has no importer
+outside its own test, so step 3, the one the file says stops this repeating, is
+undone eleven days on.
+
+**The intermediate layer question is answered at one depth, and it is no.** On
+retrieval over 85,982 donors, depth 10 of 48 loses to the last layer by 0.042 to
+0.045 with a separating interval, and loses worst in the twilight band where the
+backbone matters most. Learned mixing weights over the stack are monotone in
+depth. The uncertainty as stated is discharged downward.
+
+**The two machines can now talk, above the farm.** The claim is still true of the
+farm's scripts, which remain single-machine. It is no longer true of the work:
+this reconciliation exists because the other machine sent its rung 2 closure and
+its own split of the leakage test. Git remains the only channel that crosses
+between the repositories, and the file's advice stands for anything that must
+survive a session.
+
+### The indexing trap fired, in this study, in this week
+
+The file warns that the hidden-state mapping must be recomputed and not copied.
+It was copied. Two conventions are live in the same study:
+
+| surface | expression | `10` means |
+|---|---|---|
+| platform backends | `hidden_states[-(li + 1)]` | depth 38 of 48 |
+| lab residue probe | `states[i]` | depth 10 of 48 |
+
+The platform convention is stated at `_chunk_helpers.py:46` and implemented the
+same way in all four backends. The lab convention is at
+`residue_extract.py:109`. So the corpus-scale run that completed this morning,
+528,294 sequences and seventeen hours of card, sits at depth 38, and the
+retrieval result quoted above sits at depth 10. **They are different layers.**
+Neither checks the other, and the depth the expensive run actually measured is
+one nothing else in the study has touched.
+
+Two consequences. The layer axis is varied at three points and not two, which is
+better than intended rather than worse. And the float16 guard was load-bearing
+exactly where the file said: depth 38 is the massive-activation region measured
+near 490,000 against a ceiling of 65,504, and the run survives because
+`normalize=True` puts the pooled vector on the unit sphere before the cast.
+
+### ProtST: the refusal was right and the record it rested on is withdrawn
+
+The file refuses to exclude ProtST on operational grounds, because it is the one
+backbone whose record would falsify rung 2. That refusal was correct and is now
+correct for a second reason: excluding it would have hidden what it was carrying.
+
+But the record cannot be used as written. ProtST is pretrained on ProtDescribe,
+which pairs sequences with Swiss-Prot text describing their **function**. All the
+targets are reviewed Swiss-Prot entries, so exposure is total, and 81.9 per cent
+of them carry a `function_cc` comment today. The temporal rule does not catch it:
+the model predates the window on the annotation axis, but no-knowledge means no
+experimental evidence at t0, and a comment inferred by similarity commonly
+predates the experiment that confirms it.
+
+Split on whether UniProt describes the protein, ProtST's reachability advantage
+separates nine of nine among the 2,468 described targets and **zero of nine**
+among the 547 undescribed, inverting against the two strongest rivals. The design
+is conservative rather than favourable: the text read is the current load, so
+"has a comment" over-states what was readable in 2022, while "has no comment now"
+guarantees none existed then.
+
+So `protst_zscore` at +0.0335 winning nine of nine is a measurement of a model
+that had read the answer, and the section titled "the ceiling is not unmeasured"
+does not stand as written. It is flagged rather than struck, because the argument
+shape survives without the number: a fixed transformation may still beat the
+head, and the registry's second fact, a learned head losing to the raw substrate
+on eight of nine cells, is not a ProtST-only result.
+
+The other machine ran the same split on the task metric and found ProtST leading
+neither half, which is consistent rather than contradictory: the weighting that
+wins most cells carries a weight of exactly 0.0 on embedding similarity, so a
+consumer that does not read the embedding cannot see what the embedding carries.
+A null on a disconnected channel is not a refutation.
+
+**Not established, and required before publication:** the ProtDescribe snapshot
+date is absent from the model card, the arXiv abstract and the repository README.
+It has to be cited from the paper's methods section.
+
+### Rung 1.5 loses its premise and keeps its place
+
+The argument for the rung is a parity: the best measured fixed-substrate gain at
++0.0124 against the clean head benefit at +0.0111, same order, therefore an
+unablated substrate can invent the head's effect rather than merely attenuate it.
+
+Both numbers sit at the selection floor this same file prices at 0.0094, and the
+first of them is itself a maximum over a search. The reading that survives is not
+that the substrate might be inventing the head's effect. It is that **neither
+effect has been shown to clear the floor of its own search.**
+
+Rung 1.5 still earns its place, and its two-window protocol is now the only part
+of the design that could tell the difference. What changes is what it is for: not
+a referee between two established effects, but the measurement of whether either
+of them exists.
+
+### Still open
+
+- **`assert_stratified` load-bearing where results are recorded.** Step 3, undone.
+- **The finite probe before any mid-layer T5 or ESM job.** The completed run is
+  ankh, which loads in bfloat16, so the precondition is untested where it bites.
+- **`encoder_ablation.py:102`** still defaults to embedding configuration
+  `500a0c59`, which is not in the database. Verified 2026-08-23. The
+  pre-reinstall path default is fixed.
+- **Additivity between substrate and head**, still unmeasured.
