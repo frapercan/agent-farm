@@ -272,6 +272,22 @@ rungs:
       neighbours and transfer the same terms. In the regime this project
       names as its frontier, the representation does not participate.
 
+      And the ties are not merely small, they are smaller than chance
+      would produce. PR 243 priced the noise floor for a maximum taken over
+      many arms: about 0.0094 for 120 null arms. Calibrating from that and
+      extrapolating gives 0.0093 for the 104 arms in one cell here and
+      0.0108 for the 528 in the grid. Every margin measured is five to
+      seven times below it:
+
+        largest first-to-second margin across the nine cells   0.0015
+        ProtST over ankh-base on the board                     0.0021
+        spread between the four encodings at K=1               0.0019
+
+      So the absence of a winner is what this grid should have been
+      expected to produce, and the finding has an explanation rather than
+      only evidence. That argument was written on 2026-08-12, before this
+      rung ran, and was still an unmerged PR when the rung closed.
+
       So the retrieval axis is closed by measurement. What limits the
       result is the ordering of candidates already retrieved, which rung 3
       is the first rung to address.
