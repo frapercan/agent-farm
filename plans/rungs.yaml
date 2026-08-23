@@ -353,9 +353,49 @@ rungs:
         the two recorded ablations the rung set out to reconcile remain
         unreconciled at mid depth.
 
+        CLOSED after the correction, on three depths rather than two. The
+        retrieval consumer measured depth 38 against the last layer on the
+        same bank and bands, and it loses at two of three candidate
+        budgets. With the residue consumer's earlier depth 10, the axis is
+        monotone:
+
+          depth 10   loses by 0.042 to 0.045   residue consumer
+          depth 38   loses by 0.005 to 0.010   pooled consumer
+          depth 48   wins                      the last layer
+
+        The loss shrinks four to eightfold as depth grows. The frozen
+        recipe's layer field is measured rather than inherited and stays
+        at [0].
+
+        AND THE TWO CONSUMERS AGREE BY BAND, WHICH NEITHER SHOWS ALONE.
+        Depth 38 minus the last layer:
+
+                        task, f_micro_w    retrieval, reachability
+          <=30              +0.0068              +0.0010
+          30-60             -0.0142              -0.0158
+          60-90             -0.0129              -0.0099
+          >90               -0.0010              -0.0162
+
+        Same sign in three of four bands and close in magnitude in the two
+        middle ones, from two instruments sharing no code and measuring
+        different quantities. Both say depth is inert in twilight and costs
+        elsewhere, which is the OPPOSITE shape to the encoding axis, whose
+        effect was largest in twilight and zero above ninety per cent.
+
+        So depth and encoding are not the same lever seen twice. Depth
+        costs where the answer was already easy; encoding matters only
+        where it was hard.
+
         Never varied before this rung either way: all eleven configs in the
         database carried [0], including rung 1's eight backbones, so the
         axis had been pinned by omission exactly as rung 1's was.
+
+        ON WHICH FLOOR APPLIES, BECAUSE IT CUTS BOTH WAYS. A two-arm
+        comparison decided before it ran is held to the study's resolution
+        floor of 0.0013. A maximum taken over a search is held to the
+        selection floor, about 0.0093 for 104 arms. That is why a 0.0099
+        loss here counts and a 0.0021 margin over 104 arms does not. The
+        discriminator is the search budget, not the size of the number.
       quantisation: >
         NOT registered as separate configs, which is what this rung asks
         for. Measured as an analysis: 4 bits at 240 bytes against 688,
