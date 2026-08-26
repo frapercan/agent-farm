@@ -223,25 +223,58 @@ the report prints beside the level rather than hiding by merging.
 
 ---
 
-## 6. What can run today
+## 6. What to build first, and it is not what the ladder would have built first
 
-**The scoring node, entirely.** It is a re-read of a table that already exists, over presets that
-already exist, at every neighbourhood depth up to the stored limit, stratified. It needs no
-accelerator, no new artefact and no decision from any other node, and it addresses the axis the
-record says the scorer absorbs the ones above it.
+An earlier version of this section listed what was unblocked. That is the wrong ordering
+principle and it produced a concrete error: it named the floors census as the foundation without
+naming **which contrast class** the floors belong to, and the census that was started measures the
+wrong one.
 
-**The census that fixes the floors.** The floors of this graph are properties of the contrast
-class and the campaign has measured only one, indirectly, at the low end. Measuring the rest is a
-paired bootstrap over banks that already exist. Until it runs, every floor in this instantiation
-is inherited from a single contrast and every unpowered declaration above is provisional.
+**The order comes from what the claim needs.** The claim is that channelling beats not
+channelling. Work backwards from it.
 
-**The separation of window from donor policy**, one run.
+**First, a candidate must be able to say which flow proposed it.** No schema carries that today.
+Every stored candidate row records the donor it came from and the distance that found it, which
+is a complete description of one flow and no description at all of the others. Until a proposal
+carries its source, unique reach cannot be computed, affinity cannot be measured, and the
+difference between "no flow proposes this" and "we did not record who proposed it" is invisible.
+This is the smallest change in the list and everything else waits behind it.
 
-**The frame audit**, which exists as a registered operation and has never been dispatched. Its
-first output should be the stored results that cannot be attributed to a frame at all, because the
-jobs that produced them are gone.
+**Second, every result row must carry its frame.** The column exists and is empty in all of them,
+and a substantial block of existing results cannot be attributed to a frame at all because the
+jobs that produced them are gone. A number that cannot be attributed cannot be compared, and the
+graph's central property, that reopening is computable, is worth nothing while the source node
+has no stamped edges.
 
----
+**Third, the scoring node, which is a re-read.** It needs neither accelerator nor new artefact,
+and it addresses the axis the record says absorbs the ones above it. It is the one node that can
+close with what exists.
+
+**Fourth, and only fourth, the floors.** And here the correction matters more than the ordering.
+A floor is a property of a contrast class. The class this campaign has measured, indirectly and
+once, is **one configuration of a flow against another configuration of the same flow**: two
+backbones, two depths, two encodings. **That is not the contrast the graph runs on.** Admitting a
+flow into a region compares a system that has a whole source against one that does not, and
+nobody has measured the variance of that difference. There is no reason to expect it to resemble
+the one on record, and every unpowered declaration in section 5 rests on the resemblance.
+
+So the census is not one census. It is one per contrast class the graph will actually run, and
+the first of them is flow admission, which cannot be measured until a candidate carries its
+source. That is the dependency the ladder's ordering hid.
+
+**A separate blockage, which is real and belongs to the old contrast class.** The per-protein
+artefact that a configuration-versus-configuration census would be built from does not reproduce
+the score it should recompose, by an amount of the same order as the effects the graph must
+resolve. The instrument that would have caught this is named in the producing code's own
+docstring and was never written. Whatever is decided about that artefact, **the correct next step
+is to write that check on a case where the answer is known by construction**, not to rebuild
+anything: it costs an afternoon and decides between correcting a formula and regenerating
+thousands of files. Until then this edge is **blocked**, and its missing producer is a
+verification rather than a file.
+
+**Two small separations that cost one run each.** Window from donor policy, since every set on one
+bank is gated and every set on the other is permissive. And the identity control between the two
+search backends, which should be asserted once rather than modelled as a choice.
 
 ## 7. What this instantiation does not decide
 
