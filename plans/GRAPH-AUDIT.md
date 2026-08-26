@@ -558,3 +558,45 @@ census returns no groups, the first hypothesis is the conditioning set and not t
 Eight instrument failures were found and closed on 2026-08-26, four on each machine. All eight had
 the same shape: a clean, round or empty result that read exactly like a finding. None was closed
 by authority; each was closed by two routes disagreeing and the disagreement having a mechanism.
+
+---
+
+## 10. The window has a known defect with a built fix that was not used, and the cohort partition already exists
+
+Two findings from the last hour, and both are about machinery the platform already has.
+
+**The phantom gap.** `generate_evaluation_set.py:35` names the defect in its own payload
+documentation: "the phantom-gap: t0 propagated under a churned graph that marks pre-window
+experimental annotations as new knowledge". It carries the fix as two payload fields,
+`old_native_snapshot_id` and `new_native_snapshot_id`, which select each side's propagation graph
+without touching annotation rows.
+
+The job that produced the experimental window passed neither. Its payload was the two annotation
+set ids and nothing else, so it fell back to each set's stored snapshot, and GOA 220's stored
+snapshot is dated 2025-03-16, eleven months after the GOA file it is bound to. That is exactly the
+condition the parameter exists to correct, and it is the mechanism behind the 577 units in PK MFO
+that the reconciled route credits as gains while the underlying annotation is identical at both
+ends.
+
+Rebuilding the window is therefore right, but not for the reason first given. The generator is not
+defective: its baseline is experimental evidence only, at `protea/core/evaluation.py:264`, and the
+measured populations sit 126 units from that reading and 4,375 from the all-evidence one. The
+dispatch was defective.
+
+And the fix has a precondition nobody had identified: **no ontology snapshot contemporary with GOA
+220 exists.** The three loaded are dated 2025-03-16, 2025-07-22 and 2026-01-23, against a GOA file
+published 2024-04-16. A `go-basic` from around April 2024 has to be loaded before the window can be
+rebuilt correctly.
+
+**The cohort partition is not something this graph needs to invent.** `window_role` on
+`EvaluationSet` carries the vocabulary `valid`, for selection and threshold tuning, and `test`, to
+be reported once. That is ADR D40's rolling-origin protocol, and it is the experimental and
+competitive cohorts in the platform's own words.
+
+It is NULL in all four windows. So the field that exists to keep a tuning decision off the holdout
+was never populated, which is the mechanism behind the finding in section 7quater: two thirds of
+this campaign's decision-bearing comparisons were measured on a window containing the holdout. The
+graph should wire its cohorts onto that field rather than declare a parallel notion beside it.
+
+Both of these belong with `test_per_protein_sink` in the same category: a guard or a fix that
+exists, is documented, names the failure it prevents, and was not used.
