@@ -96,23 +96,28 @@ silently. **No quantity measured on the union may seed a prior on the competitiv
 the cohort table above, which is split, is the design's population rather than anything recomputed
 from the stored sets.
 
-**Two counts of the experimental window itself disagree by a fifth, and the cause is a definition
-rather than an error.** The table above counts 17,874 protein-aspect units gained between 220 and
-227. A second measurement over the same window counts 22,282. The gap is 4,408 units.
+**The table above is an undercount, the cause is a definition, and the correction is measured.**
+It counts 17,874 protein-aspect units gained between 220 and 227. Under the protocol's own
+baseline the same window holds 22,408.
 
-The difference is the baseline the gained side is subtracted against. The table above treats a
-term as gained only if it was absent at t0 under **any** evidence code, so a term that already sat
-on the protein electronically and became experimental within the window does not count. The other
-measurement subtracts the experimental baseline alone, so such a promotion does count. Both are
-coherent; they answer different questions. The first asks which terms are new to the protein, the
-second asks which terms became experimentally supported.
+The difference is what the gained side is subtracted against. The table treats a term as gained
+only if it was absent at t0 under **any** evidence code, so a term that already sat on the protein
+electronically and became experimental within the window does not count. Under the experimental
+baseline it does. **The benchmark's protocol is the experimental baseline**, since the object of
+prediction is the experimental annotation and the electronic one was already public at t0, so its
+promotion inside the window is a real gain. The knowledge split carries the "it was easy to
+predict" concern on its own, and is itself defined on experimental annotations alone.
 
-**The benchmark's protocol is the second one**, since the target of prediction is the experimental
-annotation and the electronic one was already public at t0. The table above is therefore the
-conservative count and is likely to be revised upward, panel by panel, once the promotion rate is
-measured directly. It is kept until then because the revision must be measured rather than
-assumed, and because the ratio between the cohorts, which is what the power argument rests on, is
-not sensitive to the choice.
+The promotion rate has since been measured directly: **7,002 protein-term pairs, 4,501
+protein-aspect units**, which accounts for the whole of the gap between the two counts. The
+correction is therefore arithmetic rather than a matter of judgement, and the nine-panel table
+will be restated at the experimental baseline before any floor is read off it.
+
+**What the correction does not disturb is the ratio the power argument rests on.** Measured on the
+same footing, each window against its own pivot, the experimental cohort is **2.55 times** the
+competitive one: 22,408 units against 8,792. By aspect the ratio runs 2.01 in BPO, 3.58 in MFO and
+2.95 in CCO. The 2.5 the table above reports survives its own absolutes being conservative, which
+is the property that matters, since the panels are sized by ratio and not by count.
 
 ---
 
