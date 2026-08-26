@@ -58,28 +58,43 @@ only one holdout here, and it is the one the field already uses.
 
 ### Panel populations, in units of protein by aspect
 
+Measured at the experimental baseline, each cohort against its own pivot, releases joined on the
+ontology accession rather than the internal term id.
+
 | panel | experimental | competitive | ratio |
 |---|---|---|---|
-| NK, BPO | 1,344 | 373 | 3.6 |
-| NK, MFO | 797 | 224 | 3.6 |
-| NK, CCO | 799 | 203 | 3.9 |
-| LK, BPO | 985 | 418 | 2.4 |
-| LK, MFO | 689 | 181 | 3.8 |
-| LK, CCO | 505 | 193 | 2.6 |
-| PK, BPO | 6,392 | 3,451 | 1.9 |
-| PK, MFO | 2,964 | 827 | 3.6 |
-| PK, CCO | 3,399 | 1,326 | 2.6 |
-| total | 17,874 | 7,196 | 2.5 |
+| NK, BPO | 1,509 | 437 | 3.45 |
+| NK, MFO | 1,140 | 349 | 3.27 |
+| NK, CCO | 1,115 | 275 | 4.05 |
+| LK, BPO | 1,215 | 539 | 2.25 |
+| LK, MFO | 941 | 245 | 3.84 |
+| LK, CCO | 821 | 266 | 3.09 |
+| PK, BPO | 7,136 (route-dependent) | 3,920 | 1.82 |
+| PK, MFO | 3,908 (route-dependent) | 1,081 | 3.62 |
+| PK, CCO | 4,623 (route-dependent) | 1,680 | 2.75 |
+| total | 22,408 | 8,792 | 2.55 |
 
 **This is why the experimental window is the one it is, and the reason is power in the panels the
-thesis is about.** The six low-knowledge panels hold between 505 and 1,344 units here. The window
+thesis is about.** The six low-knowledge panels hold between 821 and 1,509 units here. The window
 the existing ablation architecture was sized against holds between 161 and 354 in the same panels,
-so every one of them roughly triples. Against the floor that document derives at the low end of
-its contrast classes, all six clear it comfortably; against the floor at the high end, four of
-six clear it and two are close. Under the smaller window, none of that was true.
+so every one of them multiplies by between three and five. Against the floor that document derives
+at the low end of its contrast classes all six clear it comfortably, and against the floor at the
+high end all six clear it as well. Under the smaller window, none of that was true.
 
-The prior-knowledge panels remain three quarters of the units and remain the region where the
-existing arithmetic says nothing separates. Enlarging the window does not change that, and the
+**The ratio that the power argument runs on is 3.19, not 2.55.** The global ratio is seven tenths
+prior knowledge by construction, and prior knowledge is both the region the existing arithmetic
+declares inert for the representation axis and the region whose counts depend on which route
+measures them. Restricted to the six panels the thesis is about, the experimental cohort is
+**3.19 times** the competitive one, 6,741 units against 2,111. Prior knowledge on its own runs
+2.35. Quoting the global figure understates the design where it matters and launders the
+route-dependence of the part that does not.
+
+**The three prior-knowledge rows are marked because two routes disagree on them and the
+disagreement is not yet explained.** Measured against the reconciled ground truth rather than the
+raw annotations, the same window gives 6,680, 4,023 and 4,847. The six low-knowledge panels agree
+between the routes to within twelve units, three of them exactly, so the disagreement is localised
+rather than diffuse. Neither pair of prior-knowledge figures may be cited until the cause is
+found; nothing in the design rests on them meanwhile.
 instantiation does not pretend it does.
 
 ### The stored evaluations do not respect this split
@@ -96,9 +111,8 @@ silently. **No quantity measured on the union may seed a prior on the competitiv
 the cohort table above, which is split, is the design's population rather than anything recomputed
 from the stored sets.
 
-**The table above is an undercount, the cause is a definition, and the correction is measured.**
-It counts 17,874 protein-aspect units gained between 220 and 227. Under the protocol's own
-baseline the same window holds 22,408.
+**The table above replaces an undercount, and the cause was a definition rather than an error.**
+The earlier count was 17,874 protein-aspect units gained between 220 and 227, against 22,408 here.
 
 The difference is what the gained side is subtracted against. The table treats a term as gained
 only if it was absent at t0 under **any** evidence code, so a term that already sat on the protein
@@ -111,7 +125,7 @@ predict" concern on its own, and is itself defined on experimental annotations a
 The promotion rate has since been measured directly: **7,002 protein-term pairs, 4,501
 protein-aspect units**, which accounts for the whole of the gap between the two counts. The
 correction is therefore arithmetic rather than a matter of judgement, and the nine-panel table
-will be restated at the experimental baseline before any floor is read off it.
+above is the restatement.
 
 **What the correction does not disturb is the ratio the power argument rests on.** Measured on the
 same footing, each window against its own pivot, the experimental cohort is **2.55 times** the
