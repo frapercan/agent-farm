@@ -537,3 +537,24 @@ concentrated in a single panel is that failure in its purest form.
 
 Only then does the scoring node close, and it closes into an edge of multiplicity rather than a
 winner, because its adjacent levels sit below the detectable effect in all nine panels.
+
+---
+
+## 9. Two rules this audit paid for, written here so they are not paid for again
+
+**Across releases, join on `go_id`, never on `go_term_id`.** The internal id is scoped to an
+ontology snapshot, and the annotation sets of this campaign hang from three different ones (GOA
+220 and 226 from 2025-03-16, GOA 227 from 2025-07-22, GOA 230 from 2026-01-23). Joining two
+releases on the internal id silently matches nothing or almost everything depending on direction.
+Both machines committed this within two days, once returning exactly zero promotions and once
+returning "553,591 of 553,597 proteins gained a term". Neither result looked like a bug.
+
+**An empty group reads the same as a null one.** Holding a field fixed that is a property of the
+thing you are varying yields no comparison at all, and the output is indistinguishable from a
+measured absence. Holding `prediction_set_id` fixed while varying the neighbourhood depth or the
+representation does exactly that, because both are properties of the prediction set. Whenever a
+census returns no groups, the first hypothesis is the conditioning set and not the data.
+
+Eight instrument failures were found and closed on 2026-08-26, four on each machine. All eight had
+the same shape: a clean, round or empty result that read exactly like a finding. None was closed
+by authority; each was closed by two routes disagreeing and the disagreement having a mechanism.
