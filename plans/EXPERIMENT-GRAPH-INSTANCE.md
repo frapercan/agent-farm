@@ -115,9 +115,14 @@ a tie-out**, since subtracting each only-set from its own total must give the in
 construction; it carries no evidence on its own.
 
 What it takes to make 3,446 the true panel is that both only-sets be error, and only one half of
-that is settled. **The 577 are settled by monotonicity.** The raw criterion does not propagate, so
-it can overcount but never undercount: if the raw gained set is empty then the propagated one is
-empty too, whatever the closure does. They are not gains under any reading.
+that is settled. **The 577 are settled by measurement.** All of them, checked exhaustively rather
+than sampled, hold an experimental set that is identical at both ends of the window, so nothing
+about the protein's evidence changed and what the reconciled route records there is not new
+knowledge. Closure monotonicity does not settle it and must not be quoted as if it did: nesting of
+closures follows from nesting of the underlying sets only when both are taken under the same
+graph, and the reconciled route takes one end under each of two ontology snapshots. That gap is
+not a technicality, it is the drift itself, and an argument that proved the 577 away would be
+proving away units that were counted.
 
 **The 462 are open.** Calling them error requires that each one's gained term already sit in the
 ancestor closure of what the protein held at t0, which is confirmed on four of them. Until that is
