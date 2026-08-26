@@ -9,6 +9,26 @@ in the instantiation that follows it, so that a change of cohort, of release or 
 rewrites the instantiation and leaves the shape standing. A shape that has to be rewritten when
 the numbers move was never a shape.
 
+## The vocabulary, because one word was carrying an argument
+
+A **source** is where an annotation comes from: annotated donors, the label space itself, the
+query's own prior, term co-occurrence, literature, an interaction network, a structure.
+
+A **flow** is a source plus a mechanism of propagation. Neighbour transfer over an embedding is a
+flow. Running the same transfer over a different embedding is **not another flow**, it is the same
+flow configured differently, and failing to make that distinction is why two closed steps of the
+ladder ended without a winner: they varied the space of one mechanism and never the mechanism.
+
+**Affinity** is what gets measured: the set of regions in which a flow contributes above that
+region's floor. It is a set, not a score, which is why it admits no global ordering.
+
+**Channelling** is what gets built from it: the policy that admits each flow into its regions.
+
+The word **arm** is retired. It comes from trial and bandit designs, where the variants are
+interchangeable, one of them wins, and the comparison is global. None of those hold here, and the
+term made it grammatical to write "the winning arm", which is a sentence this campaign has no
+evidence for and has twice been unable to write honestly. A flow is not selected. It is channelled.
+
 ## Why the ladder is being replaced, in one paragraph
 
 A ladder makes position mean dependency. Five consequences followed, all of them observed rather
@@ -60,7 +80,7 @@ never crossed into the partition.
 
 **The stratifier's bank is part of the frame, and it is not the Bank node.** The two share a
 word and are different objects. Reach and homology coordinates are keyed on the protein and on a
-reference bank at a stated cut, so if the coordinate bank moved with the node, two arms differing
+reference bank at a stated cut, so if the coordinate bank moved with the node, two flows differing
 in donor eligibility would receive different band membership. Admitting weaker donors raises the
 identity of the best annotated neighbour without raising that of the best experimental one, which
 widens the gap and migrates proteins toward the levels the thesis is about. The bias runs the
@@ -68,15 +88,15 @@ flattering way, exactly as in the case the rule was written to forbid. No edge m
 stratifier's bank.
 
 Their governing rule is structural and it is the one most easily broken: **a coordinate must
-never depend on the arm.** If membership of a band depended on which neighbours an arm retrieved,
-two arms would be scored on different populations under one heading, and the bias would run the
+never depend on the flow.** If membership of a band depended on which neighbours a flow retrieved,
+two flows would be scored on different populations under one heading, and the bias would run the
 flattering way, because a better representation promotes its own easy cases into the easy bands.
-The stratifier is frozen sequence space. What is arm-dependent is not discarded, it is promoted
+The stratifier is frozen sequence space. What is flow-dependent is not discarded, it is promoted
 to a statistic of its own and reported as such.
 
 **The floors** are declared before a comparison runs and are properties of the comparison, not of
-the graph. Two arms that share their retrieval and differ in one downstream knob have a small
-one; two arms that retrieve different neighbours have a larger one. A floor therefore lives on
+the graph. Two flows that share their retrieval and differ in one downstream knob have a small
+one; two flows that retrieve different neighbours have a larger one. A floor therefore lives on
 the edge being tested, and a single global floor is a category error. Whether a comparison takes
 a resolution floor or a selection floor depends on whether it was declared before it ran or is a
 maximum over a search, and that distinction has already decided two opposite verdicts about
@@ -122,7 +142,7 @@ carries a question, the field or fields it varies, its incoming edges, a gate wi
 type and floor, and the value or values it leaves decided. It also carries two things a linear
 ladder kept and the first draft of this document dropped, and both are load-bearing.
 
-**The rank**, the quantity the arms are ordered by, declared per panel. Without it the propagation
+**The rank**, the quantity the configured flows are ordered by, declared per panel. Without it the propagation
 rule below silently requires one scalar over nine panels, and the only scalars available are the
 aggregates this project has proscribed.
 
@@ -143,7 +163,7 @@ changes.
 - **Substrate.** What a protein becomes. The backbone, the depth, the grain and the order in
   which sparsification and aggregation are applied.
 - **Bank.** Which donors are eligible. The evidence regime, the review status, the exclusions.
-- **Retriever.** How neighbours are found in that bank. Held by every arm ever run and never
+- **Retriever.** How neighbours are found in that bank. Held by every flow ever run and never
   declared as a choice, which makes it an inherited edge and not a constant.
 - **Generator.** What proposes candidates that retrieval cannot reach, because retrieval can only
   offer what a neighbour already carries.
@@ -151,7 +171,7 @@ changes.
 - **Features.** Which signal families the scorer is allowed to read.
 - **Combination.** Whether several models beat the best one, and by a mechanism that can be
   named.
-- **Routing.** Whether different arms should serve different panels, which is the only node whose
+- **Routing.** Whether different flows should serve different panels, which is the only node whose
   output is a policy rather than a value.
 
 Two properties of this spine matter more than its contents.
@@ -259,9 +279,9 @@ precisely where nothing else was evaluated.
 Where an interaction between two fields has been measured, the two fields are one node, by the
 rule this document already states: one field, or one group of fields that cannot be moved apart.
 
-**Cost enters the order.** Among arms whose intervals overlap, the edge orders by ascending cost
-and the point estimate breaks ties only at equal cost. Otherwise an arm that wins by a margin
-smaller than its own floor, and costs a corpus pass more than the arm it beat, fixes an expensive
+**Cost enters the order.** Among flows whose intervals overlap, the edge orders by ascending cost
+and the point estimate breaks ties only at equal cost. Otherwise a flow that wins by a margin
+smaller than its own floor, and costs a corpus pass more than the flow it beat, fixes an expensive
 branch and the terminal projection with it.
 
 **Evidence is always per panel.** A node resolves in a panel or it does not, and a node may
@@ -277,14 +297,14 @@ throughout.
 The holdout is touched once, and the discipline that makes one contact worth having is not
 restraint about how much crosses. It is that nothing is chosen after looking.
 
-**Selection bias comes from selection, not from multiplicity.** Crossing many arms biases nothing
+**Selection bias comes from selection, not from multiplicity.** Crossing many flows biases nothing
 by itself. Choosing among them once their numbers are visible biases everything. So the whole
-propagated set crosses, every arm is reported in every panel, and the analysis is fixed before the
+propagated set crosses, every flow is reported in every panel, and the analysis is fixed before the
 contact rather than trusted afterwards.
 
-**What is fixed in advance, and sealed.** Which arms cross. Which panels are reported. The metric
+**What is fixed in advance, and sealed.** Which flows cross. Which panels are reported. The metric
 and its weighting. The rule that determines each floor, though never its value, since that depends
-on per-panel populations not known until the contact. The one arm designated as the headline. The
+on per-panel populations not known until the contact. The one flow designated as the headline. The
 multiplicity correction over the declared family. And what is done if the ordering disagrees with
 the experimental cohort, which is that the experimental leader stands.
 
@@ -294,7 +314,7 @@ emits was decided by someone who had not seen it. A promise not to look leaves t
 available; a signed plan removes it, because the headline cannot be changed afterwards without the
 change being visible.
 
-**What this buys.** Per-panel results for every propagated arm rather than a single number,
+**What this buys.** Per-panel results for every propagated flow rather than a single number,
 priced under a correction over a family declared in advance. An agreement statistic against the
 experimental cohort. And a transfer claim, which is the thing the project has never had: whether a
 decision taken on a large cohort holds on the one that counts.
@@ -307,7 +327,7 @@ is not larger, so the same difference cannot clear a stricter floor on fewer pro
 noise.
 
 **Two claims, two floors, two cohorts, and an early draft assembled them backwards.** The claim
-that an arm is the best of what was searched belongs to the experimental cohort and takes a
+that a flow is the best of what was searched belongs to the experimental cohort and takes a
 selection floor, priced against the search budget of the whole graph. Each claim the holdout makes
 is a comparison declared before it ran and takes a resolution floor, adjusted for the declared
 family. The maximum lives upstream, never at the terminal.
@@ -315,11 +335,55 @@ family. The maximum lives upstream, never at the terminal.
 **This supersedes the prohibition on a second holdout** recorded in the campaign, and the
 supersession is stated rather than assumed. That prohibition exists because holding out twice
 invites reporting whichever came out better. Under a sealed plan that is not available: the
-headline was named first, every other arm was named first, and an arm that was not named cannot be
+headline was named first, every other flow was named first, and a flow that was not named cannot be
 promoted. The rule was right about the failure it named, and this design closes that failure
 rather than stepping around it.
 
-## 7. What this shape will not do
+## 7. What the campaign claims, and what the map is
+
+This section exists because an earlier draft got the two backwards, and the error is the kind
+that survives review by looking like rigour.
+
+**The affinity map is the mechanism. It is not the claim.**
+
+The map holds one decision per flow per region, and it is the worst estimated object in the
+design: with several flows over a few dozen regions it is hundreds of contrasts, the standard
+error grows as the region shrinks, so **spurious affinity concentrates in the small regions**,
+and the small regions are the ones that motivate the design. Proteins in a region are homologues
+rather than independent draws, so the effective population is a fraction of the counted one.
+Corrected for multiplicity, the effect a cell must show to be admitted is larger than any effect
+this project has ever measured in those cells. **In the regions that justify the design, the map
+is close to unidentifiable, and a design whose headline is its least identifiable object is
+indefensible however carefully it is measured.**
+
+**The claim is a single contrast, declared before the holdout is touched: does channelling beat
+not channelling?** Concretely, does the regional policy beat the best single flow applied
+everywhere, and does it beat the flat consensus of all admitted flows. That is one comparison, it
+has power, and it is what the projection is for. The map is how the policy is built, published
+beside the claim as a description rather than as a result.
+
+Three consequences follow and none of them is optional.
+
+**The map is published in three colours, never two.** Admitted, not admitted, and
+**indeterminate for want of power**, with each region's minimum detectable effect printed beside
+it. Two colours over a lattice whose power varies by an order of magnitude is misleading by
+construction: it renders "we could not tell" and "we could tell it does not help" in the same ink.
+
+**An empty region has three explanations and the design must separate them.** No signal, no
+power, or **redundancy**: several flows that agree can each fail a marginal test while the set is
+strong, so a region can be empty precisely because everything works there. A leave-one-out
+measurement cannot tell those apart, and the campaign's own record contains the trap already: one
+flow measures exactly zero in a region and turns out, measured alone, to beat the full combiner
+there. **Marginal contribution is not usefulness.** Whatever instrument builds the map must
+measure both, or the map will record the combiner's habits rather than the flows' competence.
+
+**And a flow may not be credited with competence on the coordinate that defines it.** One
+reporting coordinate is built from the statistic that gives one flow its advantage, so routing by
+it and then asking whether that flow is competent in those bands guarantees the answer. Which
+flow shares a statistic with which coordinate is declared, and no competence claim is made along
+a shared axis.
+
+## 8. What this shape will not do
 
 It will not make a small panel large. Where a panel lacks the population to resolve an axis, a
 graph resolves nothing a ladder could not, and the arithmetic that says which panels those are is

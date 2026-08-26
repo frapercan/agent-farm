@@ -35,7 +35,7 @@ approaches the corpus is not a delta.
 The frame is modelled as a source node with no levels and no experiment, whose edges reach every
 other node, so that when it moves, and the record says it will, what is invalidated is computable.
 
-**The stratifier's reference bank belongs here and not to the Bank node.** Two arms differing in
+**The stratifier's reference bank belongs here and not to the Bank node.** Two flows differing in
 donor eligibility must not receive different band membership.
 
 ---
@@ -102,8 +102,8 @@ own documentation says the field exists for it, and one is dead by construction,
 aggregation cannot differ while exactly one layer is selected.
 
 Chunking has never been produced. No configuration enables it and no stored row carries a chunk
-index, which means the control arm of the recorded aggregation-order question has no input, and
-the arm cannot be scored until it does. **Blocked**, with a named precondition: three reference
+index, which means the control flow of the recorded aggregation-order question has no input, and
+the flow cannot be scored until it does. **Blocked**, with a named precondition: three reference
 pool loaders join without a chunk predicate, so a chunked configuration would emit one pool row
 per window with the accession repeated and inflate the neighbourhood silently.
 
@@ -117,7 +117,7 @@ every set built on the other is permissive, so in the data that exists, window a
 are one axis. One run at matched window and two banks separates them.
 
 ### Retriever
-Every arm ever run retrieved by embedding nearest neighbour. Every stored candidate row carries an
+Every flow ever run retrieved by embedding nearest neighbour. Every stored candidate row carries an
 embedding distance and a named donor, so no other generator has ever produced a candidate and an
 alignment score could only ever reorder donors the embedding already found. **Inherited**, and it
 is the inherited edge with the widest reach, because every result to date is a statement about
@@ -148,12 +148,47 @@ record. Cannot be measured before the re-ranking node exists.
 
 ### Re-ranking
 What learned ranking adds over the tuned score at fixed candidates. **The layer is absent**: the
-model tables are empty and the arm field carries a single value in every stored result. Not
+model tables are empty and the flow field carries a single value in every stored result. Not
 blocked in the sense the generator is, since the trainer and its inputs exist; blocked in the
 sense that nothing has been trained on this platform.
 
 ### Combination and Routing
 Downstream of nodes that have not closed. Declared, not scheduled.
+
+---
+
+## 3bis. The affinity already measured, which is the strongest evidence the design has
+
+The campaign has run one leave-one-family-out ablation over a full feature schema, per knowledge
+category, on a clean frame with the excluded-known base applied. It records five flows whose
+contribution is exactly zero in some regions and positive in others, and several of those zeros
+are structural rather than statistical.
+
+| flow | exactly zero in | contributes in |
+|---|---|---|
+| full-vocabulary classifier | prior knowledge, all three aspects | no knowledge and limited knowledge, by a wide margin |
+| term association | no knowledge, all three | prior knowledge, first in two panels |
+| the query's own prior | no knowledge and limited knowledge | prior knowledge |
+| the neighbours' prior | prior knowledge | no knowledge, and **negative** in limited knowledge BPO |
+| lineage | no knowledge, exactly | prior knowledge, a quarter of the total gain |
+
+**Some of these zeros are mechanical and cannot be otherwise.** Term association scores a
+candidate against the terms a protein already holds, and a no-knowledge protein holds none, so its
+zero is arithmetic. The query's own prior is zero in the panel where, verified, not one protein
+holds a single term of that aspect. A zero that follows from the definition is not a measurement
+of unhelpfulness; it is the boundary of where the flow can exist at all, and the graph should
+carry it as a structural edge rather than as a weak one.
+
+**One of them is misread in the project's own record, and the misreading is instructive.** The
+classifier's zero in prior knowledge was written down as evidence that it does not help there. It
+is evidence that the combiner does not use it there: measured alone, that flow beats the full
+combiner in one prior-knowledge panel, held out, in nine of ten disjoint folds. **Marginal
+contribution and usefulness are different quantities**, and leave-one-out measures the first.
+Building an affinity map with that instrument alone would record the combiner's habits and call
+them the flows' competence.
+
+So the design's premise is not speculative. What is unproven is that channelling the flows by
+that structure beats not channelling them, and that, not the map, is the claim.
 
 ---
 
