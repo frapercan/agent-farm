@@ -82,6 +82,28 @@ The prior-knowledge panels remain three quarters of the units and remain the reg
 existing arithmetic says nothing separates. Enlarging the window does not change that, and the
 instantiation does not pretend it does.
 
+### The stored evaluations do not respect this split
+
+**The prediction sets already in the database were built for the pair 220 to 230, which is the
+union of both cohorts.** Every quantity measured on them is therefore measured on a population
+that contains the competitive cohort, including the dispersion floors of the floor census and the
+decisions this campaign took on neighbour count, preset and representation.
+
+This cannot be repaired by preserving anything, and it is not an argument for keeping those rows.
+It is a fact about the campaign that preceded this instantiation: the window this design reserves
+as blind was already read. The instantiation records it here so that nothing carries it forward
+silently. **No quantity measured on the union may seed a prior on the competitive cohort**, and
+the cohort table above, which is split, is the design's population rather than anything recomputed
+from the stored sets.
+
+**Two counts of that union disagree by about a tenth and are not yet reconciled.** A measurement
+taken from the window's ground truth against the accessions present in the stored predictions
+returns 22,282 units for the pair 220 to 230. The split table above sums to 25,070 across the same
+span. The two are not counting the same thing: one counts the delta of the window, the other
+counts the delta that reached a prediction set, and the difference is the coverage hole plus
+whatever else has not been separated from it. Neither number may be quoted for the other's
+purpose until that is settled.
+
 ---
 
 ## 3. The nodes, and where each edge stands today
@@ -157,39 +179,53 @@ Downstream of nodes that have not closed. Declared, not scheduled.
 
 ---
 
-## 3bis. The affinity already measured, which is the strongest evidence the design has
+## 3bis. What the design can lean on, which is structure and not magnitude
 
-The campaign has run one leave-one-family-out ablation over a full feature schema, per knowledge
-category, on a clean frame with the excluded-known base applied. It records five flows whose
-contribution is exactly zero in some regions and positive in others, and several of those zeros
-are structural rather than statistical.
+**This section previously claimed the opposite of its own source, and every magnitude in it is
+withdrawn.** It read the campaign's leave-one-family-out ablation as measured "on a clean frame
+with the excluded-known base applied". The signal registry records that row as measured *without*
+that base, in the frame the project itself declared invalid, and marks it as not citable until
+re-measured. The same registry downgrades the query's own prior to unmeasured-in-frame, and the
+withdrawn table listed it among the flows with measured affinity.
 
-| flow | exactly zero in | contributes in |
+**And the deeper correction is that this campaign never ran the flows at all.** Two group-bys
+settle it: the 225 prediction sets carry one identical feature list, and all 1,296 evaluation
+results carry the neighbour flow enabled and every other flow disabled. The other families'
+columns are not zero in those rows, they are entirely null. An ablation that removes a null column
+does not measure a zero; it does not measure.
+
+So the affinity map has no measured content yet. What it has is structure, and the structure comes
+from code rather than from a run, which is why it survives.
+
+**The structural zeros re-derive themselves.** The lineage producer sets all four of its features
+to zero for a protein with no known terms, by explicit convention: no known terms means no lineage
+relation to report. The evaluator defines the no-knowledge cell as a protein holding no
+experimental annotation in any namespace at the cut. Composing the two, every flow that reads the
+query's existing terms is mute by construction in that cell.
+
+| flow | mute by construction in | because |
 |---|---|---|
-| full-vocabulary classifier | prior knowledge, all three aspects | no knowledge and limited knowledge, by a wide margin |
-| term association | no knowledge, all three | prior knowledge, first in two panels |
-| the query's own prior | no knowledge and limited knowledge | prior knowledge |
-| the neighbours' prior | prior knowledge | no knowledge, and **negative** in limited knowledge BPO |
-| lineage | no knowledge, exactly | prior knowledge, a quarter of the total gain |
+| lineage | no knowledge, all three aspects | the producer zeroes it when the known set is empty |
+| term association | no knowledge, all three aspects | it scores a candidate against terms the protein holds, and it holds none |
+| the query's own prior | no knowledge, all three aspects | same, and empty in any panel where no protein holds a term of that aspect |
 
-**Some of these zeros are mechanical and cannot be otherwise.** Term association scores a
-candidate against the terms a protein already holds, and a no-knowledge protein holds none, so its
-zero is arithmetic. The query's own prior is zero in the panel where, verified, not one protein
-holds a single term of that aspect. A zero that follows from the definition is not a measurement
-of unhelpfulness; it is the boundary of where the flow can exist at all, and the graph should
-carry it as a structural edge rather than as a weak one.
+A zero that follows from a definition is not a measurement of unhelpfulness. It is the boundary of
+where the flow can exist at all, and the graph carries it as a structural edge rather than a weak
+one. Nothing here says the flows differ anywhere they are all defined, which is the interesting
+half and the unmeasured one.
 
-**One of them is misread in the project's own record, and the misreading is instructive.** The
-classifier's zero in prior knowledge was written down as evidence that it does not help there. It
-is evidence that the combiner does not use it there: measured alone, that flow beats the full
-combiner in one prior-knowledge panel, held out, in nine of ten disjoint folds. **Marginal
-contribution and usefulness are different quantities**, and leave-one-out measures the first.
-Building an affinity map with that instrument alone would record the combiner's habits and call
-them the flows' competence.
+**The instrument that produced the withdrawn numbers is also the wrong one, independently of its
+frame.** Leave-one-family-out measures marginal contribution given a combiner, not competence. A
+flow the combiner ignores reads as zero whether it is useless or merely redundant with what the
+combiner already trusts, and the two cases have opposite consequences for channelling. Built with
+that instrument alone, the affinity map would record the combiner's habits and call them the
+flows' competence. The replacement is a pair of quantities that do not depend on a combiner:
+unique reach, and the fraction of that reach the combiner exploits.
 
-So the design's premise is not speculative. What is unproven is that channelling the flows by
-that structure beats not channelling them, and that, not the map, is the claim.
-
+So the design's premise is unproven rather than supported. That is not a weakness of the shape:
+the claim was never the map. The claim is the single contrast, channelling against not
+channelling, and the map is the mechanism it needs. Measuring the flows where they are all defined
+is therefore the campaign's first obligation, not a step it may inherit.
 ---
 
 ## 4. Which nodes may see the fan
