@@ -416,6 +416,59 @@ One further asymmetry the instantiation does not mention: the window's removed s
 its gained side. 17,383 proteins lose 106,485 pairs against 16,906 proteins gaining 194,137, and
 the loss is overwhelmingly BPO (14,727 proteins, 94,061 pairs).
 
+
+---
+
+## 7quater. The decisions this campaign took are informed by the holdout
+
+This is the most consequential finding in the audit and it was found last, by reading a
+sentence in this document's own draft: "the prediction sets were built for the 220 to 230
+cohort".
+
+**220 to 230 is the union of the experimental window and the competitive one.** The
+instantiation declares 220 to 227 as experimental and 227 to 230 as the holdout, touched once
+under a sealed plan. Every result on the 220 to 230 evaluation set is therefore scored on a
+population that contains the holdout.
+
+| evaluation set | release pair | delta proteins | results |
+|---|---|---|---|
+| 8763acda | 226 to 227 | 6,216 | 702 |
+| **956ab4b3** | **220 to 230** | 22,498 | **594** |
+| c5c89dde | 227 to 230 | 8,910 | 0 |
+| 604c80d5 | 220 to 227 | 16,906 | 0 |
+
+594 of 1,296 rows, 45.8 per cent, sit on the union. The other 702 sit on 226 to 227, a
+sub-window of the experimental one, and are clean in this respect. **No result exists on
+either the experimental window or the competitive one.**
+
+Weighted by what the rows were used for, it is worse. Of the comparative groups that carry a
+decision:
+
+| axis | groups on the union | on 226 to 227 |
+|---|---|---|
+| scoring preset | 18 of 27, **66.7 per cent** | 9 |
+| neighbourhood depth K | 936 of 1,440, **65.0 per cent** | 504 |
+| representation | 918 of 1,296, **70.8 per cent** | 378 |
+
+**Roughly two thirds of every decision-bearing comparison in this campaign rests on a window
+containing the holdout.** This is not a defect of the census and it is not repaired by
+preserving anything. It is a fact about what the numbers mean, and the restart is the occasion
+to stamp it rather than inherit it in silence. No figure from those rows may seed a prior over
+the competitive cohort.
+
+It also settles the candidate table. The scoring node is a pure re-read of `go_prediction` and
+is the only node that could close without recomputing, which is an argument for keeping it. But
+those predictions are on the grouped window, so closing the node there would be a decision
+informed by the holdout. Deleting the table does not cost a node. It removes a temptation.
+
+**One measurement is unaffected, and the distinction matters.** The nine panel populations in
+section 7 come from the ground-truth artefact of `604c80d5`, which is the experimental window
+itself, and its delta of 16,906 proteins reproduces that row's counter exactly. Measured on the
+same footing, the three windows give three different tables: 22,282 panel units for the
+experimental window, 28,816 for the union, 9,239 for the competitive one. The published table
+is the experimental one. The census is on the union. They are different objects and only the
+second is contaminated.
+
 ---
 
 ## 8. What has to be agreed before anything is built
