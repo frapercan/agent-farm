@@ -108,11 +108,22 @@ the ontology in between. Both faults require a non-empty closure at t0 in the ga
 is why both are confined to prior knowledge and why the six low-knowledge panels agree to within
 twelve units.
 
-Because the faults are disjoint, the two routes agree on what is left when both are removed. In
-the middle-function panel the raw route holds 462 redundant units and the reconciled route 577
-drifted ones, and subtracting each from its own total gives **3,446 from either side**. That
-agreement is the tie-out, and it puts the true panel thirteen percent below the raw figure and
-seventeen percent below the reconciled one.
+The two only-sets are disjoint and each is homogeneous, verified over all of both rather than
+sampled: all 577 units the reconciled route holds alone have no raw gain, and all 462 the raw
+route holds alone have one. Their intersection is 3,446 units. **That number is an identity, not
+a tie-out**, since subtracting each only-set from its own total must give the intersection by
+construction; it carries no evidence on its own.
+
+What it takes to make 3,446 the true panel is that both only-sets be error, and only one half of
+that is settled. **The 577 are settled by monotonicity.** The raw criterion does not propagate, so
+it can overcount but never undercount: if the raw gained set is empty then the propagated one is
+empty too, whatever the closure does. They are not gains under any reading.
+
+**The 462 are open.** Calling them error requires that each one's gained term already sit in the
+ancestor closure of what the protein held at t0, which is confirmed on four of them. Until that is
+measured over all 462, the panel is bounded rather than known: **between 3,446 and 3,908**, at
+3,446 if every one is absorbed and 3,908 if none is. The lower bound is thirteen percent below the
+raw figure and seventeen percent below the reconciled one.
 
 **The consequence is larger than a disagreement over a count.** Roughly one unit in seven of the
 reconciled prior-knowledge panel is ontology drift rather than new annotation, which is a property
