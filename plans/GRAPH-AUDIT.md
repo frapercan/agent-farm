@@ -275,14 +275,38 @@ and resumable.
 
 ## 7. The floors, recomputed on measured populations
 
-The instantiation's panel table does not come from the database, and it is worse than
-unsourced: it is arithmetically impossible under the counting rule the code itself implements.
-In `protea/core/evaluation.py` a protein may appear in several aspects, so the three aspect
-panels of a bucket must sum to at least that bucket's protein count. The published table gives
-LK 2,179 against 2,585 limited-knowledge proteins and PK 12,755 against 12,944. Nor is it a
-partition. It reproduces under no plausible filter of the ground-truth parquet: restricting to
-the corpus changes nothing, IA above zero gives 21,961, at least two gained terms gives 19,227,
-at least three gives 17,081.
+The instantiation's panel table and the measurement below differ by 4,408 units, and the reason
+is a definition rather than an error in either.
+
+**A retraction first, because it was published here.** An earlier draft called the table
+arithmetically impossible, on the grounds that the three aspect panels of a bucket must sum to at
+least that bucket's protein count. **That check is invalid** and the table never failed it. A
+bucket's protein count and its panel units are different populations, because a protein can hold
+prior knowledge in one aspect and gain in another where it holds only limited knowledge: measured,
+**1,036 of the 16,906 delta proteins, 6.1 per cent, are in LK and PK at once**. No-knowledge is
+the only global category, since a protein with no experimental evidence in any namespace is
+no-knowledge everywhere, so NK is the one bucket where the two counts must agree. NK passing while
+LK and PK failed was the signature of a broken instrument, and it was read here as evidence
+against the table.
+
+**The real cause is the baseline the gained side is measured against**, and it is measurable.
+Counting a term as gained only when it was absent at t0 under *any* evidence code, which is the
+published table's rule, gives **17,907** panel units. Counting it as gained when it was absent
+under *experimental* evidence, so that a term already present as IEA and promoted to experimental
+inside the window counts, gives **22,408**. The difference is **4,501 units, 102 per cent of the
+observed 4,408 gap**, so the definition accounts for all of it.
+
+Which baseline is right is a protocol question and not a matter of taste. The object of prediction
+is experimental annotation, and an electronic annotation was already public at t0, so its
+promotion inside the window is a real gain and belongs on the gained side. The published table is
+the conservative count, and it is revised upward for that reason, not because it failed a check.
+
+Measured on that footing, with each window taking its own ontology pivot, the two cohorts hold
+22,408 and 8,792 units, a ratio of 2.55 overall and 2.01, 3.58 and 2.95 by aspect. The
+instantiation's stated ratio of 2.5 was therefore right even while its absolutes were conservative.
+
+Panel by panel, measured from the window's own ground-truth artefact, which reproduces every
+counter on the `evaluation_set` row exactly, and recomputing the arithmetic of
 
 Measured from the window's own ground-truth artefact, which reproduces every counter on the
 `evaluation_set` row exactly, and recomputing the arithmetic of
