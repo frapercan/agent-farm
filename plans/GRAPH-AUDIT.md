@@ -275,7 +275,17 @@ and resumable.
 
 ## 7. The floors, recomputed on measured populations
 
-The instantiation's panel table does not come from the database. Recomputing the arithmetic of
+The instantiation's panel table does not come from the database, and it is worse than
+unsourced: it is arithmetically impossible under the counting rule the code itself implements.
+In `protea/core/evaluation.py` a protein may appear in several aspects, so the three aspect
+panels of a bucket must sum to at least that bucket's protein count. The published table gives
+LK 2,179 against 2,585 limited-knowledge proteins and PK 12,755 against 12,944. Nor is it a
+partition. It reproduces under no plausible filter of the ground-truth parquet: restricting to
+the corpus changes nothing, IA above zero gives 21,961, at least two gained terms gives 19,227,
+at least three gives 17,081.
+
+Measured from the window's own ground-truth artefact, which reproduces every counter on the
+`evaluation_set` row exactly, and recomputing the arithmetic of
 `ABLATION-ARCHITECTURE.md` (2026-08-17, this campaign) on measured populations gives the
 following, at the resolution floor of 0.02 and the two contrast classes that document names.
 
@@ -287,9 +297,9 @@ following, at the resolution floor of 0.02 and the two contrast classes that doc
 | LK BPO | 1,214 | 540 | 0.0065 | 0.0105 | 0.249 |
 | LK MFO | 943 | 244 | 0.0074 | 0.0119 | 0.219 |
 | LK CCO | 821 | 266 | 0.0079 | 0.0127 | 0.205 |
-| PK BPO | 6,685 | 5,355 | 0.0028 | 0.0045 | 0.584 |
-| PK MFO | 4,025 | 1,383 | 0.0036 | 0.0057 | 0.453 |
-| PK CCO | 4,849 | 1,595 | 0.0033 | 0.0052 | 0.497 |
+| PK BPO | 6,680 | 5,354 | 0.0028 | 0.0045 | 0.584 |
+| PK MFO | 4,023 | 1,382 | 0.0036 | 0.0057 | 0.453 |
+| PK CCO | 4,847 | 1,594 | 0.0033 | 0.0052 | 0.497 |
 
 Two consequences, and the second is new.
 
@@ -301,6 +311,102 @@ window clears **nine of nine**, and the weakest panel tolerates a paired standar
 **Three panels of the competitive cohort cannot resolve anything at that contrast class.** NK CCO
 at 275, LK MFO at 244 and LK CCO at 266 fall below 332. This is not a result, it is an
 impossibility known in advance, and it belongs in the sealed plan before the holdout is touched.
+
+
+---
+
+## 7bis. The floor census, measured, and what it says about the cheapest node
+
+The census the instantiation lists as pending has now run against the stored results. Every
+figure below is the spread of `f_micro_w` within groups that share their evaluation set, frame,
+`max_terms`, `max_distance`, protein subset, window and leakage role, and differ in exactly one
+field.
+
+| contrast class | mean sd within group | median gap between adjacent levels | groups |
+|---|---|---|---|
+| neighbourhood depth K | 0.0295 | | 160 |
+| scoring preset | 0.0313 | **0.0030** | 100 |
+| representation, all | 0.0124 | 0.0021 | 144 |
+| representation, backbone only | 0.0151 | 0.0022 | 96 |
+| representation, re-encoding only | 0.0025 | 0.0013 | 48 |
+| representation, layer depth | 0.0036 | 0.0018 | 16 |
+| `max_terms` sweep | 0.0129 | | 8 |
+| `max_distance` sweep | 0.0031 | | 5 |
+| re-run of an identical configuration | **0.00000** | | 1 |
+| **admitting a whole source** | **no pairs exist** | | **0** |
+
+Six things follow, and the last two are the ones that change the plan.
+
+**The class the graph's central claim rests on has never been measured.** `arms_enabled` takes one
+value in all 1,296 rows, so there is not a single pair in which the source of the candidate
+differs. Every floor this campaign owns belongs to the class "one configuration of a flow against
+another configuration of the same flow". No "unpowered" declaration may be justified by analogy
+with them.
+
+**The evaluation pipeline is deterministic.** The one recoverable pair of genuinely identical
+configurations agrees to 0.00000 in all nine panels. The floor is not numerical noise; it is
+effect size.
+
+**A preset floor must be declared on the adjacent gap, not on the group spread.** The 0.0313 is
+dominated by two degenerate presets. The gap a real comparison must resolve is 0.0030, ten times
+smaller, and a floor set on the group spread would let the node resolve trivially.
+
+**These are effect sizes and not the paired standard deviation the floor formula takes.** They
+say what a comparison must resolve, not how noisy it is. Read against the minimum detectable
+effect at the low end of the contrast classes, on measured populations, the median adjacent-preset
+gap is below the detectable effect in **all nine panels**: 0.0030 against 0.0058 in NK BPO, 0.0062
+against 0.0079 in LK CCO, 0.0012 against 0.0028 in PK BPO. **The cheapest node in the graph
+resolves its extremes and not its neighbours**, so its outgoing edge carries multiplicity by
+construction rather than by failure.
+
+**The frame is not free, and the instantiation declares that it is.** Changing only the
+information accretion set, with everything else held, moves `f_micro_w` by up to 0.0185, mean
+0.0045. That is more than the distance threshold moves it (0.0031) and as much as layer depth
+(0.0036). A frame is modelled as a source node with no experiment precisely because it is a
+convention, which is right, but the consequence is that an unsealed result is not a cheap result.
+It is a result whose number is uncertain by more than most of the nodes the graph exists to
+decide.
+
+**And 396 of 1,296 rows, 30.6 per cent, have no recoverable job**, so their frame, `max_terms`,
+`max_distance` and protein subset are all unknown. They cannot enter any contrast. Worse, they set
+a trap that was walked into during this census: leaving the frame unconditioned produces twelve
+apparently identical groups with a mean spread of 0.0299 and protein counts ranging from 228 to
+2,179 inside a single group. **A floor estimated on those would be thirty times the real one.**
+
+Two smaller corrections. `distance_threshold` is NULL in all 225 prediction sets, so the retrieval
+threshold is a constant with a settings entry rather than a node. And a NULL `scoring_config_id`
+is numerically identical to `embedding_only`, verified on two prediction sets, so counting it as a
+ninth preset inflates the fan with a duplicate level.
+
+---
+
+## 7ter. Three blockers on the experimental window that no document carries
+
+**The information accretion set the frame declares does not exist.** The frame takes IA from the
+window's t0, which is GOA 220. `information_accretion_set` holds four rows: three on GOA 226 and
+one on GOA 230, none on GOA 220 and none on the pivot snapshot. Any IA-weighted number published
+today on this window carries GOA 226 IA and therefore violates the frame the same page declares.
+The precondition is cheap, because the mass barely moves between the three available tables (under
+1.3 per cent): produce the GOA 220 table on the pivot and re-seal. Until then the edge is blocked
+by an absent artefact rather than measured.
+
+**Three point one per cent of the experimental window has no candidates at all, and the hole is
+not uniform.** The 225 prediction sets were built for the 220 to 230 cohort. 525 of the 16,906
+delta proteins of 220 to 227 are not in it, because they gained terms between 220 and 227 and lost
+them again before 230; 366 of them sit in the `removed` bucket of the older evaluation set. The
+damage reaches 8.3 per cent in PK CCO. Scoring this window with what exists today does not
+evaluate it, it truncates it silently and unevenly across panels, which is exactly the shape of
+bias an affinity map cannot detect from inside. Either those 525 get candidates, or every result
+row declares the reduced cohort.
+
+**Pair disjointness is not protein disjointness, and only the first is declared.** The
+intersection of gained (protein, term) pairs between the two cohorts is exactly zero, verified.
+But 2,374 proteins appear in both, which is 26.6 per cent of the competitive cohort. The holdout
+is blind to the pairs it will be scored on and is not blind to the proteins.
+
+One further asymmetry the instantiation does not mention: the window's removed side is larger than
+its gained side. 17,383 proteins lose 106,485 pairs against 16,906 proteins gaining 194,137, and
+the loss is overwhelmingly BPO (14,727 proteins, 94,061 pairs).
 
 ---
 
@@ -323,6 +429,25 @@ installation (InterProScan). They are not exclusive and the ordering is a budget
 contradict it. No result row without a sealed frame. A node cannot close as measured with a weak
 incoming edge.
 
-**And the first action either way** is `audit_evaluation_frames`, which is read-only, exists, has
-never run, and is the only thing standing between the graph and a source node with no sealed
-edges.
+### The order, which is now determined rather than chosen
+
+Three things must happen before the scoring node can close on the experimental window, and none of
+them is a decision.
+
+**First, `audit_evaluation_frames`.** Read-only, registered since 2026-08-17, never dispatched.
+The census above already knows what it will find, 396 rows with no recoverable job, but knowing it
+from a query and having it recorded as a result are different things, and the second is what the
+graph runs on.
+
+**Second, the GOA 220 information accretion table on the pivot snapshot.** Without it every
+IA-weighted number on the experimental window violates the frame that page declares. The mass
+moves under 1.3 per cent between the available tables, so this is a correctness fix and not a
+result-changing one, which is the best kind to do first.
+
+**Third, candidates for the 525 proteins that have none**, or a reduced cohort declared on every
+result row. Scoring the window as it stands truncates it by 3.1 per cent overall and 8.3 per cent
+in one panel, and an uneven truncation across panels is the one bias a regional affinity map is
+structurally unable to see.
+
+Only then does the scoring node close, and it closes into an edge of multiplicity rather than a
+winner, because its adjacent levels sit below the detectable effect in all nine panels.
