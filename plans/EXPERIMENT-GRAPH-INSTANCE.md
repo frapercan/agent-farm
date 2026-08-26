@@ -89,12 +89,38 @@ measures them. Restricted to the six panels the thesis is about, the experimenta
 2.35. Quoting the global figure understates the design where it matters and launders the
 route-dependence of the part that does not.
 
-**The three prior-knowledge rows are marked because two routes disagree on them and the
-disagreement is not yet explained.** Measured against the reconciled ground truth rather than the
-raw annotations, the same window gives 6,680, 4,023 and 4,847. The six low-knowledge panels agree
-between the routes to within twelve units, three of them exactly, so the disagreement is localised
-rather than diffuse. Neither pair of prior-knowledge figures may be cited until the cause is
-found; nothing in the design rests on them meanwhile.
+That ratio is route-independent by construction rather than by luck. Both of the faults that split
+the prior-knowledge rows need a non-empty experimental closure at t0 in the aspect being counted,
+and no low-knowledge panel has one. Measured on the reconciled route the numerator moves by nine
+units and the ratio by four thousandths, from 3.193 to 3.189.
+
+**The three prior-knowledge rows are marked because two routes disagree on them, and both routes
+are wrong.** Measured against the reconciled ground truth rather than the raw annotations, the
+same window gives 6,680, 4,023 and 4,847. Decomposed in the one panel examined so far, the
+disagreement is two faults pointing opposite ways.
+
+The raw route **overcounts** because it does not propagate the pivot: a term it records as gained
+is already an ancestor of something the protein held at t0, so the gain is redundant rather than
+new. The reconciled route **overcounts** because it closes each end under its own ontology
+snapshot, and the two releases hang off snapshots four months apart: a protein whose experimental
+set is byte-identical at both ends still acquires ancestors, because parent edges were added to
+the ontology in between. Both faults require a non-empty closure at t0 in the gained aspect, which
+is why both are confined to prior knowledge and why the six low-knowledge panels agree to within
+twelve units.
+
+Because the faults are disjoint, the two routes agree on what is left when both are removed. In
+the middle-function panel the raw route holds 462 redundant units and the reconciled route 577
+drifted ones, and subtracting each from its own total gives **3,446 from either side**. That
+agreement is the tie-out, and it puts the true panel thirteen percent below the raw figure and
+seventeen percent below the reconciled one.
+
+**The consequence is larger than a disagreement over a count.** Roughly one unit in seven of the
+reconciled prior-knowledge panel is ontology drift rather than new annotation, which is a property
+of the window rather than of a route: anything evaluated on it is being scored in part on the
+ontology having been restructured. The design is protected only because the contamination is
+structurally confined to the region it already treats as inert. Neither set of prior-knowledge
+figures may be cited, and the reconciled route may not be adopted on the grounds of being the
+evaluator's, since in the panel measured it is the less accurate of the two.
 instantiation does not pretend it does.
 
 ### The stored evaluations do not respect this split
