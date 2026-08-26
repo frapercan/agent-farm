@@ -390,5 +390,7 @@ that the first node to close has somewhere to write its answer.
 
 It does not fix the floors. It names the one that exists and says the rest are pending.
 
-And it does not schedule. The order in section 6 is what is unblocked, not what matters most, and
-those are different questions.
+And it does not schedule. The order in section 6 is what the claim needs, worked backwards from
+the contrast the campaign intends to run. What is unblocked is a different question and a weaker
+one, and reading the list as an availability order is the error that sent the first floors census
+at the wrong contrast class.
