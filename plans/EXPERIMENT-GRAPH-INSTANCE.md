@@ -96,13 +96,23 @@ silently. **No quantity measured on the union may seed a prior on the competitiv
 the cohort table above, which is split, is the design's population rather than anything recomputed
 from the stored sets.
 
-**Two counts of that union disagree by about a tenth and are not yet reconciled.** A measurement
-taken from the window's ground truth against the accessions present in the stored predictions
-returns 22,282 units for the pair 220 to 230. The split table above sums to 25,070 across the same
-span. The two are not counting the same thing: one counts the delta of the window, the other
-counts the delta that reached a prediction set, and the difference is the coverage hole plus
-whatever else has not been separated from it. Neither number may be quoted for the other's
-purpose until that is settled.
+**Two counts of the experimental window itself disagree by a fifth, and the cause is a definition
+rather than an error.** The table above counts 17,874 protein-aspect units gained between 220 and
+227. A second measurement over the same window counts 22,282. The gap is 4,408 units.
+
+The difference is the baseline the gained side is subtracted against. The table above treats a
+term as gained only if it was absent at t0 under **any** evidence code, so a term that already sat
+on the protein electronically and became experimental within the window does not count. The other
+measurement subtracts the experimental baseline alone, so such a promotion does count. Both are
+coherent; they answer different questions. The first asks which terms are new to the protein, the
+second asks which terms became experimentally supported.
+
+**The benchmark's protocol is the second one**, since the target of prediction is the experimental
+annotation and the electronic one was already public at t0. The table above is therefore the
+conservative count and is likely to be revised upward, panel by panel, once the promotion rate is
+measured directly. It is kept until then because the revision must be measured rather than
+assumed, and because the ratio between the cohorts, which is what the power argument rests on, is
+not sensitive to the choice.
 
 ---
 
