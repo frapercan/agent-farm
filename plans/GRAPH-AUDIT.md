@@ -390,14 +390,22 @@ The precondition is cheap, because the mass barely moves between the three avail
 1.3 per cent): produce the GOA 220 table on the pivot and re-seal. Until then the edge is blocked
 by an absent artefact rather than measured.
 
-**Three point one per cent of the experimental window has no candidates at all, and the hole is
-not uniform.** The 225 prediction sets were built for the 220 to 230 cohort. 525 of the 16,906
-delta proteins of 220 to 227 are not in it, because they gained terms between 220 and 227 and lost
-them again before 230; 366 of them sit in the `removed` bucket of the older evaluation set. The
-damage reaches 8.3 per cent in PK CCO. Scoring this window with what exists today does not
+**Part of the experimental window has no candidates at all, and the hole sits almost entirely in
+one panel.** The 225 prediction sets were built for the 220 to 230 cohort, whose delta is 22,498
+proteins, and `go_prediction` holds 22,813 distinct accessions. 251 of the 16,906 delta proteins
+of 220 to 227 fall outside it, 1.48 per cent, which is 256 of the 22,282 panel units, 1.15 per
+cent. **208 of those 256, four fifths of the whole hole, are in PK CCO**, where they are 4.29 per
+cent of the panel. Every other panel is under half a per cent.
+
+(An earlier draft of this document published 3.1 per cent and 8.3 per cent here, taken from a
+subagent's report and not reproduced. The direct measurement above, crossing the window's
+ground-truth artefact against the distinct accessions of `go_prediction`, supersedes it. The
+same measurement reproduces the nine panel populations exactly by a second route, which is the
+check that gives it standing.) Scoring this window with what exists today does not
 evaluate it, it truncates it silently and unevenly across panels, which is exactly the shape of
-bias an affinity map cannot detect from inside. Either those 525 get candidates, or every result
-row declares the reduced cohort.
+bias an affinity map cannot detect from inside. A truncation concentrated in one panel is worse
+than an even one for a design whose whole object is a per-region map. Either those 251 proteins
+get candidates, or every result row declares the reduced cohort.
 
 **Pair disjointness is not protein disjointness, and only the first is declared.** The
 intersection of gained (protein, term) pairs between the two cohorts is exactly zero, verified.
@@ -444,10 +452,11 @@ IA-weighted number on the experimental window violates the frame that page decla
 moves under 1.3 per cent between the available tables, so this is a correctness fix and not a
 result-changing one, which is the best kind to do first.
 
-**Third, candidates for the 525 proteins that have none**, or a reduced cohort declared on every
-result row. Scoring the window as it stands truncates it by 3.1 per cent overall and 8.3 per cent
-in one panel, and an uneven truncation across panels is the one bias a regional affinity map is
-structurally unable to see.
+**Third, candidates for the 251 proteins that have none**, or a reduced cohort declared on every
+result row. Scoring the window as it stands truncates it by 1.15 per cent of panel units overall
+and 4.29 per cent in PK CCO, which holds four fifths of the whole hole. An uneven truncation
+across panels is the one bias a regional affinity map is structurally unable to see, and a hole
+concentrated in a single panel is that failure in its purest form.
 
 Only then does the scoring node close, and it closes into an edge of multiplicity rather than a
 winner, because its adjacent levels sit below the detectable effect in all nine panels.
