@@ -114,10 +114,10 @@ from the stored sets.
 **The table above replaces an undercount, and the cause was a definition rather than an error.**
 The earlier count was 17,874 protein-aspect units gained between 220 and 227, against 22,408 here.
 
-The difference is what the gained side is subtracted against. The table treats a term as gained
-only if it was absent at t0 under **any** evidence code, so a term that already sat on the protein
-electronically and became experimental within the window does not count. Under the experimental
-baseline it does. **The benchmark's protocol is the experimental baseline**, since the object of
+The difference is what the gained side is subtracted against. The earlier count treated a term as
+gained only if it was absent at t0 under **any** evidence code, so a term that already sat on the
+protein electronically and became experimental within the window did not count. Under the
+experimental baseline it does. **The benchmark's protocol is the experimental baseline**, since the object of
 prediction is the experimental annotation and the electronic one was already public at t0, so its
 promotion inside the window is a real gain. The knowledge split carries the "it was easy to
 predict" concern on its own, and is itself defined on experimental annotations alone.
