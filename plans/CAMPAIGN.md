@@ -1,6 +1,35 @@
 # THE CAMPAIGN: the clean run, defined
 
-Author: Francisco Miguel Perez Canales. Written 2026-07-27.
+> **SUPERSEDED AS A PLAN ON 2026-08-27. DO NOT RUN FROM THIS DOCUMENT.**
+>
+> The campaign is no longer a ladder of rungs. It is a directed experimentation
+> graph whose nodes are decisions about fields and whose edges carry a value, a
+> strength and a per-panel cardinality, refined into a survivor cascade in which
+> configurations are channelled into the regions where they show affinity.
+>
+> **Read instead, in this order:**
+>
+> | document | what it carries |
+> |---|---|
+> | `EXPERIMENT-GRAPH.md` | the shape: nodes, edges, the five strengths, propagation |
+> | `CAMPAIGN-MODEL.md` | flows against configurations, regions and stratification, affinity, channelling, floors per contrast class |
+> | `CAMPAIGN-INSTANCE-ZERO.md` | the instance: node by node, the preconditions, and the first run |
+> | `ABLATION-ARCHITECTURE.md` | the arithmetic of what the benchmark can resolve |
+>
+> **What is still true here** and is not repeated in those documents: the naming
+> discipline in section 0, the temporal frame, and the reasoning behind the
+> corpus tiers. Those parts are cited by the live design and were not superseded.
+>
+> **What is dead** is every rung, every ordering that follows from a rung, and
+> every result the ladder recorded. The stored results of that campaign were
+> deleted on 2026-08-26 by author decision D-09, because two thirds of its
+> decision-bearing comparisons were measured on a window containing the blind
+> holdout. No figure from them may seed a prior over the competitive cohort.
+>
+> A reader who follows this document as written will build the wrong model of
+> what is being run. That is why this notice is here rather than in a changelog.
+
+Author: Francisco Miguel Perez Canales. Written 2026-07-27. Superseded 2026-08-27.
 
 Fourth and operative companion to `E2E-CANONICAL-RUN.md` (axes and principles),
 `SIGNAL-REGISTRY.md` (what each signal is worth) and `GENESIS-STATE.md` (what the

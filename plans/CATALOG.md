@@ -11,9 +11,14 @@ Status legend: **ACTIVE** (live, being worked) · **DONE** (finished, work lande
 
 ## 1. Canonical research campaign
 
+**The canonical campaign changed on 2026-08-27.** It is the experimentation graph,
+refined into a survivor cascade. Everything below it in this section describes the
+ladder that preceded it and is kept for the record, not for execution.
+
 | Plan | Status | What it is | Where |
 |---|---|---|---|
-| **beat-lafa-1** | **ACTIVE — canonical** | The current campaign to surpass LAFA #1. `PLAN.md` (bibliography-grounded levers L1-L7) + `CAMPAIGN-DOSSIER.md` (the definitive record of everything tried, how, state, insights, artifact map). Best confirmed native = **0.3745** (EvalResult `b21b187c`). Bottleneck = PK precision. | `plans/beat-lafa-1/` |
+| **experiment-graph** | **ACTIVE, canonical** | The live campaign. Nodes are decisions about fields; edges carry a value, a strength and a per-panel cardinality. Configurations are channelled into the regions where they show affinity, and the single pre-registered claim is that channelling beats not channelling. Read `EXPERIMENT-GRAPH.md` for the shape, `CAMPAIGN-MODEL.md` for flows, regions and floors, `CAMPAIGN-INSTANCE-ZERO.md` for the instance. | `plans/EXPERIMENT-GRAPH.md` |
+| **beat-lafa-1** | **ARCHIVED, superseded 2026-08-27** | The ladder campaign to surpass LAFA #1. Its stored results were deleted under decision D-09, because two thirds of its decision-bearing comparisons were measured on a window containing the blind holdout, so the figures it records (including the 0.3745 native and its evaluation-result id) no longer resolve and may not seed a prior. Kept for the reasoning and the levers, not for the numbers. | `plans/beat-lafa-1/` | The current campaign to surpass LAFA #1. `PLAN.md` (bibliography-grounded levers L1-L7) + `CAMPAIGN-DOSSIER.md` (the definitive record of everything tried, how, state, insights, artifact map). Best confirmed native = **0.3745** (EvalResult `b21b187c`). Bottleneck = PK precision. | `plans/beat-lafa-1/` |
 | **meta-reranker** | ACTIVE — live reference | ADR-D43 architecture: stacked EvidenceScorer ports + shallow per-category combiner. `beat-lafa-1` plugs each lever in as one scorer. Architecture doc, not a slice plan. | `plans/meta-reranker/ARCHITECTURE.md` |
 
 ## 2. LAFA-campaign lineage (archived — folded into beat-lafa-1)
