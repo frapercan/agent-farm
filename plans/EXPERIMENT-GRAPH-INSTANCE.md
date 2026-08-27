@@ -58,21 +58,38 @@ only one holdout here, and it is the one the field already uses.
 
 ### Panel populations, in units of protein by aspect
 
-Measured at the experimental baseline, each cohort against its own pivot, releases joined on the
-ontology accession rather than the internal term id.
+Measured on the rebuilt window, both ends closed under the graph congruent with its opening and
+the pivot explicitly different, so these counts are free of the ontology drift that inflated the
+earlier ones.
 
 | panel | experimental | competitive | ratio |
 |---|---|---|---|
 | NK, BPO | 1,509 | 437 | 3.45 |
-| NK, MFO | 1,140 | 349 | 3.27 |
-| NK, CCO | 1,115 | 275 | 4.05 |
-| LK, BPO | 1,215 | 539 | 2.25 |
-| LK, MFO | 941 | 245 | 3.84 |
+| NK, MFO | 1,129 | 349 | 3.23 |
+| NK, CCO | 1,116 | 275 | 4.06 |
+| LK, BPO | 1,214 | 539 | 2.25 |
+| LK, MFO | 943 | 245 | 3.85 |
 | LK, CCO | 821 | 266 | 3.09 |
-| PK, BPO | 7,136 (route-dependent) | 3,920 | 1.82 |
-| PK, MFO | 3,908 (route-dependent) | 1,081 | 3.62 |
-| PK, CCO | 4,623 (route-dependent) | 1,680 | 2.75 |
-| total | 22,408 | 8,792 | 2.55 |
+| PK, BPO | 5,811 | pending | |
+| PK, MFO | 3,292 | pending | |
+| PK, CCO | 3,201 | pending | |
+| total | 19,036 over 14,032 proteins | pending | |
+
+**The rebuild moved prior knowledge and left low knowledge untouched, to the unit.** All six
+low-knowledge panels come back identical; the three prior-knowledge panels fall from 6,680, 4,023
+and 4,847. The phantom gap was **2,899 proteins and 3,246 units, every one of them in prior
+knowledge**. That is the structural prediction measured: both drift mechanisms need a non-empty
+experimental closure at t0 in the aspect being counted, and no low-knowledge panel has one. The
+prediction was recorded before the rebuild and could not be tuned to it afterwards.
+
+Nine of nine panels clear the floor the ablation architecture derives at the high end of its
+contrast classes. The weakest is limited knowledge in the cellular-component aspect at 821 units,
+which tolerates a paired standard deviation up to 0.205.
+
+The competitive column is the contaminated measurement and is left marked rather than restated,
+because rebuilding that window is an act reserved to the sealed plan. Its low-knowledge panels are
+expected to be unchanged for the same structural reason, which is a prediction and not yet a
+measurement.
 
 **This is why the experimental window is the one it is, and the reason is power in the panels the
 thesis is about.** The six low-knowledge panels hold between 821 and 1,509 units here. The window
@@ -85,14 +102,18 @@ high end all six clear it as well. Under the smaller window, none of that was tr
 prior knowledge by construction, and prior knowledge is both the region the existing arithmetic
 declares inert for the representation axis and the region whose counts depend on which route
 measures them. Restricted to the six panels the thesis is about, the experimental cohort is
-**3.19 times** the competitive one, 6,741 units against 2,111. Prior knowledge on its own runs
+**3.19 times** the competitive one, 6,732 units against 2,111. Prior knowledge on its own runs
 2.35. Quoting the global figure understates the design where it matters and launders the
 route-dependence of the part that does not.
 
 That ratio is route-independent by construction rather than by luck. Both of the faults that split
 the prior-knowledge rows need a non-empty experimental closure at t0 in the aspect being counted,
 and no low-knowledge panel has one. Measured on the reconciled route the numerator moves by nine
-units and the ratio by four thousandths, from 3.193 to 3.189.
+units and the ratio by four thousandths, from 3.193 to 3.189. The rebuild has since settled it:
+the six low-knowledge panels came back identical to the unit, so 3.19 now rests on measured counts
+rather than a route-dependent estimate. Prior knowledge falls from seven tenths of the cohort to
+just under two thirds, so the cohort is slightly less dominated by the region the arithmetic treats
+as inert.
 
 **The three prior-knowledge rows are marked because two routes disagree on them, and both routes
 are wrong.** Measured against the reconciled ground truth rather than the raw annotations, the

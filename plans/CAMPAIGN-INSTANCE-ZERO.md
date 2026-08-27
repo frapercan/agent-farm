@@ -734,9 +734,10 @@ guard is off and a failed resolution silently publishes an unweighted number und
 
 One prediction set. One `predict_go_terms` coordinator dispatch, which partitions internally into
 batch messages of the payload's batch size, default 1024, so the message count is the delta protein
-count divided by that and is reported by the coordinator rather than assumed. For orientation, the
-superseded construction of this window had 16,906 delta proteins, which would be seventeen
-messages; instance zero's own count comes from A4.
+count divided by that and is reported by the coordinator rather than assumed. A4 has since run: the window holds
+**14,032 delta proteins and 19,036 units**, so fourteen messages at the default batch size. Every
+quantity below that is proportional to the cohort takes those numbers and not the superseded
+16,906 and 22,282, which were measured on the drifted construction.
 
 | field | value | why |
 |---|---|---|
