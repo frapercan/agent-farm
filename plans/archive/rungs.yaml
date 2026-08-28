@@ -1,3 +1,21 @@
+# ARCHIVED 2026-08-28. This declares the ladder, and the campaign is a graph.
+#
+# It is kept, not deleted, because the machine-checkable declaration was the
+# right idea: prose cannot refuse a job, and this file could. What it declares
+# is what has been superseded. The experiment graph replaces the five rungs with
+# ten nodes, each carrying an edge whose strength is one of measured, chosen,
+# inherited, unpowered or blocked, and a cardinality that is a vector over nine
+# panels rather than a scalar.
+#
+# Nothing reads this any more. scripts/check_rung_declaration.py and
+# .github/workflows/rung-declaration.yml went with it, because a green check
+# that enforces a retired claim is worse than no check: it reports that the
+# trunk agrees with a campaign nobody is running.
+#
+# What should replace it is a declaration of the graph that a job can be refused
+# against. That does not exist yet, and saying so here is the point of keeping
+# the file.
+
 # THE LADDER, IN A FORM SOMETHING CAN CHECK
 #
 # CAMPAIGN.md section 5 declares five rungs, each with one question and one

@@ -1,17 +1,26 @@
 ---
 name: rung-declaration
 section: "12-ci-gates"
-state: working
+state: retired
 owner: agent-farm conductor loop
 source:
-  - .github/workflows/rung-declaration.yml
-  - plans/rungs.yaml
-  - scripts/check_rung_declaration.py
-runbook: plans/CAMPAIGN.md
-smoke: python3 scripts/check_rung_declaration.py
+  - plans/archive/rungs.yaml
+runbook: none
+smoke: none
 ---
 
 # rung-declaration
+
+> **Retired 2026-08-28.** The check was right and its subject is gone. It enforced
+> that `plans/CAMPAIGN.md` declares five rungs, and the campaign is now a graph of
+> ten typed nodes. The workflow and the checker were removed and the declaration
+> moved to `plans/archive/rungs.yaml`, because a green check that enforces a
+> retired claim reports agreement with a campaign nobody is running, which is
+> worse than no check at all.
+>
+> The idea survives the subject: prose cannot refuse a job, a declaration can.
+> The graph has no such declaration yet, and that gap is the reason this page
+> stays rather than being deleted.
 
 Pull-request gate that makes the experimental ladder a claim something can
 refuse.
@@ -28,10 +37,8 @@ this gate checks it.
 
 ## Source coordinates
 
-- `.github/workflows/rung-declaration.yml`
-- `plans/rungs.yaml`
-- `scripts/check_rung_declaration.py`
-- `tests/test_rung_declaration.py`
+- `plans/archive/rungs.yaml` (the declaration, archived)
+- removed: `.github/workflows/rung-declaration.yml`, `scripts/check_rung_declaration.py`, `tests/test_rung_declaration.py`
 
 ## What it refuses
 
