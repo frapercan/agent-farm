@@ -81,12 +81,55 @@ and a rename would leave it writing to an unlinked inode.
 - `~/.secrets/protea-lab.env` defines `PROTEA_DB_URL` and `PROTEA_AMQP_URL`
   pointing at the server. The wrapper sources it as shell, so `export` prefixes
   are fine, which is why `EnvironmentFile=` is not used.
-- A PROTEA checkout at `~/Thesis2/repositories/PROTEA` with dependencies
-  installed, and poetry at `~/.local/bin/poetry`. All three are overridable
-  through `PROTEA_LAB_ENV`, `PROTEA_REPO` and `POETRY_BIN`.
+- A PROTEA checkout with dependencies installed, and poetry at
+  `~/.local/bin/poetry`. Overridable through `PROTEA_LAB_ENV`, `PROTEA_REPO`
+  and `POETRY_BIN`. See the section below for which checkout it picks.
 - Paths use systemd's `%h` rather than a literal home directory. The other unit
   in this directory hardcodes one, and every hardcoded home in this project
   broke when the username changed.
+
+## Which checkout the workers serve from
+
+`PROTEA_REPO`, if set. Otherwise `~/Thesis2/worktrees/protea-deploy` if it
+exists, and otherwise the developer's checkout at
+`~/Thesis2/repositories/PROTEA`, with a line on stderr saying so.
+
+The order matters and the default used to be the last of the three. That meant
+the workers ran whatever happened to be checked out in the developer's tree, so
+their version was decided by someone editing rather than by anyone deploying.
+Found on 2026-08-20 with the workers twenty-two commits behind a branch that had
+just merged, and nothing anywhere said so: from the outside a worker serving old
+code and a worker serving new code look identical.
+
+Nothing creates the deploy slot. Create it by hand:
+
+```bash
+git -C ~/Thesis2/repositories/PROTEA worktree add \
+    ~/Thesis2/worktrees/protea-deploy origin/develop
+```
+
+### The slot has no environment of its own
+
+Poetry keys a virtualenv by project path, so a fresh worktree gets a fresh empty
+one and `poetry install` there builds native extensions from source. On this node
+that fails: `biotraj` needs `python3-dev`, which is not installed, and installing
+it needs root.
+
+Poetry honours an already-activated virtualenv, so point the slot at the one that
+already works by adding to `~/.secrets/protea-lab.env`:
+
+```bash
+export PROTEA_REPO=$HOME/Thesis2/worktrees/protea-deploy
+export VIRTUAL_ENV=$HOME/.cache/pypoetry/virtualenvs/<the working env>
+```
+
+Only the code being imported changes; the environment is the same one the
+workers already ran in. Check `torch.cuda.is_available()` after any change here,
+because a `poetry install` on this node silently replaces the CUDA build of
+torch with the CPU one.
+
+Once `python3-dev` is installed, the slot can have its own environment and
+`VIRTUAL_ENV` should go away.
 
 ## Restart behaviour, and why it is shaped this way
 
@@ -109,3 +152,32 @@ One instance per queue, and only the compute-bound stages. The embeddings batch
 stage belongs on the node; the write stage stays on the server, which is the
 split the queue layout already encoded and the reason both machines are useful
 at once.
+
+## The slot refuses when it is behind
+
+A slot is a location, not a guarantee, and the first version of this stopped at
+the location. On 2026-08-27 a slot sat thirty-two commits and six days behind its
+branch while serving the evaluations queue. It did not carry the neighbourhood
+depth filter, so it accepted jobs that declared one, dropped the unknown field
+without a word, scored the unrestricted candidate set and returned success.
+Sixteen of fifty-two cells came back holding another arm's measurement under this
+arm's label. Nothing failed, nothing warned, and the wall clock was the only
+thing that separated the two lanes.
+
+So the launcher now compares the slot against its own tracking branch and exits
+78 when it is behind, with the count and the branch in the message. A worker that
+will silently produce mislabelled results is worse than a worker that will not
+start.
+
+    PROTEA_ALLOW_STALE_SLOT=1
+
+pins the node on purpose. It starts, and it logs the commit it is actually
+serving rather than letting the reader assume the tip. Every start now logs
+`rev=` for the same reason.
+
+The freshness check fetches but never moves the slot. A node that updates itself
+on start is a node whose version nobody chose, and the check would then be
+passing by changing the thing it is testing.
+
+A slot that tracks no upstream cannot be checked, and says so rather than
+passing quietly.
