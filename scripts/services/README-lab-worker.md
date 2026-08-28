@@ -152,3 +152,32 @@ One instance per queue, and only the compute-bound stages. The embeddings batch
 stage belongs on the node; the write stage stays on the server, which is the
 split the queue layout already encoded and the reason both machines are useful
 at once.
+
+## The slot refuses when it is behind
+
+A slot is a location, not a guarantee, and the first version of this stopped at
+the location. On 2026-08-27 a slot sat thirty-two commits and six days behind its
+branch while serving the evaluations queue. It did not carry the neighbourhood
+depth filter, so it accepted jobs that declared one, dropped the unknown field
+without a word, scored the unrestricted candidate set and returned success.
+Sixteen of fifty-two cells came back holding another arm's measurement under this
+arm's label. Nothing failed, nothing warned, and the wall clock was the only
+thing that separated the two lanes.
+
+So the launcher now compares the slot against its own tracking branch and exits
+78 when it is behind, with the count and the branch in the message. A worker that
+will silently produce mislabelled results is worse than a worker that will not
+start.
+
+    PROTEA_ALLOW_STALE_SLOT=1
+
+pins the node on purpose. It starts, and it logs the commit it is actually
+serving rather than letting the reader assume the tip. Every start now logs
+`rev=` for the same reason.
+
+The freshness check fetches but never moves the slot. A node that updates itself
+on start is a node whose version nobody chose, and the check would then be
+passing by changing the thing it is testing.
+
+A slot that tracks no upstream cannot be checked, and says so rather than
+passing quietly.
