@@ -1,0 +1,34 @@
+{
+  "old": "go-basic-2024-03-28.obo",
+  "new": "go-basic-2025-07-22.obo",
+  "alive_2024": 42312,
+  "gone": 2756,
+  "redirected_via_alt_id": 0,
+  "lost_without_target": 2756,
+  "by_aspect": {
+    "BPO": {
+      "alive_2024": 27074,
+      "gone": 1466,
+      "redirected": 0,
+      "lost": 1466
+    },
+    "MFO": {
+      "alive_2024": 11180,
+      "gone": 1229,
+      "redirected": 0,
+      "lost": 1229
+    },
+    "CCO": {
+      "alive_2024": 4058,
+      "gone": 61,
+      "redirected": 0,
+      "lost": 61
+    }
+  },
+  "note": "Exposure over the ontology, not weighted by annotation counts. The redirect field for an obsoleted term is replaced_by (automatic) or consider (advisory); alt_id is the merge mechanism and answers a different question.",
+  "alt_id_check_was_the_wrong_field": true,
+  "obsoleted_in_place": 2756,
+  "replaced_by_with_live_target": 737,
+  "consider_only": 151,
+  "no_target_at_all": 1868
+}

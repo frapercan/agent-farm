@@ -1,0 +1,40 @@
+{
+  "old": "go-basic-2024-03-28.obo",
+  "new": "go-basic-2025-07-22.obo",
+  "terms": {
+    "old": 42309,
+    "new": 39903,
+    "added": 350,
+    "removed": 2756
+  },
+  "edges": {
+    "old": 74117,
+    "new": 68310,
+    "added": 2740,
+    "removed": 8547,
+    "net": -5807
+  },
+  "closure_grew": 3429,
+  "closure_shrank": 11670,
+  "common": 39553,
+  "by_aspect": {
+    "BPO": {
+      "common": 25607,
+      "grew": 2564,
+      "shrank": 10488,
+      "extra_ancestors": 4650
+    },
+    "MFO": {
+      "common": 9950,
+      "grew": 624,
+      "shrank": 997,
+      "extra_ancestors": 1026
+    },
+    "CCO": {
+      "common": 3996,
+      "grew": 241,
+      "shrank": 185,
+      "extra_ancestors": 455
+    }
+  }
+}
