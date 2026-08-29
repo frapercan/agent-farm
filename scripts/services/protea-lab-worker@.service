@@ -1,8 +1,27 @@
 [Unit]
 Description=PROTEA compute-node worker for queue %i
 Documentation=https://github.com/frapercan/agent-farm/blob/main/scripts/services/README-lab-worker.md
-After=network-online.target
-Wants=network-online.target
+# No ordering directives here, and adding one would be worse than nothing. This
+# is a USER unit, and a user manager cannot order against a system target: on
+# this machine `systemctl --user show time-sync.target -p LoadState` reports
+# not-found, and so did the `After=network-online.target` and
+# `Wants=network-online.target` that used to sit on these two lines. They read
+# as gates for as long as they existed and ordered against nothing, which is why
+# the worker could start before the network was up and before the clock had been
+# set. They are gone rather than commented, because an inert declaration is
+# worse than no declaration.
+#
+# `systemctl --user show <unit> -p After` is not a check on any of this: it
+# lists ordering names even for units that do not exist, so it reports what was
+# asked for rather than what will happen.
+#
+# The clock gate is real and it is in the wrapper, which is the process that
+# stamps the events. It waits on timedatectl before the worker consumes
+# anything, and it starts the worker anyway if the clock never synchronises,
+# because a queue with no consumer costs more than a wrong timestamp. The worker
+# does not need a network ordering either: it retries every thirty seconds for
+# as long as the server is unreachable, which is what StartLimitIntervalSec=0
+# below is for. See "The clock gate" in the README.
 # The persistent server can be unreachable for hours, either because it is
 # closed or because the link is down. That is not a reason to give up, so the
 # start rate limiter is disabled and the unit retries for as long as it takes.
