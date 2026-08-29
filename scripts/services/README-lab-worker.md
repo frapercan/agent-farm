@@ -166,9 +166,18 @@ So `After=time-sync.target` would order against nothing while reading as a gate.
 The `After=network-online.target` and `Wants=network-online.target` this unit
 used to carry were inert for exactly that reason, which is why the worker could
 start before the network was up, and they have been removed rather than
-commented. Note that `systemctl --user show <unit> -p After` lists ordering
-names even for units that do not exist, so grepping that output proves nothing
-about whether a gate fires.
+commented.
+
+Two traps in checking any of this, and they point in opposite directions.
+`systemctl --user show <unit> -p After` lists ordering names even for units that
+do not exist, so it reports what was asked for rather than what will happen, and
+grepping it proves nothing about whether a gate fires. And `LoadState` answers
+only for unit types that need a unit file: measured here, an invented
+`.service` and an invented `.target` both report `not-found`, but an invented
+`.slice` reports `loaded`, because slices are implicit units systemd
+synthesises on demand. So `LoadState` carries no information about a slice in
+either direction, and the check above is sound only because it is asked of a
+target. Confirm existence with `list-units --all`, not with `LoadState`.
 
 Three other stock answers were checked and rejected.
 `systemd-time-wait-sync.service` is not installed here at all, because the node
