@@ -1,0 +1,24 @@
+# What the laptop's workers are RUNNING. Not what a tree is checked out at.
+#
+# The compute node's timer reads this with
+#     git show origin/main:plans/DECLARED-REVISION.txt
+# every few minutes, and syncs itself to it. It refuses rather than guesses:
+# a sha absent from the clone, a sha that is not an ancestor of origin/develop,
+# a dirty deploy slot, or an install that leaves a sibling wrong all leave the
+# worker DOWN. A silent wrong consumer is worse than no consumer.
+#
+# WHY "RUNNING" AND NOT "CHECKED OUT". On 2026-08-30 a branch was checked out
+# in this machine's deploy tree while a twelve arm sweep was live. The workers
+# had loaded their code hours earlier and never reloaded, so every arm computed
+# identically, but two of them recorded a revision no process had ever held,
+# and six batches of a third were refused and dead-lettered by the guard that
+# noticed. The tree and the running code are two different quantities. This
+# file names the second.
+#
+# Every sibling package is derived from this commit's own poetry.lock, so there
+# is no second list to disagree with. Add an override line only when knowingly
+# ahead of the lock, one per package, first match wins.
+#
+# Update this when the WORKERS move, not when the tree does.
+
+coordinator bc7c4237307fd0f15c709af63c4e920fc55b974d
