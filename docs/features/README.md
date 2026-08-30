@@ -8,7 +8,7 @@ Sections mirror the original `context/feature-inventory.md` numbering
 so existing PLAN.md citations keep working. New features land in the most
 specific section; ambiguous cases go to `10-repos-scope` or `12-ci-gates`.
 
-Total first-class capabilities: **76**.
+Total first-class capabilities: **77**.
 
 ## 1-agents
 
@@ -53,6 +53,7 @@ Total first-class capabilities: **76**.
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
 | [lab-worker-service](lab-worker-service.md) | working | `scripts/services/protea-lab-worker.sh`, `scripts/services/protea-lab-worker@.service`, `scripts/services/protea-lab-worker.logrotate` | `bash -n scripts/services/protea-lab-worker.sh` | `scripts/services/README-lab-worker.md` | compute node, unattended |
+| [node-revision-sync](node-revision-sync.md) | working | `scripts/services/protea-node-sync.sh`, `scripts/services/protea-node-sync.service`, `scripts/services/protea-node-sync.timer`, `plans/DECLARED-REVISION.txt` | `bash -n scripts/services/protea-node-sync.sh` | `scripts/services/README-lab-worker.md` | compute node, unattended |
 
 ## 4-lifecycle
 

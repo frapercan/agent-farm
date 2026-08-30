@@ -1,0 +1,15 @@
+[Unit]
+Description=Poll for the revision the server declares
+
+[Timer]
+# Three minutes is short enough that a move on the server is followed
+# inside one batch, and a tick costs one fetch. Persistent so that a
+# reboot of this personal machine catches up on the tick it slept
+# through instead of waiting a full interval.
+OnBootSec=90s
+OnUnitActiveSec=3min
+AccuracySec=15s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

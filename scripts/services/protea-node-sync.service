@@ -1,0 +1,12 @@
+[Unit]
+Description=Follow the revision the server's workers are running
+Documentation=https://github.com/frapercan/agent-farm/blob/main/scripts/services/README-lab-worker.md
+
+[Service]
+Type=oneshot
+# The script decides for itself whether to act and refuses rather than
+# guesses, so a non-zero exit here means it could not run at all. That is
+# worth seeing in the journal rather than retrying blind.
+ExecStart=/bin/bash %h/.local/lib/protea/protea-node-sync.sh
+StandardOutput=journal
+StandardError=journal
