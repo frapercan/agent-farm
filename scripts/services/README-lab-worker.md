@@ -242,3 +242,95 @@ One instance per queue, and only the compute-bound stages. The embeddings batch
 stage belongs on the node; the write stage stays on the server, which is the
 split the queue layout already encoded and the reason both machines are useful
 at once.
+
+## Following the server, without being told
+
+The worker above will consume anything the queue hands it, on whatever code the
+deploy slot happens to hold. That is fine while somebody is watching. It stops
+being fine the moment the server moves, because the two machines share no state
+and nothing here pulls: an instruction committed on the laptop sits unseen on
+the node until a person carries it across.
+
+That gap is not hypothetical. The revision guard means a worker on the wrong
+commit does not compute wrong answers, it refuses every batch, which on the
+server side looks exactly like a queue with no consumer. On 2026-08-30 a single
+internal dependency moved, `protea-method`, while its version string stayed at
+`0.3.1` on both commits, so no version check anywhere could see it and the only
+witness was `direct_url.json` inside the dist-info.
+
+`protea-node-sync.sh` closes it. Install it beside the worker wrapper and give
+it a timer:
+
+```bash
+install -m 755 scripts/services/protea-node-sync.sh    ~/.local/lib/protea/
+install -m 644 scripts/services/protea-node-sync.service ~/.config/systemd/user/
+install -m 644 scripts/services/protea-node-sync.timer   ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now protea-node-sync.timer
+```
+
+### What the server declares, and what it means
+
+`plans/DECLARED-REVISION.txt`, in this repository, because it is the only
+repository both machines clone. The node reads it with
+`git show origin/main:plans/DECLARED-REVISION.txt`, so it never checks anything
+out and cannot disturb a tree somebody is using.
+
+One line is enough:
+
+```
+coordinator bc7c4237307fd0f15c709af63c4e920fc55b974d
+```
+
+**Every sibling package is derived from that commit's own `poetry.lock`.** A
+second list would be a second thing to disagree with, and the lockfile is
+already the authority. An override line, one per package, wins over the lock for
+that package alone, and exists only for the case where the server is knowingly
+ahead of it.
+
+The line names **what the workers are running**, not what a tree is checked out
+at. Those are two quantities, and the day this file was written they differed:
+a branch was checked out in the server's deploy tree while a twelve-arm sweep
+was live, the workers had loaded their code hours earlier and never reloaded,
+and two arms recorded a revision no process ever held.
+
+### It refuses rather than guesses
+
+Every path that would change the node is gated on the check in front of it, and
+a check that cannot run is a refusal. In order:
+
+| Condition | What happens |
+|---|---|
+| no declaration file yet | nothing, and it says so |
+| declared sha absent from the clone | refuses |
+| declared sha not an ancestor of `origin/develop` | refuses |
+| declared sha changes `alembic/versions/` | refuses unless the declaration also carries `schema-applied <same sha>` |
+| deploy slot has uncommitted changes | refuses |
+| a batch in flight and the log still moving | defers one tick, then treats silence past 1500s as a stall |
+| an install fails, or leaves a sibling wrong | worker stays **down** |
+| torch loses CUDA, or the operation does not import | worker stays **down** |
+
+The last two are the point. A silent wrong consumer is worse than no consumer,
+because the queue drains into refusals or into answers nobody asked for, and
+both look like progress from the other machine.
+
+The migration row deserves its own note. A revision can be correct code against
+a database that has not been migrated to it: the code sets the new columns and
+every insert fails. The node cannot see that, because the schema lives on the
+other machine, and it deliberately does not look: reading the applied revision
+off the live server is exactly the access a compute node should not have. So the
+check is a local diff of the migration directory, which detects "this revision
+changes the schema" rather than "the schema is behind", and the acknowledgement
+line is the server asserting the rest. Move the two lines in one commit and
+there is never a window where the file says go and the schema says no.
+
+### Asking without moving
+
+```bash
+PROTEA_SYNC_DRYRUN=1 ~/.local/lib/protea/protea-node-sync.sh
+```
+
+reports what it would do and touches nothing. `node-sync.state` in the log
+directory carries the last verdict, and it is written on every path including
+the ones that do nothing, because a state file left over from an earlier run
+reads as a current one.
