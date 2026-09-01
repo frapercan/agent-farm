@@ -699,3 +699,103 @@ Added to the laptop's instrumentation queue, now five items:
 4. `frame_digest` is invisible to the ORM.
 5. The `depth` field must name which of the three quantities it carries, and a
    comparison must refuse to cross them.
+
+---
+
+## 11. The population correction is itself a threshold count
+
+`ABLATION-ARCHITECTURE.md` re-derives the campaign's unit count as 5,674
+protein-aspect units against the 11,800-13,054 every earlier design assumed,
+and derives 0.913 aspects per protein from it. Sobremesa reproduced the
+arithmetic digit by digit from
+`plans/farm-platform/artefacts/knn_226_227_fmicrow.csv` and passed it on as a
+correction to every power calculation in the project.
+
+**The arithmetic reproduces here exactly, and the quantity is not a
+population.**
+
+    216 rows = 72 arms (8 plm x 3 k x 3 regime) x 3 aspects, 9 cells
+
+Within every cell, `n_proteins` takes exactly three distinct values, one per K:
+
+    cell      min    max   ratio   values
+    nk-bpo     84    354    4.21   [84, 145, 354]
+    nk-cco     37    161    4.35   [37, 60, 161]
+    nk-mfo     71    243    3.42   [71, 99, 243]
+    lk-bpo     77    307    3.99   [77, 124, 307]
+    lk-cco     45    181    4.02   [45, 69, 181]
+    lk-mfo     42    180    4.29   [42, 90, 180]
+    pk-bpo    621   2382    3.84   [621, 942, 2382]
+    pk-cco    239    809    3.38   [239, 308, 809]
+    pk-mfo    256   1057    4.13   [256, 401, 1057]
+
+    sum of the minima  1,472        sum of the maxima  5,674
+
+`n_proteins` is the count of proteins holding a prediction at that arm's
+threshold, and it grows with K. The 5,674 is the sum of the K=10 column. Pick
+K=3 and the same file yields 1,472. Neither is a cohort: a cohort does not
+change when you retrieve more neighbours.
+
+So `5,674 / 0.913 = 6,215` is a ratio between one arm's coverage and a cohort
+size, and "0.913 aspects per protein" is not an aspects-per-protein figure.
+The correction to previous designs is not established by this file, because
+this file cannot settle a cohort size at all.
+
+**The failure mode is the one the norm's rule 3 names.** The sum was collided
+and reproduced exactly; the population it was computed over was not. A correct
+arithmetic over the wrong quantity reproduces perfectly every time.
+
+This is the fourth appearance of a defect already recorded: `n_proteins` is a
+threshold count, not a cohort size, so a quantity derived from it has no
+reading as a population.
+
+### The laptop's interval is unaffected, and here is the collision that shows it
+
+`effect_of_interest = 0.02` is a declared threshold and was never derived from
+an assumed n. The minimum detectable effects reported per panel come from the
+paired population the operation actually measured. Those pairings agree exactly
+with the graph's panel `units`, by two independent routes — a BCa pairing over
+the per-protein parquets, and the graph's reconstruction from intersecting the
+intervals of stored rounded metrics:
+
+    panel    n_paired   graph units
+    NK:MFO      1129       1129
+    NK:BPO      1509       1509
+    NK:CCO      1116       1116
+    LK:MFO       943        943
+    LK:BPO      1214       1214
+    LK:CCO       821        821
+    PK:CCO      3201       3201
+    PK:MFO / PK:BPO  0     (artefact absent, not computed)
+
+Seven of seven agree to the unit. These are cohorts, measured, not assumed.
+
+**But the correction lands somewhere real: the competitive window.** Whatever
+its exact cohort, the v226->v227 window is small, and its smallest cells are
+very small — the K=10 coverage of NK:CCO is 161 proteins and of LK:MFO is 180.
+`reportable_strata`'s floor is 30 by default, and `stratify_evaluation`'s
+`min_population` likewise. A seven-axis crossing over a cell of 161 will
+withhold nearly everything. **The competitive window has to be sized before it
+is designed on**, and that sizing is a `generate_evaluation_set` job, not an
+inference from an arm's coverage column.
+
+## 12. The plan store cannot be dated by mtime, and the meta-documents are older than the wipe
+
+Verified here, and it is worse than reported. **17** files at the top level of
+`plans/` share the mtime `2026-07-28 13:41:37` to the second — the moment a
+snapshot was unpacked, not an edit. `git log` gives the real dates:
+
+    CATALOG.md        2026-06-22      ROADMAP-NEXT.md   2026-06-22
+    CONCEPT-MAP.md    2026-06-22      THESIS-FINISH.md  2026-06-16
+
+So the meta-documents are not merely pre-wipe. They are **roughly ten weeks
+older than the wipe**, and they describe a research state whose receipts were
+deleted on 2026-08-27. Anything they assert about measured results is prior
+work and does not bind this window, which is D1 applied to the documents rather
+than to the nodes.
+
+Sobremesa committed two unversioned documents (`ABLATION-ARCHITECTURE.md` and
+`LEARNED-REPRESENTATION-ABLATION.md`, 89 KB) in agent-farm #273. They were on a
+machine whose own CLAUDE.md says it holds no state and reboots without warning,
+and a `git clean` would have taken both. Committing them unedited was right;
+their content is pre-wipe and is preserved as reasoning, not as evidence.
