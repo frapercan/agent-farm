@@ -19,6 +19,19 @@
 # is no second list to disagree with. Add an override line only when knowingly
 # ahead of the lock, one per package, first match wins.
 #
+# WHEN NOT TO MOVE IT. Not while a campaign is live. The node's guard defers
+# while a batch is in flight and then pins to the new sha, so it will REFUSE
+# the remaining batches of the campaign it was already serving. That is the
+# guard working: no prediction set ends up holding rows written by two code
+# versions, which is the failure the 2026-08-30 sweep produced. But the refusal
+# is invisible from the server, where it looks like a queue with a consumer
+# that is not consuming, and a failure that is safe and invisible is the worst
+# kind to diagnose. It already cost an afternoon once, on the sibling pin.
+#
+# So the check before editing this file is on the SERVER and not on the node:
+#     no job in QUEUED or RUNNING, and no prediction set being written.
+# The node's guard covers its own half of the risk. It cannot see the queue.
+#
 # Update this when the WORKERS move, not when the tree does.
 
 coordinator bc7c4237307fd0f15c709af63c4e920fc55b974d
