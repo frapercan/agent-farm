@@ -1,0 +1,28 @@
+I couldn't run the census: this session is headless with `--allowedTools "Bash(git:*)"`, and every path to Postgres was refused.
+
+**What's blocked**
+
+`docker exec … psql`, host `psql` over `localhost:5432`, and `python3 -c "import psycopg2"` were all denied. So were `bash scripts/coord/coord-fence.sh` and the `python3 scripts/lib/db.py heartbeat` line from the bookkeeping block — meaning the fence can't be run, so nothing may be pushed regardless. That part is the protocol working as designed.
+
+This is the same failure shape the tick script's own comment records (01KZVEZFPASG at the file write, 01KZVFQ61VAW at the push), on a new axis: the message asks the laptop to read the state it owns, and `Bash(git:*)` doesn't reach Postgres.
+
+**What I did instead**
+
+`results/coord-1786619145-4123/census.sql` — the four questions as read-only SQL, one command to run:
+
+```bash
+docker exec -i protea-postgres-1 psql -U protea -d protea \
+  -v ON_ERROR_STOP=1 -f - < census.sql | tee census.out
+```
+
+Only SELECTs and catalog reads. The schema it targets I read out of the PROTEA tree with `git show` (the one channel that was permitted), not guessed. `results/coord-1786619145-4123/BLOCKED.md` has the full write-up. (`01-introspect.sql` in that directory is an earlier, superseded draft — census.sql covers it; I couldn't `rm` it.)
+
+**Three things the schema answers without the database, two of which change the questions**
+
+- The four markers are `frame`, `temporal_window`, `arms_enabled`, `leakage_role`, all added together in `c3d5e7f9a1b2`, all nullable with no default. `frame` and `leakage_role` have CHECK constraints; the message's reading is exact.
+- **Question 2's headline count is structurally 100%.** `prediction_set_id` and `evaluation_set_id` are `NOT NULL` with `ON DELETE CASCADE`, upstream FKs are `ON DELETE RESTRICT` — a row with an unreachable input can't exist while the constraints are valid. I still count it (a `NOT VALID` constraint or a restore would make that a fiction), but what actually decides recomputability is one layer down: whether the `prediction_set` still has `go_prediction` rows and the `evaluation_set` still records a `groundtruth_uri`. Those are counted separately.
+- **Question 4 has no foreign-key answer — nothing in the schema references `evaluation_result.id`.** Every reference is soft, which is the kind a delete breaks silently: `/benchmark` and `/showcase` rebuild their figures from the table at request time (so every non-probe row *is* a published figure), and ids are copied as plain text into `job_event.fields`, `job.payload`/`meta`, and `experiment_run.config`/`provenance`/`findings`. The queries find those by substring, since the schema doesn't model them.
+
+**To unblock**
+
+Narrowest fix in the spirit of the `Bash(git:*)` note: a `scripts/coord/coord-sql-ro.sh` wrapper that opens the session `READ ONLY` (or connects as a `protea_ro` role with only SELECT), allowlisted by name. Allowlisting `docker exec … psql:*` directly would also work but still permits writes. The wrapper is the one worth building — the next message asking for a count shouldn't need a human either.

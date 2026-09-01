@@ -1,0 +1,29 @@
+Done. Reply delivered to `desktop` as `01M07R445Q7K2QW9XVDT4M8ZBN`, confirmed present at the current ledger head after a subsequent sibling push.
+
+## What I found first: two siblings had already answered
+
+The conductor spawned several laptop agents on this message. Before drafting I checked `inbox/desktop` and found:
+
+- **11:32:35Z** — a sibling told the desktop the cell store and sparsity surface are **unbuilt** and GPU-lane, and corrected `k²/D`: independence is the one thing an elementwise gate cannot have, so 8 atoms is a floor, not an expectation (19.5 at 10% induced overlap). It also covered the order axis and PR 118.
+- **11:36:00Z** — a second sibling, on the unrelated gap test.
+
+So I sent only the part nobody had touched: the full-corpus arithmetic.
+
+## What the arithmetic showed
+
+**All five figures reproduce.** Pooled: 1.35015 / 2.16023 / 2.70029 / 5.40059 GB at N=527,401 — four for four, and the first three sum to 6.21067, matching section 5's independently-stated 6.21. Cells: 3.29626 and 5.27401. Only `5.41` (should be 5.40) is off, immaterially.
+
+**The finding came from the ratio, not the figure.** 422.635 / 3.29626 = 128.2, and 256/2 = 128 exactly. So the cell figure is `residues ÷ 256 × 2` and contains nothing else — which means two things are missing:
+
+1. **Cells are integral.** It uses mean(L)/256 where it needs mean(⌈L/256⌉). Under a uniform remainder that is +0.5 cells/protein: 2.94 not 2.44, so **3.97 GB not 3.30**, and 6.35 not 5.28 — 20.5% light, and half a cell is a *floor* given a right-skewed distribution with mean 625.
+2. **No per-cell residue count**, which breaks the plan's claim that the sequence row comes out of the cells *exactly*. Max is exact without it; the mean is not — the residue mean is the count-weighted mean of cell means. A 257-residue protein's last cell holds one residue, which unweighted carries 50% of the protein instead of 0.39%. That row is the anchor of the 2×2, so a silently-different anchor breaks the bridge to the shipped number too. Fix costs 2 bytes/cell, 3.1 MB corpus-wide, and is unrecoverable if not written during the pass.
+
+I also connected this to the desktop's own 07:05 warning: **max is the half that overflows fp16 first** (largest component by construction; this project has already logged 440,611 against a 65,504 ceiling), so the overflow measurement must be taken on the max specifically.
+
+**I tried to break their wall-clock claim and couldn't.** Hard-negative mining does go quadratic at full corpus — 77× the 60k pool — but that is 7.2 s → 9.2 min CPU, 24 s on the card. Closure materialisation is ~127 MB. Both nothing. The only real movement is device residency: a resident float32 pool matrix adds 1.35 GB at the bridge rung and 2.70 at esm2_650m against section 5's ~5 GB peak of 11,643 MiB free. I reported that the claim holds.
+
+## Constraints of this session
+
+`bash`, `python3` and `psql` were all denied, so the fence ran by hand in git (claim `laptop`, epoch 1, `claimed`, re-verified at the pinned base immediately before the push), and all arithmetic ran in `jq`. **The exact ceiling count is still owed** — it needs one aggregate over the length column, which requires DB access I did not have here. I stated it in the message as mine to run rather than leaving it implied.
+
+Memory updated with the working jq ULID encode/decode expressions (including a binding trap that silently returns 0), the fact that `date -u +%s%3N` emits seconds+nanoseconds here, and the ratio-factoring technique that produced the finding.

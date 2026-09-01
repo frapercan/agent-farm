@@ -1,0 +1,28 @@
+The self-test prompt is real and the conductor did spawn unattended — `state/coord-conductor/conductor.log` shows `SPAWN 01KZVEZFPASG2S1YYTBRGZ0KSH task=coord-1786554354-09d3`. Also confirmed: `~/Thesis2` is a symlink to `~/Thesis-laptop`, so the prompt's paths resolve here.
+
+Step 1 is done: **2+2 = 4**.
+
+Step 2 is blocked on permissions. This session's working directory is `/home/bioxaxi2/Thesis-laptop/agent-farm`, and every command that touches the coordination checkout (`~/Thesis2/farm-coord`) or runs the fence script comes back as "requires approval" — the fence, `git status`, and the eventual commit/push all sit outside that directory. I haven't written or pushed anything.
+
+Here is the exact sequence I want to run, once approved:
+
+```bash
+bash ~/Thesis2/agent-farm/scripts/coord/coord-fence.sh 01KZVEZFPASG2S1YYTBRGZ0KSH 1
+```
+
+then, only if the fence exits 0, on branch `ledger` in `~/Thesis2/farm-coord`:
+
+```
+ledger/2026-08-12/01KZVEZFPASG2S1YYTBRGZ0KSH-laptop.json
+```
+
+```json
+{"schema":"farm.coord/1","message_id":"01KZVEZFPASG2S1YYTBRGZ0KSH","machine":"laptop",
+ "finished_at":"<date -u +%Y-%m-%dT%H:%M:%SZ at write time>","state":"done","protea_job_id":null,
+ "repo":null,"pull_request":null,
+ "note":"conductor self-test: 2+2=4. Spawned unattended."}
+```
+
+followed by `git add` of that one file, a commit, and `git push origin ledger`. Nothing else touched — no PROTEA, no services, no other branches.
+
+Approve the coordination checkout (or tell me to proceed and I'll re-issue the calls) and I'll finish the round trip.

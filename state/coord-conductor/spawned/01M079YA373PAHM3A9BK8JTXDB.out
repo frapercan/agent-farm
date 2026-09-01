@@ -1,0 +1,77 @@
+I verified the whole message by hand against the artefact rather than trusting the table. Here's what holds, what doesn't, and one thing neither of you has spotted that changes the conclusion.
+
+## The cohort table is exactly right
+
+All eight rows reproduce from `knn_226_227_fmicrow.csv` (216 rows = 8 models × 3 K × 9 cells). Full cohort = 307+181+180+354+161+243+2382+809+1057 = **5,674**. The reduced ones are 2,238 and 1,472. Four models matched, `ankh_base` matched on the K=3/K=10 rung that matters, three models with no matched K=3.
+
+The direction is stronger than stated: in all five matched models, **K=3 beats K=10 in 9 of 9 cells — 45 of 45.**
+
+## But they are not "different cohorts" — they are broken runs
+
+This is the part that changes things. Look at `f_micro_w` as a function of K, holding model fixed, and mark which row is reduced:
+
+| model | cell | K=3 | K=5 | K=10 |
+|---|---|---|---|---|
+| ankh_base | lk-bpo | 0.5874 (307) | **0.3881 (124)** | 0.5422 (307) |
+| ankh_large | lk-mfo | **0.0347 (42)** | 0.5715 (180) | 0.5522 (180) |
+| prostt5 | lk-bpo | **0.3753 (124)** | 0.5511 (307) | 0.5188 (307) |
+| esmc_600m | lk-bpo | **0.4057 (124)** | **0.3882 (124)** | 0.5442 (307) |
+
+In every case the score collapses exactly where the cohort is reduced, and nowhere else. `ankh_base` is non-monotone in K — 0.587 → 0.388 → 0.542 — with the dip at the reduced row. `ankh_large` reads 0.0347 at K=3 against 0.5715 at K=5; no K change produces that, every other model moves about +0.02 in that direction, and the same arm carries the `no_positives` row.
+
+The cohort deficit and the score deficit have a common cause. The reduced rows are partial or failed runs, not a subsample of a harder population — a ~40% subsample of the same proteins cannot move `f_micro_w` by 0.20.
+
+**Scale:** the artefact is ~0.18, the real K effect (matched K=3 − K=10, mean over 9 cells) is ~0.04. The defect is **4.5× larger than the quantity being measured**, and it points the wrong way — read without checking `n_proteins`, the table says K=3 is catastrophic for `ankh_large` and `prostt5`.
+
+So "24 of 24" is worse than "all rows exist". **19 of 24 arms sit on the declared cohort; five do not**: `ankh_base` K5, `ankh_large` K3, `esmc_600m` K3, `esmc_600m` K5, `prostt5` K3.
+
+## A correction that helps you
+
+Two of your three "untested" models do have a matched comparison one rung over. `ankh_large` and `prostt5` both have K=5 on the full 5,674, and **K=5 beats K=10 in 9 of 9 cells for both.** So:
+
+- **K=3 specifically: 5 of 8.** Your number, confirmed.
+- **K decreasing: 7 of 8** on a matched cohort.
+- `esmc_600m` alone has no full-cohort K comparison (K3 and K5 both on 2,238, K10 on 5,674), though K3 > K5 in 8 of 9 on its own matched 2,238.
+
+## K=30: the source exists, and it does not say what either of us has been saying
+
+`plans/farm-platform/PLAN.md:3547-3563`, item `F-METHOD-CORE-K10`, verdict 2026-06-09, leakage-clean held-out VALID band v220–v226: uniform K10 beats the K30-retrained per-aspect-K reranker on all NK aspects (BPO 0.4167 vs 0.3726, CCO 0.5284 vs 0.4810, MFO 0.5669 vs 0.5176; n_gt 5.5k–7k). Memory key `highk_lever_verdict`; ADR `protea-neural-head/design/ADR-method-3arm-ensemble_2026_06_09.md`.
+
+Three qualifications kill it as a leg of this argument:
+
+1. It is **K30 vs K10**, not K30 vs K3. It never establishes K=30 as the worst available choice.
+2. It is a **different experiment** — different band, different unit (ground-truth annotations, not protein-aspect units), NK aspects only, and a *reranker* comparison where the K30 arm was retrained, so K is confounded with retraining.
+3. `plans/archive/sdr/SDR-LEVER-VALIDATION.md:48` records **K_nn=30 as the PROTEA default**, and `plans/archive/score-ablation/PLAN.md:70` records the opposite prior ("BPO se beneficia de K30"), never completed.
+
+The repo therefore holds **three live K decisions at once**: 30 in production, 10 marked `status: done` and "closed as decided", 3 in this ablation on five models. Your rescue doesn't just close an open axis — it collides with one already marked closed. That needs settling before either of us builds further.
+
+## Your statistics reproduce, with two amendments
+
+σ_d: 0.0034 × √(5674/10) = **0.0810** ✓. MDE = 2.8σ/√n gives 0.00465 at n=2382 and 0.01686 at n=181 ✓ (80% power, α=0.05). Spreads all confirmed on the five full-cohort models — 0.0046 / 0.0082 / 0.0440 / 0.0494 as quoted (pk-mfo is 0.00454, rounds to 0.0045 not 0.0046; immaterial).
+
+**Amendment 1 — it's five of six, not four.** By your own MDE: lk-bpo 0.0440 vs 0.0129 ✓, lk-cco 0.0494 vs 0.0169 ✓, nk-bpo 0.0311 vs 0.0121 ✓, nk-cco 0.0285 vs 0.0179 ✓, nk-mfo 0.0176 vs 0.0146 ✓ (marginal, 1.2×). Only **lk-mfo fails**, 0.0057 vs 0.0169.
+
+**Amendment 2 — spread is the wrong statistic for that MDE.** MDE governs one paired two-arm test; max−min over five arms is an extreme-value statistic with positive expectation under the null (E[range of 5] ≈ 1.645·σ_d/√n). Against that reference, observed/null:
+
+- low-knowledge: lk-bpo 5.8×, lk-cco 5.0×, nk-bpo 4.4×, nk-cco 2.7×, nk-mfo 2.1×, **lk-mfo 0.57×**
+- prior-knowledge: pk-cco 1.8×, pk-bpo 1.7×, pk-mfo 1.1×
+
+Your inversion survives cleanly. But "nothing to resolve in the prior-knowledge panels" overstates it — 1.7× is weak, not absent. And σ_d=0.081 was measured on a *prefilter* contrast, not a PLM swap; one global σ_d across cells spanning f≈0.15 to f≈0.63 assumes homoscedasticity that is almost certainly false. The rescore should emit per-cell paired differences so σ_d is measured, not imported.
+
+## Two smaller things
+
+**0.913 aspects/protein is not derivable from this artefact.** It needs a protein denominator (implying ~6,215 proteins) that the CSV does not carry — it gives units per cell only. Same rule you applied to K=30 applies here.
+
+**Your bootstrap-by-protein point is correct**, and the artefact lets you bound it: the nk cells hold 758 units over between 354 and 758 distinct proteins, so mean cluster size ≤ 2.14 and the design effect 1+(m−1)ρ is bounded by ~2.14. Unit-level resampling could make nk intervals up to ~46% too narrow. Worth writing that bound into the plan rather than the qualitative warning.
+
+## What I'd change about the rescore
+
+Don't rescore all eight at K=3. **Re-run the three missing full-cohort K=3 arms** (`ankh_large`, `esmc_600m`, `prostt5`) and you have matched K=3 vs K=10 on all eight. Add `ankh_base` K5 and `esmc_600m` K5 and the entire 8×3 grid closes. Five arms instead of eight, and it fixes the defect rather than working around it.
+
+## Blocked
+
+I could not run the fence, dispatch, or reply on the ledger — Bash needs approval in this session and the fence, `gh`, and `python3` calls were all refused. **Nothing has been sent to the desktop.** Also note the message's fence path and `AGENT_FARM_ROOT` are the desktop's `~/Thesis2/agent-farm`; on this machine per `CLAUDE.md` it is `~/Thesis-laptop/agent-farm`, which is where I ran the verification.
+
+The two plan files are not on this clone, so I have not reviewed `ABLATION-ARCHITECTURE.md` or `LEARNED-REPRESENTATION-ABLATION.md`.
+
+Approve Bash and I'll run the fence and put this on the ledger — or say the word and I'll draft the reply for you to send.

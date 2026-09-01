@@ -625,3 +625,77 @@ within `9995651a` and not depth in general.
 4. `frame_digest` has zero references in `protea/infrastructure/`. It is
    reachable only through raw SQL in two files, which is how two operations came
    to disagree about which column the seal lives in.
+
+---
+
+## 10. The first interval was withdrawn as a depth measurement
+
+Sobremesa challenged section 9 on the ground that `rungs.yaml` already warned
+this axis can produce "an arithmetic property rather than a finding", and asked
+two questions the database answers.
+
+**Question 1: does the ladder's scorer aggregate across neighbours?** Yes.
+`scoring_config` `e6beac15` ("composite", linear) carries
+`neighbor_vote_fraction: 0.2` alongside `embedding_similarity: 0.4`,
+`identity_nw: 0.2`, `identity_sw: 0.1`, `taxonomic_proximity: 0.1`. So it is
+branch B, not the zero-weight branch.
+
+**Question 2: is the ladder among the 78 with a broken vote fraction?** Yes,
+and barely. On `9995651a`: max 1.9333, **805 rows out of 2,441,584 above 1.0 —
+0.033 percent**. For scale, `8a75f84e` reaches 4.9 with 52,398 rows out of
+range and `d5b634b2` reaches 4.6 with 52,229. Three orders of magnitude apart.
+805 contaminated rows in 2.4 million cannot produce deltas of +0.12.
+
+**But the challenge holds anyway, for a stronger reason than the one raised.**
+
+    _leaf_record_builder.py:435   "neighbor_vote_fraction": vote_count / runner.k_limit
+    _base_frame_recount.py:84-87  max_sequence_rank -> DepthCut
+    scoring.py:270                reads the STORED neighbor_vote_fraction
+
+The vote fraction is computed **at prediction time**, over the full retrieval,
+divided by the retrieval's own `k_limit`, and stored on the row.
+`max_sequence_rank` is applied at evaluation time as a `DepthCut` — a filter,
+not a rescoring. **So a candidate's score is identical at every cut**, and every
+arm of the ladder carries scores that encode a thirty-neighbour neighbourhood.
+
+The five arms are therefore not five retrieval depths. They are one K=30
+retrieval, scored once, truncated at five points. Truncating earlier keeps only
+the top-ranked candidates, which raises precision at a fixed threshold. That is
+the arithmetic property `rungs.yaml` named, and the monotone factor-of-two
+pattern fits it exactly as well as it fits a depth effect.
+
+**The interval in section 9 is correctly computed and is withdrawn as a
+measurement of the retriever axis.** What it measures is the evaluation-time
+truncation of a fixed, fixed-scored candidate list. It is relabelled, not
+deleted: it is still the campaign's first paired interval, and the machinery it
+exercised — declared frame, seal, BCa intervals, a declared effect of interest,
+7 of 9 panels resolved with absences reported as absences — all worked.
+
+Sobremesa's proposed discriminator, matched candidate volume, does not apply
+here, because volume is the ONLY thing that differs between these arms. The
+real discriminator is two prediction sets built at different `limit_per_entry`,
+which is a different retrieval rather than a different cut. Those exist at 10
+and 30 and are confounded with `exclude_self_neighbour` and with donor policy
+(section 1). **The retriever axis remains unmeasurable in this record.**
+
+### The instrumentation this exposes, and it is the laptop's
+
+The graph's panel `depth` field coalesces three different quantities into one
+axis label:
+
+    COALESCE(er.max_sequence_rank || 'seq', er.max_k_position, ps.limit_per_entry)
+
+A retrieval depth, a per-protein rank cut and a per-sequence rank cut are not
+three levels of one axis; two of them are reporting cuts over a fixed
+retrieval and only the third changes what was retrieved. Rendering them under
+one name is the same defect as naming a level by fewer fields than it varies
+in, and it is what let a truncation ladder read as a depth ladder.
+
+Added to the laptop's instrumentation queue, now five items:
+
+1. `operating_point` as a declared field on `experiment_run`.
+2. `audit_evaluation_frames` must stop subtracting across two populations.
+3. `seal_evaluation_frames.description` names the wrong column.
+4. `frame_digest` is invisible to the ORM.
+5. The `depth` field must name which of the three quantities it carries, and a
+   comparison must refuse to cross them.
