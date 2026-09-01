@@ -519,3 +519,109 @@ true.** One varying field, artifacts that already exist, about seven minutes,
 and it exercises declaration, dispatch and read-back against a real paired
 floor. It is also the features axis's only reachable second level, which is
 `false` on 19 of 19 sets today.
+
+---
+
+## 9. The first measured interval, and what the frame turned out to be
+
+### `frame` was never unwritable. It was undeclared.
+
+Sobremesa established that `seal_evaluation_frames` writes `frame_digest` and
+not `frame`, that the two are different columns, and that the auditor's
+`re_framable = recomputable - with_frame` subtracts across two populations that
+do not speak to each other. All three verified here.
+
+One correction: sobremesa concluded that a recompute would return the same NULL
+because nothing in the evaluation path writes `frame`. **`run_cafa_evaluation`
+does.** It carries `frame` and `temporal_window` as payload fields with a
+validator on the vocabulary (`run_cafa_evaluation.py:242-302`) and returns them
+for stamping at line 507; `batch_rescore_evaluation.py:297` does the same. In
+581 evaluations nobody ever passed them.
+
+So the fix was neither a mutation of published rows nor a recompute of the
+body: **re-run the five ladder evaluations with the frame declared.** Five new
+rows through the normal path, additive, about half a minute each.
+`internal` is derived rather than chosen: `lafa` denotes the parity-locked
+leaderboard-comparable harness, and `COMPARABLE_WINDOW` is v226->v227, so a
+220->227 result cannot be that.
+
+### The two digests were one undeclared field
+
+After sealing, the partition is exact:
+
+    f-631427d3657ff6c5f71638b8   temporal_window '220-227'   76 rows
+    f-1c245d41f26ff70c3b0a9247   temporal_window NULL        21 rows
+    NULL                         unattributable               1 row
+
+The digest partition IS the `temporal_window` partition. The five re-run ladder
+rows declared the window and joined the majority frame. So "one window carries
+two frame digests" was never two harnesses; it was 21 rows that never declared
+which window they were in. The seal is over six fields
+(`evaluation_set_id`, `pivot_snapshot_id`, `information_accretion_set_id`,
+`temporal_window`, `max_terms`, `max_distance`), and a NULL in one of them
+makes a different address.
+
+The one unattributable row is `c5baecef`: its evaluation set or accretion set
+is missing, so it can be described and never reproduced.
+
+**And the "9 seals against 480 stratifications" is not a coverage gap.**
+`SealEvaluationFramesPayload` has no row selector — only `dry_run` and
+`max_examples` — and the operation loops over a table-wide select. One job
+seals the whole table, and `dry_run` defaults to true so a provenance rewrite
+has to be asked twice. Nine successful jobs are nine full sweeps over ~93 rows.
+`stratify_evaluation` takes a prediction set and a result and an axis list, so
+it is one job per result per crossing, hence 480. The two counts are not
+comparable and neither is evidence about the other.
+
+### The interval
+
+`compare_paired_panels`, 2000 resamples, BCa, seed 0, ia-weighted,
+`effect_of_interest` 0.02, against the deepest arm as baseline.
+
+    k=2 vs k=30                          k=10 vs k=30
+    panel    delta  [ci_low, ci_high]    delta  [ci_low, ci_high]    mde(10v30)
+    NK:MFO  +0.1234 [0.1037, 0.1442]   +0.0440 [0.0337, 0.0558]      0.0164
+    NK:BPO  +0.0692 [0.0581, 0.0805]   +0.0269 [0.0202, 0.0343]      0.0104
+    NK:CCO  +0.0767 [0.0603, 0.0929]   +0.0344 [0.0255, 0.0446]      0.0142
+    LK:MFO  +0.0931 [0.0732, 0.1149]   +0.0395 [0.0293, 0.0553]      0.0194
+    LK:BPO  +0.0712 [0.0585, 0.0840]   +0.0318 [0.0247, 0.0403]      0.0116
+    LK:CCO  +0.0866 [0.0662, 0.1068]   +0.0319 [0.0200, 0.0426]      0.0161
+    PK:CCO  +0.0582 [0.0507, 0.0675]   +0.0230 [0.0190, 0.0276]      0.0063
+    PK:MFO  not_computed                not_computed
+    PK:BPO  not_computed                not_computed
+
+    resolved 7, refused 0, null_unread 0, underpowered 0, null_with_power 0
+
+Every panel that computed says the shallower arm is greater, and the ordering
+is monotone: the gap at k=2 is roughly twice the gap at k=10 on every panel.
+The two PK panels were not computed because the artefact is absent for them on
+one side, which is the same 22-of-93 readability limit the artifact audit
+found, and the operation reports it as `absent` and never as a null.
+
+**This is the campaign's first result that could have come out otherwise.** It
+is also the first thing the retriever node could be `measured` on, once a floor
+for it exists as an `experiment_run` row.
+
+Two cautions travel with it. The comparison re-selects the operating point on
+every resample (`tau_a` 0.57 against `tau_b` 0.59 on PK:CCO, with 26.85 percent
+of proteins switching operating point between the two arms), which is exactly
+the selection D2 voted to remove; under a fixed declared tau these numbers will
+move. And the baseline is one arm of one prediction set, so this measures depth
+within `9995651a` and not depth in general.
+
+### Instrumentation owed, and it is the laptop's half
+
+1. `operating_point` must become a declared field on `experiment_run` rather
+   than a constant in `compare_paired_panels`, with re-selection as one
+   declarable option. Until then D2's decision cannot be expressed.
+2. `audit_evaluation_frames` must stop subtracting `with_frame` from
+   `recomputable`. The honest quantity is a single query over rows that both
+   lack a frame and have reachable parents — and it should not be called
+   "re-framable by recomputing", because a recompute only supplies a frame if
+   the payload declares one.
+3. `seal_evaluation_frames.description` says it stamps `evaluation_result.frame`
+   with a content digest. It stamps `frame_digest`, and a digest would violate
+   `frame`'s own CHECK. The docstring 130 lines above says so correctly.
+4. `frame_digest` has zero references in `protea/infrastructure/`. It is
+   reachable only through raw SQL in two files, which is how two operations came
+   to disagree about which column the seal lives in.
