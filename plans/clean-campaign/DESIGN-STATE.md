@@ -799,3 +799,79 @@ Sobremesa committed two unversioned documents (`ABLATION-ARCHITECTURE.md` and
 machine whose own CLAUDE.md says it holds no state and reboots without warning,
 and a `git clean` would have taken both. Committing them unedited was right;
 their content is pre-wipe and is preserved as reasoning, not as evidence.
+
+---
+
+## 13. The stratum space, measured on this window instead of argued
+
+Sobremesa put a checkable inconsistency on the table — `strata.py`'s docstring
+says the five protein-level axes admit 1,920 combinations, its own enums
+multiply to 1,800 — and derived from the pre-wipe "77 populated" that six of
+seven cells cannot report a five-axis crossing at the default floor.
+
+**The space: neither number. `all_strata()` produces 1,080.**
+
+    LengthBand 4, HomologyBand 5, DonorEvidence 3, TaxonomyBand 6,
+    PropagationBand 5      free product 1,800
+    all_strata()                              9,720 total
+    distinct protein-level combinations       1,080
+    9 category-aspect x 1,080                 9,720   (consistent)
+
+The free product overcounts because `all_strata()` couples the two: when
+homology is NONE the only admissible evidence is NONE, and otherwise it is
+EXPERIMENTAL or OTHER — never three. So homology x evidence is 1 + 4x2 = 9,
+not 15, and 4 x 9 x 6 x 5 = 1,080. **The docstring's 1,920 contradicts the
+docstring's own 9,720**, since 9,720 / 9 = 1,080. Sixth instrumentation item.
+
+**The populated count: measured here, not inherited.** `stratify_evaluation`
+dispatched on this window over the sealed ladder, floor 30.
+
+Five protein-level axes only (result `3b1ab7be`, k=20):
+
+    cat   populated   reportable   withheld   rows
+    LK        139          25         114     2,978
+    NK        136          34         102     3,754
+    PK        170          55         115    12,303
+    TOT       445         114         331
+
+All seven axes (result `0cb03569`, k=10):
+
+    cat   populated   reportable   withheld   rows
+    NK        340          33         307     3,754
+    LK        318          29         289     2,978
+    PK        416          79         337    12,303
+    TOT     1,074         141         933
+
+`rows_placed` equalled `rows_read` in all six runs, so nothing was dropped for
+a missing length, aspect or neighbourhood.
+
+**So the pre-wipe 77 is not this window's number.** Per category the five axes
+populate 136 to 170 cells, roughly double it. It was measured on prot_t5 at
+K=30, over an enumeration whose denominator the docstring gets wrong, and it
+should not be carried.
+
+**And the derivation that rested on it crosses two populations.** The claim
+compared 77 strata against per-PANEL cohorts (NK:CCO = 1,116). But
+stratification runs per CATEGORY over all three aspects at once: NK's
+`rows_read` is 3,754, which is exactly 1,509 + 1,129 + 1,116, its three panels
+summed. A per-panel cohort against a per-category strata count is the same
+mixing of populations as section 11, this time erring toward pessimism.
+
+**The seven-axis crossing is satisfiable, and it just ran.** What it does not
+do is report most of what it finds: 141 reportable of 1,074 populated, 87
+percent withheld. That is `reportable_strata` working as designed — "withheld
+cells are WRITTEN and flagged, never dropped: a table that prints only what
+survived looks identical to a table that covered everything."
+
+So the campaign standard CAN ask for the seven-axis crossing. Sobremesa's
+recommendation — declare two axes crossed and the rest marginal — remains a
+good choice about how much of the population stays visible, and it is a choice
+rather than a necessity. What the standard must not do is print the 141 without
+the 933 beside them.
+
+**One caution that does survive intact, and it is theirs.** These counts are on
+220->227, whose per-category populations are 2,978 to 12,303. The competitive
+v226->v227 window is far smaller. It has to be sized before anything is
+designed on it, and at the observed 25 percent reportable rate a category
+holding a few hundred proteins will clear very few cells. That sizing is a
+`generate_evaluation_set` job.
