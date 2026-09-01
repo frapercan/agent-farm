@@ -34,10 +34,12 @@
 #
 # Update this when the WORKERS move, not when the tree does.
 
-# 2026-09-01: bc7c4237 -> ea40bf90 -> 853322e8 -> f17c4819 -> a8215b38, five
-# shas in one sitting. The last is the one to read; the earlier ones are left
-# described because the node polled between them and its state file will name
-# ea40bf90. It is powered off, so all of them collapse into one sync.
+# 2026-09-01: bc7c4237 -> ea40bf90 -> 853322e8 -> f17c4819 -> a8215b38 ->
+# a5de702, six shas in one sitting. The last is the one to read; the earlier
+# ones are left described because the node polled between them and its state
+# file will name ea40bf90. It is powered off, so all of them collapse into one
+# sync, which is why a run of hops this long cost nothing here and would not
+# have been acceptable with the fleet up.
 #
 # THE DECLARATION TRACKS THE TIP OF develop. The third hop changes one test
 # docstring and nothing a worker executes, and it moved the declaration anyway.
@@ -67,5 +69,5 @@
 # The server's own venv was reinstalled to e937e0e before this was written, so
 # the machine making the declaration satisfies it.
 
-coordinator a8215b38bc6309b6b7dc0490449b5f5d6ffdfa70
-schema-applied a8215b38bc6309b6b7dc0490449b5f5d6ffdfa70
+coordinator a5de702707d807252b088219131d95db16551c3b
+schema-applied a5de702707d807252b088219131d95db16551c3b
