@@ -6,8 +6,10 @@ because that is the only place an instruction can be written once and read by
 both.
 
 `CAMPAIGN.md` stays authoritative for what the run is. `RUN-LEDGER.md` records
-what has been computed and at what rate. This file answers a different question:
-which machine does what, and how each one learns what you decided.
+what has been computed and at what rate. `COLLIDING-A-NUMBER.md` says what has
+to be true before a number either machine produces is allowed to travel between
+them. This file answers a different question: which machine does what, and how
+each one learns what you decided.
 
 ---
 
