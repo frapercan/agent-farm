@@ -11,13 +11,58 @@ source of structure. Alignment-based structural search is explicitly not part of
 it, by author decision on 2026-09-02, so the mechanism stays vector retrieval and
 no external search engine enters the dependency set.
 
+## 0. CORRECTION, 2026-09-02, before anything below is read
+
+**The premise of section 1 is not in this window, and the peer found it.**
+
+Section 1 opened this line by leaning on rung 2's closure: 104 arms per cell, a
+largest first-to-second margin of 0.0015, a noise floor near 0.0093, four
+encodings identical to six decimals in half the prior-knowledge cells. Counted
+against the live database on 2026-09-02 the whole registry holds 93 evaluation
+results and 19 prediction sets, all created between 2026-08-27 and 2026-08-30,
+carrying 80 distinct arms with 612 arm-by-panel cells at n=1 and 108 at n=2. **No
+panel has 104 arms.** Those numbers are from the campaign that was wiped on
+2026-08-27.
+
+The defect is not that the numbers were wrong. It is that this document applied
+the no-archaeology norm with full rigour to `struct_gate`, in section 2, saying
+its receipt is gone and therefore carries no weight until recomputed, and did not
+apply the same norm to rung 2, which sits underneath the entire opening. Same
+asymmetry, and the more expensive of the two because it is load-bearing.
+
+**This frees the line rather than killing it.** The argument that justifies
+opening it is that a folded structure is a different INPUT, not another encoding
+of the same input. That argument stands on its own. What falls is the use of rung
+2 as evidence, and with it section 4's claim that this cannot be rung 2 because
+rung 2 closed that axis. If the campaign restarts clean, rung 2's closure does
+not bind the new graph at all, so the question does not arise.
+
+**There is also no floor anywhere in the registry.** The 108 duplicate cells at
+n=2 all carry `n_psets = 1`: the same prediction set evaluated twice. With
+deterministic evaluation that is zero information about noise. Every floor quoted
+in this document, 0.0093 included, is imported from a campaign that no longer
+exists. For the clean campaign, replicates are not a refinement, they are the only
+way a floor is born inside the window.
+
+Every number below that predates 2026-08-27 is therefore marked, and none of them
+is evidence about the current window. They are retained because they record what
+was once measured and what mechanism was proposed, which is worth keeping, and
+because several of them are the reason a measurement is worth repeating rather
+than assumed.
+
+
 ## 1. The one claim that justifies opening this at all
 
-Rung 2 is closed, and it closed hard. Four encodings, 104 arms per cell, and the
-largest first-to-second margin is 0.0015 against a noise floor of about 0.0093.
-In half the prior-knowledge cells the four encodings score identically to six
-decimals, which the rung reads correctly: they retrieve the same neighbours and
-transfer the same terms.
+Rung 2 was recorded as closed, and it closed hard. Four encodings, 104 arms per
+cell, and the largest first-to-second margin is 0.0015 against a noise floor of
+about 0.0093. In half the prior-knowledge cells the four encodings score
+identically to six decimals, which the rung reads correctly: they retrieve the
+same neighbours and transfer the same terms.
+
+**PRE-WIPE. Not evidence about this window, per section 0.** It is repeated here
+because the SHAPE of the finding is what this line has to answer to, whether or
+not the numbers are ever recovered, and because it is the argument this slice was
+originally opened against.
 
 That result is about four transformations OF THE SAME INPUT. Dense pretrained,
 dense fitted, sparse pooled and sparse per residue are all functions of one amino
@@ -65,14 +110,18 @@ and until then it carries no weight in any argument.
 
 ## 3. Three measured findings that constrain the design
 
-**3.1 The winning channel weights embedding similarity at exactly zero.** Rung 2
-found that what separates arms is the channel, not the encoding: holding the
+**3.1 The winning channel weights embedding similarity at exactly zero. PRE-WIPE,
+see section 0.** Rung 2 found that what separates arms is the channel, not the encoding: holding the
 weighting fixed, the four encodings spread 0.0540 under `embedding_only` at K=30
 and 0.0025 under `composite_no_embedding`, whose weight on embedding similarity is
 exactly 0.0 and which wins 72.7 per cent of cells.
 
 A second retrieval space is a second embedding similarity. Fed in as a similarity
-weight it enters through a gate the champion holds at zero. So the structural
+weight it would enter through a gate the champion held at zero. The number is
+pre-wipe, but the design consequence is kept because it costs nothing to obey and
+because it is cheap to re-measure inside the new window: the weight a scoring
+config puts on embedding similarity is a declared configuration value, not an
+estimate, so what has to be re-measured is only whether that config still wins. So the structural
 channel is designed as a **candidate generator** and as a **reranker feature**, and
 never as a similarity weight. Its gate is recall and accretion coverage of the
 candidate set, which is rung 1's own wording, not a score contribution.
@@ -87,9 +136,10 @@ observe a donor the embedding cannot reach, which is the entire question. The
 structural bank is defined by the cohort and its full candidate universe, never by
 the embedding's top K.
 
-**3.3 The payoff cannot come from ordering.** Re-weighting a donor set is worth
-+0.0725 and permuting a fixed 30 donors is worth exactly 0, and 86 per cent of
-what a no-knowledge protein gains is already reachable from 30 donors. A second
+**3.3 The payoff cannot come from ordering. PRE-WIPE, see section 0.**
+Re-weighting a donor set was measured at +0.0725 while permuting a fixed 30
+donors was worth exactly 0, and 86 per cent of what a no-knowledge protein gains
+was reachable from 30 donors. A second
 retrieval space therefore has to pay in donors the sequence index cannot reach at
 all, in the twilight band, or it does not pay. This is why the primary gate is
 disagreement and reach, not rank quality.
@@ -99,11 +149,25 @@ disagreement and reach, not rank quality.
 **Rung 7, `the retriever`, axis `retriever` on field `payload.search_backend`,
 as a third level beside embedding and alignment.**
 
-It is not rung 1 and not rung 2. Both of those vary `embedding_config_id`, which
-is a representation of the sequence, and rung 2 closed that axis by measurement.
-Structure is a different input reaching the same retrieval mechanism, and rung 7
-is the rung whose declared subject is what generates the candidate set rather than
-how it is encoded or scored.
+**WITHDRAWN 2026-09-02. The schema decides this, and not the way this section
+argued.** The original argument was that this is not rung 1 or rung 2 because both
+vary `embedding_config_id` and rung 2 closed that axis by measurement. Section 0
+removes the second half: rung 2's closure is pre-wipe and does not bind. The peer
+then showed the first half is also wrong, on the schema rather than on a
+measurement. `flows.py` defines a flow as source plus mechanism and states
+explicitly that neighbourhood transfer over another representation is the same
+flow configured differently. A structural nearest-neighbour search is
+neighbourhood transfer over another representation, so it is not a second flow.
+Concretely it enters as a row of `embedding_config` carrying its own
+`model_backend`, which is exactly where the substrate axis lives, while
+`search_backend` reads `numpy` in all 19 prediction sets and carries nothing at
+all. For structure to land on the retriever axis, `search_backend` would first
+have to start carrying something, and that is schema work rather than a label.
+
+**So the placement is the substrate axis, and that is fine.** It was only a
+problem while rung 2's closure was taken to bind, and it does not. The two threads
+converge. The honesty note below about vector search was correct and is no longer
+needed, and it is kept only as a record of the reasoning.
 
 One honesty note that has to be recorded rather than smoothed over. The rung's
 axis note says the alignment level "requires a backend that is not vector search,
@@ -237,7 +301,10 @@ first.
 nearest structural neighbour carry the query's true molecular function term, and
 at what rate? This reproduces the lost `struct_gate` receipt and satisfies the
 no-archaeology norm at no extra cost. Floor: it must clear the sequence retriever's
-rate on the same cohort, or the channel has no claim.
+rate on the same cohort, or the channel has no claim. The floor is measured on the
+cohort by replication, not imported: section 0 establishes that no replication
+exists anywhere in the registry, so every quoted floor in this project is currently
+borrowed from a window that was deleted.
 
 **Gate 2, disagreement.** Overlap between the structural top K and the embedding
 top K on the same queries, in the twilight band, per cell. The ceiling of any
@@ -249,7 +316,8 @@ line closes here, for the price of a few thousand acquisitions.
 returns, how many carry an annotation the embedding donors do not, and does the
 structural neighbourhood agree with itself? This is rung 7's secondary question and
 it does not need the scoring winner. Floor: candidate-set recall and accretion
-coverage improve per cell at matched volume, with intervals.
+coverage improve per cell at matched volume, with intervals, against a floor born
+from replicate runs inside this window rather than imported.
 
 **Gate 4, the primary question, blocked.** Does structure propose better candidates
 at equal bank and equal scoring? Not scheduled until rung 1 names a scoring winner
