@@ -336,3 +336,186 @@ if it existed.
 `DECLARED-REVISION.txt` governs what the workers run. It does not move while a
 campaign is live, and the check before editing it is on the SERVER: no job in
 QUEUED or RUNNING, and no prediction set being written.
+
+---
+
+## 7. Closed on 2026-09-02, and what closing them uncovered
+
+Sobremesa answered D1-D7 and part of D8. What follows is the state after that
+exchange, plus what the laptop measured while executing its half of day one.
+
+### Decisions now closed
+
+**D1 - nothing binds.** Agreed. Sobremesa withdrew the rung-2 closure from its
+own structure-retrieval premise; the correction is in agent-farm #270.
+
+**D2 - primary metric at a fixed declared tau.** Agreed, with a condition and a
+warning, both sobremesa's. Condition: the thesis reports both, with Fmax
+secondary and explicitly labelled a maximum over a grid, because CAFA reports
+Fmax. Warning: sobremesa's calibration study found the optimal rule DIFFERS
+between `f_micro_w` and Fmax and the two disagree in direction, so choosing the
+primary changes which arm wins. This is a decision about the claim, not about
+the arithmetic.
+
+**And the tool does not implement it.** `compare_paired_panels` hardcodes
+`operating_point = "reselected_per_resample"` at two sites and exposes no knob.
+It re-selects the operating point on every resample, which is Fmax's selection
+semantics. Choosing (a) therefore requires a change to the operation, not only
+a declaration. Recorded because the decision reads as free and is not.
+
+**D3 - one seat of declaration.** Agreed. `experiment_run` is it, and
+`rungs.yaml` is retired. Two declarations diverge and the graph reads one.
+
+**D5 - structure retrieval sits on substrate.** Agreed and already withdrawn
+from the retriever axis in #270.
+
+**D6 - order of opening.** Agreed on cost order, with one change by interest:
+`build_go_cooccurrence` goes first. Not for its own value but because it is a
+pure dispatch whose inputs are already in the database, it unblocks the
+`compute_association` feature level, and it exercises the declaration loop end
+to end. Pipe-cleaner and lever at once.
+
+**D7 - a sixth strength value.** Agreed. "Nobody declared a floor" and "a floor
+was declared and it did not separate" are the difference between not knowing
+and knowing.
+
+**The distinction already exists one layer down.**
+`ComparePairedPanelsPayload.effect_of_interest` carries it: "a null is read
+against this and never against the observed difference; without it a panel
+whose interval covers zero is reported as `null_unread`". So the operation
+separates a read null from an unread one and `strength_of` does not. The sixth
+value is not a new idea, it is the graph catching up with its own kernel.
+
+### D8, partly
+
+Sobremesa's own front census died in the same session limit (18 agents, 0
+results), so **D8.1 (what in the lab is reproducible), D8.3 (which plan
+directories retire) and the per-release decomposition of additions and removals
+remain open**. They were not improvised, which is the right answer.
+
+**The GOA releases exist and the axis is not supply-limited.** 221 through 225
+are all present as `goa_uniprot_all.gaf.NNN.gz` on the EBI FTP:
+
+    221  17.40 GB  2024-06-14      (context: 220 = 19.03 GB)
+    222  18.87 GB  2024-08-01                226 = 21.09 GB
+    223  19.19 GB  2024-10-21                227 = 14.58 GB
+    224  19.51 GB  2024-12-21
+    225  20.62 GB  2025-03-08
+
+95.6 GB compressed for the five, against 179 GB free on the desktop, so they do
+not all fit at once without streaming. 150 releases are archived in total.
+
+A free cross-check falls out of this: **227 is 14.58 GB against 226's 21.09,
+so the roughly thirty percent contraction is visible in the file size before
+anything is loaded.** The non-monotonicity the split registry refuses to adjust
+on can be confirmed without ingesting a byte.
+
+**Structural acquisition is affordable and is not the blocker.** Measured by
+sobremesa 2026-09-02, after correcting its own first probe, which used
+`model_v4` against an API reporting `latestVersion: 6` and returned 0 of 30 —
+a tooling artefact read as absent coverage:
+
+    AFDB coverage on an NK sample   30 of 30
+    mean residues                   469
+    mean global pLDDT               77.3
+    latency per query               166 ms
+    mean cif                        416 KB
+
+Upper bound over the whole experimental bank: 89,263 fetches, about 37 GB, 4.1
+hours serially or roughly 30 minutes at eight-way. The API returns
+`globalMetricValue` and the pLDDT fractions without downloading the structure,
+so a disorder column costs 89,263 queries and no storage.
+
+**The blocker is that no queue named `protea.embeddings.batch` is declared or
+consumed.** Nothing new can be embedded until a consumer exists. Sobremesa owns
+it and has taken it as its first task.
+
+### A premise that has to be withdrawn from the record
+
+Sobremesa reports that per-residue embeddings ARE persisted on the desktop,
+with an accession index and provenance: `storage/probe/exp220.npy`
+(45,073,591 x 2 x 768, 276.9 GB), `pool60k_last.npy` (67.6 GB),
+`lafa_last.npy` (14.2 GB), `nk220.npy` (9.1 GB) and two more — 74,436,929
+positions, 369 GB total.
+
+This refutes gap 1 of `DESIGN-cross-encoder.md`, which states that per-residue
+embeddings are not persisted and therefore forces cross-attention to
+evidence-token granularity. The premise that shaped that design is false.
+
+**Not verifiable from the laptop**: `storage/` here holds only
+`evaluation_artifacts/` and `upstream_receipts/`, so this is sobremesa's
+measurement, attributed and not collided. Nothing should be built on it until
+it is, but the false premise should be withdrawn either way.
+
+---
+
+## 8. What day one produced, and where it stopped
+
+Three operations dispatched in-platform, all of which had been registered and
+never run.
+
+**`audit_per_protein_artifacts`** (job `bbe4918b`). Verdict over 93 results and
+279 result-by-setting cells: `both` 63, `grid` 3, `legacy` 213, `absent` 0.
+**22 results are fully readable, 71 are rejected.** So the grid-based path
+covers under a quarter of the record.
+
+**The six dead-lettered messages are one incident, and the guard held.** All
+six are the same job `cd7862b4`, `predict_go_terms_batch` over prot_t5 at depth
+30, rejected 2026-08-30 — the residue of the incident `DECLARED-REVISION.txt`
+already describes. Its prediction set `c53eda1e` survived SHORT (1,319,713 rows
+against its sibling's 2,216,376) but the job is `CANCELLED` and the set carries
+**zero evaluations**. No published number rests on it. This is a check that
+could have failed and did not, which is what makes it evidence. The messages
+were read without consuming them; purging them is a separate decision and they
+are currently the receipt.
+
+**`compare_paired_panels` refused, correctly, and that refusal is the finding.**
+Dispatched on the sealed five-level depth ladder (prediction set `9995651a`,
+composite, `max_sequence_rank` 2/5/10/20/30, verified here as sharing the digest
+`f-1c245d41f26ff70c3b0a9247`), it returned `PanelComparabilityError`:
+
+> the two evaluation results do not both declare ['frame', 'temporal_window'],
+> so they cannot be shown to share a frame. An unstamped marker is not a
+> matching one. This refusal is not waivable by `allow_frame_mismatch`, which
+> waives a DISAGREEMENT and not an absence.
+
+**`audit_evaluation_frames`** (job `3dc21cad`) then gave the exact state, and it
+is worse than the census reported:
+
+    93 rows, 0 carry a frame, 71 carry a temporal_window, 93 recomputable,
+    0 deletable-only
+    leakage_role: 90 'select', 3 'probe', 0 'test'
+
+Three things follow.
+
+1. **Not one of the 93 results carries a frame.** Nine successful
+   `seal_evaluation_frames` runs did not put one there. Whether sealing alone
+   can set it, or whether the audit's "93 re-framable by recompute" means a
+   recompute is required, is unresolved and is the next thing to settle — it
+   decides whether the census's "cheapest action" is one dispatch or a
+   re-evaluation of the whole body.
+2. **One window carries two frame digests**, `f-631427d3657ff6c5f71638b8` on 71
+   results and `f-1c245d41f26ff70c3b0a9247` on 5, with 17 carrying none. A
+   panel level cannot express which, so two arms under one panel name may not
+   share a frame.
+3. **Nothing in the record is external validation.** 90 of 93 are `select` and
+   3 are `probe`; there is no `test`. Everything we hold is selection material,
+   which is consistent with holding zero evaluations on the LAFA-comparable
+   window.
+
+Day one stopped here on purpose. Sealing or recomputing 93 published rows while
+two digests disagree inside one window is a design decision, not a chore, and
+the design phase is what this file exists to finish.
+
+### Day two, as agreed
+
+Laptop: `generate_evaluation_set` on v226->v227, and the first GOA load (221).
+Sobremesa: the `protea.embeddings.batch` consumer, the structural cohort of
+v226->v227, and gates 0 and 1 — real coverage over the whole cohort, and the
+positive control that recomputes the lost 66.6 / 20.7 rather than citing it.
+
+**The first declared `experiment_run`: `expand_votes_to_ancestors` false against
+true.** One varying field, artifacts that already exist, about seven minutes,
+and it exercises declaration, dispatch and read-back against a real paired
+floor. It is also the features axis's only reachable second level, which is
+`false` on 19 of 19 sets today.
