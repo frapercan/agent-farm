@@ -34,16 +34,29 @@
 #
 # Update this when the WORKERS move, not when the tree does.
 
-# 2026-09-01: moved bc7c4237 -> ea40bf90. The server check the section above
-# demands was run first and is recorded in the commit: no job in QUEUED or
-# RUNNING (last job 2026-08-30 11:18Z), no work queue holding messages and none
-# unacknowledged, newest prediction_set 2026-08-30 08:07Z. Nothing was in
-# flight, so no consumer is being asked to abandon a campaign it was serving.
+# 2026-09-01: bc7c4237 -> ea40bf90 -> 853322e8, twice in one sitting. The
+# second move is the one to read; the first is left described because the node
+# may have polled between them and its state file will name it.
 #
-# The target adds one migration, e2f7c3a1b904 (a result records the depth it
-# scored), and the server's alembic_version is already at it, which is what the
-# schema-applied line below asserts and the only thing it asserts. poetry.lock
-# is byte-identical between the two commits, so no sibling moves with this.
+# The server check the section above demands was run before each, and is
+# recorded in the commits: no job in QUEUED or RUNNING, no work queue holding
+# messages, none unacknowledged, newest prediction_set 2026-08-30 08:07Z. The
+# only thing in the broker is the six dead-lettered batches from 2026-08-30,
+# which are not in flight and are not waiting on a consumer.
+#
+# MIGRATIONS. One, e2f7c3a1b904 (a result records the depth it scored), added
+# between bc7c4237 and ea40bf90 and unchanged since. The server's
+# alembic_version is already at it. That is what the schema-applied line below
+# asserts and the only thing it asserts. A node still sitting at bc7c4237 sees
+# the migration in its diff and needs the line; one that already followed to
+# ea40bf90 sees no migration in the second hop and ignores it.
+#
+# SIBLINGS. cafaeval-protea moves 2cb2e66d -> e937e0e with this. That is the
+# point of the second hop, not a side effect: the two kernels differ in whether
+# the pooled sums are restricted to the eligible rows, so a fleet split across
+# them would produce PK numbers labelled comparable that are not. PROTEA#917.
+# The server's own venv was reinstalled to e937e0e before this was written, so
+# the machine making the declaration satisfies it.
 
-coordinator ea40bf90b078228219143d8900999198abdb039c
-schema-applied ea40bf90b078228219143d8900999198abdb039c
+coordinator 853322e842ea5ad1bf924ffee65718d88e4626ca
+schema-applied 853322e842ea5ad1bf924ffee65718d88e4626ca
