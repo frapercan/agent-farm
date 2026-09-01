@@ -34,4 +34,16 @@
 #
 # Update this when the WORKERS move, not when the tree does.
 
-coordinator bc7c4237307fd0f15c709af63c4e920fc55b974d
+# 2026-09-01: moved bc7c4237 -> ea40bf90. The server check the section above
+# demands was run first and is recorded in the commit: no job in QUEUED or
+# RUNNING (last job 2026-08-30 11:18Z), no work queue holding messages and none
+# unacknowledged, newest prediction_set 2026-08-30 08:07Z. Nothing was in
+# flight, so no consumer is being asked to abandon a campaign it was serving.
+#
+# The target adds one migration, e2f7c3a1b904 (a result records the depth it
+# scored), and the server's alembic_version is already at it, which is what the
+# schema-applied line below asserts and the only thing it asserts. poetry.lock
+# is byte-identical between the two commits, so no sibling moves with this.
+
+coordinator ea40bf90b078228219143d8900999198abdb039c
+schema-applied ea40bf90b078228219143d8900999198abdb039c
