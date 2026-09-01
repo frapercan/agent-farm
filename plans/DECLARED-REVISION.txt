@@ -34,9 +34,17 @@
 #
 # Update this when the WORKERS move, not when the tree does.
 
-# 2026-09-01: bc7c4237 -> ea40bf90 -> 853322e8, twice in one sitting. The
-# second move is the one to read; the first is left described because the node
-# may have polled between them and its state file will name it.
+# 2026-09-01: bc7c4237 -> ea40bf90 -> 853322e8 -> f17c4819, three times in one
+# sitting. The last is the one to read; the earlier ones are left described
+# because the node polled between them and its state file will name ea40bf90.
+#
+# THE DECLARATION TRACKS THE TIP OF develop. The third hop changes one test
+# docstring and nothing a worker executes, and it moved the declaration anyway.
+# That is the rule now, replacing a judgment call. Deciding per commit whether a
+# change is "real enough" to declare is how the file drifts behind: every skip
+# is defensible on its own and the gap is only visible once something depends on
+# it. A hop that changes nothing costs the node one stop and restart with no
+# work in flight, which is cheaper than the gap.
 #
 # The server check the section above demands was run before each, and is
 # recorded in the commits: no job in QUEUED or RUNNING, no work queue holding
@@ -58,5 +66,5 @@
 # The server's own venv was reinstalled to e937e0e before this was written, so
 # the machine making the declaration satisfies it.
 
-coordinator 853322e842ea5ad1bf924ffee65718d88e4626ca
-schema-applied 853322e842ea5ad1bf924ffee65718d88e4626ca
+coordinator f17c4819dd63d972bc557951e298ec6b5d46dd79
+schema-applied f17c4819dd63d972bc557951e298ec6b5d46dd79
