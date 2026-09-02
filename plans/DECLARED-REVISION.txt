@@ -69,5 +69,34 @@
 # The server's own venv was reinstalled to e937e0e before this was written, so
 # the machine making the declaration satisfies it.
 
-coordinator a5de702707d807252b088219131d95db16551c3b
-schema-applied a5de702707d807252b088219131d95db16551c3b
+# 2026-09-02: a5de702 -> c4b1204, and the check that gates this file was run
+# on the server as the header requires: no job in QUEUED or RUNNING and no
+# prediction set being written at the moment of the edit.
+#
+# WHY NOW. Overnight this machine ran three revisions on one queue at once. Its
+# worker processes had loaded their code on 30 August and never reloaded, so
+# they opened prediction sets stamping b0f164dc; the compute node was in-sync
+# at a5de702 and correctly refused every batch it was handed; and the deploy
+# tree was further on than either. Two arms of a declared experiment failed
+# with ForeignRevisionError and a third was cancelled before it finished a
+# short prediction set. Nothing was mislabelled, because the node refuses
+# rather than guesses.
+#
+# The workers were then restarted against a5de702, which is why the machine
+# making this declaration is entitled to make it. Moving to c4b1204 now carries
+# the fixes that came out of the same night: the depth field no longer renders
+# three quantities under one axis name (PROTEA#925), the paired comparison's
+# operating point is a declared field rather than a literal (#926), the frame
+# audit no longer subtracts two populations (#924), and the server gained the
+# check the node already had, refusing to start a worker on a revision nobody
+# declared (#928).
+#
+# NO MIGRATION MOVES. `git diff --name-only a5de702 c4b1204 -- alembic/versions/`
+# is empty, so schema-applied simply follows the coordinator and no node needs
+# to consult it on this hop.
+#
+# SIBLINGS unchanged: cafaeval-protea stays at e937e0e, which a5de702's own
+# poetry.lock already named.
+
+coordinator c4b12041b76b46023bdfc8a293ab9c76cda57a90
+schema-applied c4b12041b76b46023bdfc8a293ab9c76cda57a90
