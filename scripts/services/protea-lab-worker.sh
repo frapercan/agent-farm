@@ -40,12 +40,62 @@ set +a
 : "${PROTEA_DB_URL:?the environment file does not define PROTEA_DB_URL}"
 : "${PROTEA_AMQP_URL:?the environment file does not define PROTEA_AMQP_URL}"
 
-REPO="${PROTEA_REPO:-${HOME}/Thesis2/repositories/PROTEA}"
+# The tree this worker RUNS. It defaults to the deploy slot and not to the
+# developer workspace, and the difference is not cosmetic.
+#
+# WHAT THIS DEFAULT USED TO BE, AND WHAT IT COST. Until 2026-09-02 it was
+# ${HOME}/Thesis2/repositories/PROTEA, the developer workspace, while
+# protea-node-sync.sh read the SAME variable with a DIFFERENT default,
+# ${HOME}/Thesis2/worktrees/protea-deploy. Neither the unit nor the environment
+# file set the variable, so the two scripts silently disagreed: the sync guard
+# checked out, verified and reported the declared revision on a tree that no
+# process ever executed, while the worker ran whatever the developer workspace
+# happened to be checked out at. On the morning of 2026-09-02 that was #801,
+# three months behind, and it does not contain code_revision.py, so the worker
+# had no revision guard at all. It completed seven of seven batches of a
+# declared experiment and the record says they succeeded.
+#
+# One name with two defaults is the same defect this project has already found
+# in a `depth` column that fused three quantities. The fix is not a better
+# default: it is that the process refuses when it cannot show that it is running
+# what the server declared.
+REPO="${PROTEA_REPO:-${HOME}/Thesis2/worktrees/protea-deploy}"
 if [[ ! -d "${REPO}" ]]; then
   echo "protea-lab-worker: no PROTEA checkout at ${REPO}" >&2
   exit 78
 fi
 cd "${REPO}"
+
+# --- refuse to consume from a tree the server did not declare ----------------
+#
+# A guard that does not share a tree with the process it guards is not a guard,
+# it is a report about something else. This is the same comparison
+# protea-node-sync.sh makes before it syncs, made again here by the process that
+# will actually execute the code, because the sync running is not evidence that
+# the worker inherited it.
+#
+# It does NOT fetch. The timer keeps origin/main fresh; a network round trip on
+# every worker start would make the queue depend on the link being up. Reading a
+# slightly stale declaration and refusing is safe. Reading none is not.
+FARM="${PROTEA_FARM:-${HOME}/Thesis2/agent-farm}"
+DECL_PATH="${PROTEA_DECL_PATH:-plans/DECLARED-REVISION.txt}"
+if [[ -d "${FARM}/.git" ]]; then
+  DECL="$(git -C "${FARM}" show "origin/main:${DECL_PATH}" 2>/dev/null \
+          | awk '$1 == "coordinator" { print $2; exit }')"
+  if [[ -z "${DECL}" ]]; then
+    echo "protea-lab-worker: ${DECL_PATH} on agent-farm origin/main names no coordinator; refusing to consume" >&2
+    exit 78
+  fi
+  HEAD_SHA="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || true)"
+  if [[ "${HEAD_SHA}" != "${DECL}" ]]; then
+    echo "protea-lab-worker: this tree is ${HEAD_SHA:0:12} and the server declares ${DECL:0:12}; refusing to consume" >&2
+    echo "protea-lab-worker: tree=${REPO}. Let protea-node-sync follow the declaration, or fix PROTEA_REPO." >&2
+    exit 78
+  fi
+else
+  echo "protea-lab-worker: no agent-farm clone at ${FARM}, so the declaration cannot be read; refusing to consume" >&2
+  exit 78
+fi
 
 POETRY="${POETRY_BIN:-${HOME}/.local/bin/poetry}"
 if [[ ! -x "${POETRY}" ]]; then

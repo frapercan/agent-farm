@@ -37,7 +37,13 @@ Type=simple
 # running node. The repository stays the source; see the README for the one
 # command that reinstalls it after a pull.
 ExecStart=/bin/bash %h/.local/lib/protea/protea-lab-worker.sh %i
-WorkingDirectory=%h/Thesis2/repositories/PROTEA
+# The deploy slot, never the developer workspace. Set explicitly as well as in
+# the wrapper's default, so the two cannot drift apart again: until 2026-09-02
+# the unit pointed here at repositories/PROTEA while protea-node-sync.sh
+# maintained worktrees/protea-deploy, and the worker ran a tree the guard was
+# not looking at.
+Environment=PROTEA_REPO=%h/Thesis2/worktrees/protea-deploy
+WorkingDirectory=%h/Thesis2/worktrees/protea-deploy
 
 Restart=always
 RestartSec=30
