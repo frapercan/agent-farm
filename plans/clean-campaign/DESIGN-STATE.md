@@ -1346,3 +1346,101 @@ retrieval-depth axis, which section 10 established cannot be measured from
 evaluation-time cuts, becomes measurable: distinct `limit_per_entry` values are
 distinct retrievals, and they can now be run against a frame that is not
 superseded.
+
+---
+
+## 20. The stratum floor was never a power threshold, and the gap is fifty-fold
+
+Sobremesa derived the per-protein paired sigma from the seven BCa intervals of
+section 9, as half-width x sqrt(n) / 1.96, and the derivation reproduces here to
+the digit:
+
+    NK:MFO 0.3471   NK:BPO 0.2220   NK:CCO 0.2778   LK:MFO 0.3267
+    LK:BPO 0.2267   LK:CCO 0.2968   PK:CCO 0.2425      mean 0.2771
+
+This is the only per-protein paired variability measured anywhere in the
+project. From it, at 80 per cent power and 95 per cent confidence:
+
+    n        30      100     347    1,000   1,509   3,201
+    MDE   0.1417   0.0776  0.0417   0.0245  0.0200  0.0137
+
+    detecting the declared 0.02 needs n = 1,506
+
+**At the default stratum floor of 30 the detectable effect is 0.1417, seven
+times the effect the campaign says it cares about.** Crossing one axis makes it
+concrete: over the seven panels by length band, 22 of 28 cells clear the floor
+and **1 of 28 can detect 0.02** — and that one is PK:CCO in the commonest length
+band, the most inert cell in the grid. The floor admits 21 cells that are blind
+to the question they are being asked.
+
+That is not a defect in the value 30. A floor of thirty is a rule against
+printing the mean of three things. **It was never a power threshold, and it must
+stop being read as one.**
+
+### The consequence changes the standard rather than the numbers
+
+**Stratifying here is to EXPLAIN, not to DETECT.** Detection happens at the
+panel, the only population where the declared effect is visible. A stratum
+locates where an effect lives: it is a map, and a map does not need power to be
+true, it needs to be honest about what it does not resolve. Reading a stratum as
+a test is the error, and the standard should make that impossible rather than
+discourage it.
+
+Three of the six rules that follow are instrumentation, and they are the
+laptop's:
+
+1. **Every stratified number carries its detectable effect in the same row.** A
+   cell reporting 0.03 with a detectable effect of 0.08 is saying it does not
+   resolve its own number, and the reader should see that without doing
+   arithmetic.
+2. **A null in a stratum reports "no evidence at this power"**, which is the
+   sixth strength value of D7 applied one level down.
+3. **Depth enters the frame descriptor**, with the guard refusing a table whose
+   rows carry different depths unsealed — the same shape as a comparison already
+   refusing two results that do not declare the same frame.
+
+And one that composes with them: **every declared comparison publishes the
+per-protein paired sigma it observed.** It costs a column, and it means the next
+design is sized from a measurement rather than from this borrowed number.
+
+**The assumption everything above rests on, stated because it does.** That sigma
+came from ONE contrast, and depth is a large-effect contrast. The between-result
+spreads in the floor census (scoring config 0.0609, max_terms 0.0231) are a
+different object — dispersion of a metric across results, not of a paired
+per-protein difference — and the two are not substitutable.
+
+## 21. The first declared experiment, and the first arms on the fixed frame
+
+`experiment_run` held zero rows for the life of this platform, which is the
+mechanical reason no node could reach `measured`: `_Q_FLOORS` reads a floor only
+from a run whose `config` names `graph_node` and `floor`.
+
+It now holds one: **`8cbd5946-2c5b-488e-bb26-684dcf2c3b58`,
+`tune-226-227-retriever-depth`**, declared BEFORE dispatch as D3 requires,
+carrying the node, the varying field, the held fields, the levels, the window,
+the declared effect and the power caveat from section 20.
+
+Its hypothesis records a falsifiable prediction rather than an intention:
+
+> These three arms vary `limit_per_entry`, so each is a distinct retrieval,
+> scored independently. Prediction, recorded before dispatch: if the earlier
+> monotone result was truncation rather than depth, these arms will separate by
+> less than the truncation ladder did.
+
+The chain that made it possible, all built tonight and all on the fixed frame:
+
+    evaluation_set  f80b240a   226->227, window_role valid, pivot 2025-03-16
+    targets         6,216 sequences, 3.75 MB, sha256 38a01ce59bb3
+    query_set       c0c57e1f   tune-226-227-valid, 6,216 entries
+    arms            limit_per_entry 30, 10, 5   (jobs 4c5d17d0, 7a94b4de, 4b293423)
+
+Everything else is held: esm2_650m, GOA 226 as the donor bank, ontology
+releases/2025-03-16, `exclude_self_neighbour` true, cosine, numpy (KNN on CPU by
+standing rule), aspect-separated, ancestors not expanded, evidence-gated donors.
+
+The `floor` field currently carries a placeholder saying it must be reconciled
+with what `_level_name` actually renders once the arms are scored. That is
+honest and it is also a defect: a declaration that cannot name its own baseline
+until after the fact is half a declaration, and the level-naming change of
+PROTEA #925 landed after this run was written. Reconciling it is the first thing
+to do when the arms finish.
