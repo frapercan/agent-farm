@@ -875,3 +875,128 @@ v226->v227 window is far smaller. It has to be sized before anything is
 designed on it, and at the observed 25 percent reportable rate a category
 holding a few hundred proteins will clear very few cells. That sizing is a
 `generate_evaluation_set` job.
+
+---
+
+## 14. The competitive window is 227->230, and the laptop had it wrong
+
+The author corrected it and the record agrees, in three independent places.
+
+`plans/ROADMAP-THESIS-10.md` states the design throughout: **SELECT 220->227**
+(`window_role='valid'`), **FINAL 227->230** "sealed and untouched", "touched
+once", "externally validated on LAFA", under a "select-on-220->227 /
+touch-227->230-once gate".
+
+`plans/temporal-eval-alignment/PLAN.md` measured the horizons on 2026-06-26:
+
+    TEST 227->230  ~6 months     "TEST IS SOUND", "the champion frame is valid"
+    VALID 220->227 ~17 months    "the biased ~15-month frame, to demote", ~3x too wide
+    226->227       ~4 months     "close but short; only 215 new proteins vs the test's 325"
+
+and names the fix: a horizon-matched validation is ~6 months ending at 227,
+which is **225->227**, and "GAF 225 must be ingested (gap)". The bias it
+identifies is in MODEL SELECTION — thresholds and hyperparameters tuned on a
+wrong-horizon task — and not leakage.
+
+The floor census manifest (section 15) settles it from the artefact side:
+
+    window_release_pairs: 956ab4b3 220->230 | 8763acda 226->227
+                          c5c89dde 227->230 | 604c80d5 220->227
+
+**So `split_registry.COMPARABLE_WINDOW = v226->v227` is wrong**, and every
+statement this file made about "the competitive window" in sections 3, 11, 12
+and 13 named the wrong one. 226->227 is a short sub-window that 702 pre-wipe
+results happened to sit on, not the board's frame. Seventh instrumentation
+item, and the most consequential: the registry and the roadmap are two
+declarations that diverged, which is D3's argument arriving as a fact.
+
+Correction to section 3: the competitive window is **227->230**, both its
+corpora are loaded, and it has never been built here. The horizon-matched
+selection window is **225->227** and needs GAF 225, which is the single most
+valuable of the five uningested releases rather than one of five equals.
+
+### What the re-ranker actually trained on
+
+    bench-v1-K5-v226-lineage   13 train pairs v160->v226, eval v226->v230
+                               24.35M train rows, schema_sha 6d97a624b8a7
+                               9 v226full_lineage_<cell> RerankerModel rows
+                               cafaeval Fmax NK+LK selective avg 0.6215 +/- 0.0014
+    SDR                        "Leakage-clean: t0/v227 train/reference, 227-230 eval"
+
+**Thirteen window pairs spanning v160 to v226.** The longitudinal axis the
+author described is real and was once populated to that depth. This platform
+holds four annotation sets. So the re-ranker's training axis is not "load 221
+to 225": it is an order of magnitude more corpora than that, and the campaign
+has to decide how much of that depth it actually needs rather than inheriting
+the number.
+
+## 15. The floor census exists, it verifies, and it contains no noise floor
+
+Sobremesa found that D-09 — the decision that deleted the campaign's stored
+results — is **not in `DECISION-LOG.md` on main**. It lives on the unmerged
+branch `plan/decision-wipe-the-campaign-results`. A reader of the canonical
+store learns that the last thing that happened was 2026-07-28 and treats every
+pre-wipe number as live. Reported by sobremesa; the merge state is theirs to
+verify, the artefact below is verified here.
+
+D-09 recorded that three findings were materialised before anything was
+deleted, and the deletion was conditioned on reading them back and checking
+them against their manifest. **All three are present in this laptop's object
+store** under `floor_census/2026-08-26/`, and the check reproduces today:
+
+    bytes    431,446  = manifest      sha256  20f5ec36...b064e7  = manifest
+    rows      11,664  = manifest      results      1,296        = manifest
+    complete   8,100  = manifest
+
+11,664 = 1,296 results x 9 panels exactly: every result on every panel, not a
+sample. Fifty columns, thirteen conditioning fields, the metric beside them.
+
+**The wipe's own account of why**, from the manifest's `window_stamp`:
+
+> 594 of 1,296 results, 45.8 per cent, were evaluated on 220->230, which is the
+> UNION of the experimental window 220->227 and the competitive window
+> 227->230. Any decision taken on those rows is informed by the holdout. The
+> remaining 702 sit on 226->227, a sub-window of the experimental one, and are
+> clean in that respect. **NO result exists on either 220->227 or 227->230.**
+
+So the blind reserve had already been read when depth, preset and
+representation were chosen. D-09's binding line — no figure from those rows may
+seed a prior over the competitive cohort — applies to both machines, and both
+have already violated it once today: sobremesa opened its structure slice on
+rung 2's closure, and the laptop read a k=2 versus k=30 result as replicating a
+known finding.
+
+### It is not a noise floor, and here is why
+
+Of the 8,100 completely-conditioned rows there are **8,091 distinct
+conditioning groups**. Only 9 groups hold two rows, and in all 9 the range is
+**exactly 0.000000**. Consistent with a deterministic evaluator and metrics
+quantised to 1e-4, and it means the census carries no run-to-run variance.
+
+What it does carry is the material for paired contrasts. Pairs within one panel
+differing in exactly one conditioning field:
+
+    scoring_config_id      n=26,640   sigma_paired 0.0609   |median| 0.0156
+    max_terms              n=   639   sigma_paired 0.0231   |median| 0.0147
+    max_distance           n=   198   sigma_paired 0.0067   |median| 0.0025
+    protein_subset_label   n=    81   sigma_paired 0.0467   |median| 0.0221
+    ia_set_id              n=    45   sigma_paired 0.0128   |median| 0.0067
+    leakage_role           n=     9   sigma_paired 0.0000   |median| 0.0000
+
+**`embedding_config_id` and `k` yield zero single-field pairs.** Neither ever
+varied alone in 1,296 results: representation and depth never had a clean
+single-field contrast before the wipe either. The defect this campaign exists
+to fix is older than the campaign.
+
+And none of these reproduce the declared floors (`reporting` 0.081 at n=129,
+`routing` 0.13 at n=332), so those came from a different construction or a
+different file, and remain unattributed. Eighth instrumentation item: a floor
+the graph publishes should name the artefact and the pairing rule that produced
+it.
+
+**The line this file draws, for sobremesa to attack.** These sigmas are
+computed on rows whose window includes the holdout, so they may not seed a
+prior about the competitive cohort. A sigma is a statement about the
+measurement machinery rather than about the cohort, which is the argument for
+using it as a floor — but it is an argument, not a licence, and the campaign
+should re-derive its floors on its own window rather than inherit these.
