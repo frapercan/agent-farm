@@ -1093,3 +1093,90 @@ supersession the spec ordered and nobody performed — done in agent-farm #274 �
 has the roles inverted, and (c) build the instruments the spec requires and that
 do not exist: the per-release ADDED/REMOVED decomposition, the
 signal-to-mechanism registry, and a landing place for paired intervals.
+
+---
+
+## 17. The TUNE window is smaller than the window it competes on
+
+The author asked whether 226->227 is too small to tune on. Measured from the
+annotation sets by the first-appearance rule, experimental evidence only.
+
+**A trap found on the way, and it must be written down.** `go_term_id` is
+snapshot-scoped: `go_term` holds 432,070 rows over 48,251 distinct `go_id`
+across 9 snapshots. A first-appearance diff computed on `go_term_id` therefore
+matches nothing across annotation sets and returns the ENTIRE later set as
+"new". The first run of this measurement did exactly that and reported 551,192
+new annotations for both 226->227 and 220->227 — identical, which is what
+exposed it. **Any window delta must join to `go_term` and compare `go_id`.**
+Tenth instrumentation item, and a silent one: the wrong answer looks like a
+large, plausible delta.
+
+### The three windows, first-appearance experimental
+
+    window            CCO anot/prot   MFO anot/prot   BPO anot/prot   total anot
+    TUNE 226->227      1,902 / 1,360   1,887 / 1,500   5,098 / 3,080      8,887
+    COMPETE 227->230   2,755 / 2,191   2,006 / 1,661   6,528 / 4,431     11,289
+    (June) 220->227    9,840 / 6,559   7,816 / 5,989  17,517 / 9,860     35,173
+
+**The TUNE window is smaller than the first stretch of the COMPETE window**, in
+every aspect, and it is a quarter of the superseded June window. Tuning on less
+material than the competition is scored on inverts the usual ratio.
+
+### The nine board cells of the TUNE window
+
+              CCO     MFO     BPO
+      NK      168     252     356
+      LK      184     187     317
+      PK    1,008   1,061   2,407      total 5,940 protein-aspect units
+
+**Six of the nine cells hold fewer than 360 proteins**, and the smallest,
+NK-CCO, holds 168.
+
+The spec fixes length x homology-split-by-evidence as the explanatory axes
+inside each cell. Length has 4 levels and homology x evidence has 9, so 36
+strata per cell. Against a floor of 30, a cell of 168 can populate at most 5
+strata even under a perfectly uniform split, and the split is not uniform. Six
+cells cap out below 12. **This is the author's concern, quantified: the frame is
+not too small to score, it is too small to stratify at the depth the same spec
+requires.**
+
+### A collision that lands, for a claim that did not
+
+These cohorts agree closely with the K=10 column of
+`knn_226_227_fmicrow.csv` — NK-BPO 356 against 354, NK-CCO 168 against 161,
+LK-BPO 317 against 307, PK-BPO 2,407 against 2,382 — seven of nine within about
+two per cent, computed by a completely independent route. So sobremesa's 5,674
+was empirically close to the cohort. Section 11's refutation of the derivation
+stands unchanged: a column that moves by a factor of four with K cannot
+establish a cohort, and being accidentally close is not the same as being
+established. Both things are true and both belong in the record.
+
+### What follows, and it revives something section 16 declared void
+
+The leak constraint the spec states is "nothing after 227 informs a choice".
+**It is not "only 226->227".** Every window that ends at or before 227 is
+leak-free with respect to an open-ended COMPETE series starting at 227.
+
+So the pre-227 releases come back, in a different role. They are void for the
+COMPETE series, which needs 228 through 234. They are the only way to widen the
+TUNE material without touching the holdout.
+
+Three options, with a recommendation:
+
+1. **Keep 226->227 as the primary tune window** — it is adjacent to the mark and
+   therefore most representative of the regime the frozen champion will meet —
+   **and declare a tune SET of several pre-227 windows beside it**, requiring a
+   design decision to hold across them rather than on one. This is the author's
+   own suggestion of using different sets over different intervals, and it costs
+   the ingestion of pre-227 releases and nothing else.
+2. Widen backwards to a single larger window. Both candidates were already
+   rejected by the author: 220->227 as biased and three times too wide, 225->227
+   as a superseded working assumption.
+3. Accept 226->227 alone and reduce the stratification depth inside the cells,
+   which contradicts section 4 of the spec.
+
+Recommendation: option 1. It preserves the fixed frame, satisfies the leak rule
+exactly as written, and turns the tune set into a robustness statement — a
+decision that survives several pre-227 regimes is better evidence than one
+selected on a single transition, and **226->227 is the -30.9 per cent
+contraction**, so a decision tuned only there is tuned on an anomaly.
