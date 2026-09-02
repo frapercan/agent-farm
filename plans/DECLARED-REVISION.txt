@@ -112,5 +112,23 @@
 # had the TUNE window inside the validation split. PROTEA#923, the seal named
 # the harness label instead of the digest column it writes.
 
-coordinator 8f43ceaa5219b1cd5c057f9e326804c54f563cab
-schema-applied 8f43ceaa5219b1cd5c057f9e326804c54f563cab
+# 2026-09-02, third hop: 8f43cea -> 957e975. Server gate run before the edit:
+# no job QUEUED or RUNNING, no prediction set being written. No migration moves.
+#
+# WHAT IT CARRIES, and it is the last of the stabilisation. PROTEA#931: a
+# separation that crosses frames is not one. separated_from_floor tested a
+# declared floor against every level that landed in the same panel, which is
+# every arm the record holds whatever window it was scored under; a panel key is
+# a category and an aspect and it is not a frame. It now restricts the
+# comparison to the rows sharing the floor's seal, refuses an unsealed floor
+# instead of reporting that it did not separate, and refuses a floor whose rows
+# span two seals instead of picking one.
+#
+# The same PR declares frame_digest on the EvaluationResult model. It had zero
+# references in protea/infrastructure and was reachable only through raw SQL in
+# two files, so it was invisible to Base.metadata: a query reading it passed
+# against the live store and failed against a schema built from the models. That
+# invisibility is also how the seal came to describe the wrong column for a day.
+
+coordinator 957e9757e1459e91b1d60b511c8a552cbb146be4
+schema-applied 957e9757e1459e91b1d60b511c8a552cbb146be4
