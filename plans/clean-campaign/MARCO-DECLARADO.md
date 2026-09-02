@@ -220,3 +220,50 @@ en vez de un supuesto invisible.
 
 No lo cambio sin que lo decidas: altera lo que la campaña mide, y la variante A
 es la que presumiblemente usa LAFA.
+
+---
+
+## Las dos variantes, construidas (2026-09-02)
+
+La clave de identidad se ensanchó (PROTEA#933) y las dos conviven:
+
+| id | modo | nativos viejo / nuevo | NK | LK | PK | delta | retiradas |
+|---|---|---|---|---|---|---|---|
+| `b7cfed9a` | reconciled | 2024-03-28 / 2025-07-22 | 2.413 | 2.585 | 19.836 | 23.736 | 426.385 |
+| `b7452c0e` | reconciled | 2024-03-28 / 2024-03-28 | 2.404 | 2.564 | 9.768 | 13.753 | 115.436 |
+
+**A** es cada lado bajo su DAG nativo. **B** es el delta en un solo grafo, ambos
+lados bajo el pivote t0. Una decisión de esta campaña tiene que sostenerse bajo
+las dos; el grafo de propagación es un eje más que hay que sobrevivir, no un
+supuesto invisible.
+
+B reproduce exactamente el cálculo que se hizo fuera del sistema antes de tocar
+el código, lo que es la comprobación de que la operación hace lo que se creía.
+
+### Un defecto que sólo apareció al construirla
+
+El primer intento de B guardó un conjunto **vacío**: nk 0, lk 0, pk 0, delta 0,
+modo `same_snapshot`. Sin error.
+
+`generate_evaluation_set` elegía entre sus dos caminos con
+`same_snapshot = old_native == new_native == pivot_id`, que es una propiedad de
+los **argumentos**. El camino rápido resuelve por `go_term.id`, columna
+**scoped al snapshot**, así que sólo es correcto si los **conjuntos** están
+enlazados al grafo en uso. Las dos pruebas coinciden mientras no haya override
+y divergen exactamente cuando lo hay.
+
+Medido: de las **11.197.453** anotaciones experimentales de los dos corpus,
+**cero** resuelven bajo el pivote. Todas descartadas sin comentario por
+`_load_experimental_annotations_by_ns`.
+
+PROTEA#934 lo arregla por los dos lados: el modo se decide sobre el enlace
+propio de los conjuntos, y un delta vacío sobre corpus no vacíos se **rechaza**
+en vez de guardarse. Esa segunda mitad importa tanto como la primera: el fallo
+no lanzaba, y aguas abajo nada podía distinguir un ground truth vacío de uno
+real.
+
+### Estado del sello
+
+Los seis campos del marco están fijados para las dos variantes. Falta el query
+set y el primer brazo para que `frame.declared` pase a verdadero: se cierra
+cuando el primer resultado lo selle.
