@@ -1276,3 +1276,73 @@ the frame digest: comparable if and only if the conditioning matches.
    thin and how far back it had to reach to stop being thin — and a
    supply-limited stratum is visible as a cell that stayed short at maximum
    depth, which is a finding rather than a gap.
+
+---
+
+## 19. The TUNE frame exists
+
+Built 2026-09-02 by `generate_evaluation_set`, the first artefact of the clean
+campaign on the frame the author fixed.
+
+    evaluation_set   f80b240a-34de-4d10-99a2-40e907ee873c
+    window           226 -> 227,  window_role 'valid'
+    pivot ontology   releases/2025-03-16  (36038118-...)
+
+    delta_proteins    6,216        NK   523   LK   622   PK 5,331
+    annotations      50,858        NK 9,860   LK 8,811   PK 32,187
+    removed_proteins 13,059
+    removed_annots   75,421
+    known_terms       3,652,485
+
+**The pivot was derived, not chosen**, and the derivation is recorded because
+getting it wrong produces the phantom gap the payload's own docstring warns
+about — a t0 propagated under a churned graph marks pre-window experimental
+annotations as new knowledge. Three supports agreed: `band_registry` binds band
+v226 to `releases/2025-03-16` with `t0_cutoff` 2025-05-03, which is GOA 226's
+publication date; `temporal-eval-alignment/PLAN.md` line 93 states it verbatim
+for this exact window, "VALID 226->227: donor = GOA 226 under OBO 2025-03-16";
+and the exclusion basis is what the protein knew at the window's START, so it is
+read under the start's ontology. The existing 220->227 set pivots on
+`releases/2025-07-22` instead, which is the END's band, and 220 has no band at
+all — consistent with its description elsewhere as the frame to demote.
+
+### Two collisions this number closes
+
+**`strata.py` was talking about this set all along.** Its `all_strata` docstring
+says "the evaluation set holds 6,216 proteins". The 220->227 set holds 14,032.
+The set just built holds **6,216**. So the module's own population figure was
+already the TUNE window's, written before the window existed as a row.
+
+**And it explains sobremesa's 0.913.** Section 11 refuted "5,674 protein-aspect
+units at 0.913 aspects per protein" on the ground that 5,674 is a K=10 coverage
+column that moves by a factor of four with K. The refutation stands, and the
+mechanism is now visible: 5,674 / 0.913 = 6,214.7, and the cohort is 6,216. The
+0.913 was not measured, it was **the ratio that makes a coverage column come out
+at a cohort size somebody already knew**. A quantity derived to reproduce a
+known answer reproduces it, which is why reproducing it proved nothing.
+
+### What the frame costs, in its own numbers
+
+**13,059 proteins and 75,421 annotations were REMOVED, against 6,216 and 50,858
+gained.** More than twice as many proteins leave the corpus as enter it. That is
+the -30.9 per cent contraction, and it is inside the window every parameter and
+threshold will be selected on. The author fixed it knowingly and section 17
+already records the exposure; this is the first time it is stated in the tune
+frame's own counts rather than in file sizes.
+
+It also makes the exclusion rule load-bearing rather than incidental. Withheld
+terms are the protein's full set at the window's START, "including terms the
+corpus has since withdrawn", and 75,421 annotations were withdrawn across this
+window. Intersecting with what still counts at the end would penalise the method
+for predicting something true at the start that the corpus later removed. On this
+window that is not a corner case; it is the dominant event.
+
+### What is now possible that was not
+
+Nothing has ever been scored on this frame — all 98 surviving results are on
+220->227, confirmed by joining every one to its evaluation set. So the campaign's
+next arms are the first numbers that exist on the fixed window. In particular the
+retrieval-depth axis, which section 10 established cannot be measured from
+evaluation-time cuts, becomes measurable: distinct `limit_per_entry` values are
+distinct retrievals, and they can now be run against a frame that is not
+superseded.
