@@ -1000,3 +1000,96 @@ prior about the competitive cohort. A sigma is a statement about the
 measurement machinery rather than about the cohort, which is the argument for
 using it as a floor — but it is an argument, not a licence, and the campaign
 should re-derive its floors on its own window rather than inherit these.
+
+---
+
+## 16. The authoritative spec already exists, and it supersedes both of us
+
+`plans/E2E-CANONICAL-RUN.md`, authored by Francisco Miguel Perez Canales and
+fixed 2026-07-27, is "the authoritative specification for ONE clean end-to-end
+run". Neither machine had read it. It answers, in the author's own words, what
+this file spent a day deriving:
+
+> No prior result is preserved as a number; results are regenerated.
+> Trajectories -- the decisions, mechanisms, and their measured place -- are
+> what survives.
+
+### The temporal frame, section 3, FIXED BY THE AUTHOR
+
+> **TUNE window: 226 -> 227.** Every parameter, threshold and design decision is
+> selected here. Nothing after 227 informs a choice.
+> **COMPETE window: 227 -> forward, OPEN-ENDED.** The frozen system is scored on
+> everything that accrued after 227. **This supersedes the fixed 227 -> 230
+> test**: the test set GROWS as releases publish.
+> This supersedes both the June roadmaps (SELECT 220 -> 227) and the July
+> working assumption (VALID 225 -> 227).
+
+Every window this file argued about was superseded five weeks before the
+argument started:
+
+    226 -> 227   the TUNE window, not "the comparable window"   (section 3, wrong)
+    220 -> 227   superseded June roadmap                        (section 14, wrong)
+    227 -> 230   superseded by an open-ended series             (section 14, wrong)
+    225 -> 227   superseded July working assumption             (section 14, wrong)
+
+`split_registry.COMPARABLE_WINDOW = v226->v227` names the TUNE window as the
+comparable one, inverting the two roles. Ninth instrumentation item and the most
+serious: the registry that raises `SplitLeakError` to protect the holdout has
+the holdout and the selection set the wrong way round.
+
+**The corpus is not what either machine assumed.** Nine releases exist through
+v234, verified upstream by the author on 2026-07-27. The COMPETE series needs
+227 through 234; this platform holds **227 and 230**, so six are missing.
+**220 and 221-225 are not needed at all** — the "ingest 221 to 225" conclusion
+of sections 3 and 14, and the argument that 225 is the one that matters, are
+both void.
+
+The two contractions are located: **226 -> 227 is -30.9 per cent and it is the
+TUNE window**, and **231 -> 232 is -29.6 per cent, inside COMPETE**. The author
+took the tune-on-a-contraction decision knowingly.
+
+The series carries three binding conditions:
+
+1. ADDED and REMOVED decomposed per release and reported beside the metric, so a
+   dip at a contraction is separable from a prediction error. This is the
+   outstanding Q2, and it is a precondition rather than an extra.
+2. One point designated THE comparable number, the board's own window; every
+   other point is characterisation and must be labelled so.
+3. The series is a property of the FROZEN champion and may inform nothing.
+
+### The stratification is already fixed, section 4
+
+> category (NK/LK/PK) x aspect (MFO/CCO/BPO) x sequence length (buckets) x
+> homology band to the reference, split by evidence provenance. The 9 board
+> cells = category x aspect. Length and homology are the EXPLANATORY axes inside
+> each cell; the homology-x-evidence axis gives a coordinate to the
+> prior-knowledge wall.
+
+**Four axes, not seven**, and `stratify_evaluation`'s default is
+`["category", "aspect", "length", "homology"]` — already exactly this. The
+question of which axes to cross was answered before it was asked. Section 13's
+measurement stands; its framing as an open choice was wrong.
+
+### The ablations and the economy, section 5
+
+PLM (the 8-PLM matched grid at retrieval level), K, per-signal marginal
+contribution LOFO-style, and SOA against TransFew / DeepGO-SE, ranked at the
+retrieval gate first and taken to the board only for the champion. Plus the
+author's economy decision: **run the PLM x K x score grid on a representative
+stratified SUBSAMPLE, gate at retrieval, confirm the champion on the full set.
+Do not run the full factorial everywhere. Log every truncation, no silent caps.**
+
+### One staleness inside the spec
+
+Section 9 still lists "confirm VALID 225->227 / TEST 227->230" as an open
+decision, which section 3 of the same document supersedes. The open-decisions
+list was not updated when the frame was fixed.
+
+### What this changes about the plan
+
+The design phase does not need to invent a campaign. It needs to (a) execute the
+supersession the spec ordered and nobody performed — done in agent-farm #274 —
+(b) reconcile the code registries to the spec, `split_registry` first since it
+has the roles inverted, and (c) build the instruments the spec requires and that
+do not exist: the per-release ADDED/REMOVED decomposition, the
+signal-to-mechanism registry, and a landing place for paired intervals.
