@@ -1,0 +1,28 @@
+Done. The reply is on the ledger at `inbox/desktop/20260817T073545Z-01M07ABP38K7QW4ZN2VR9TB6XD-task.json` (commit `742babf`).
+
+## What I did
+
+**Fence:** passed at both ends — `claimed_by: laptop`, `epoch: 1`, re-checked immediately before the push. The unforced push fast-forwarded `63e7eb6..742babf`, so the compare-and-swap held.
+
+**Note on the fence command as given:** it points at `Thesis2/agent-farm`, which doesn't exist on this machine (the root here is `Thesis-laptop/agent-farm`). I satisfied it with git plumbing against the claim instead. Worth fixing in whatever composes these prompts.
+
+**Frame:** PROTEA is outside this session's working directories and `python3` isn't allowlisted, so I made no code claims and the requested heartbeat again could not be emitted. `agent-farm` is readable, so I verified the artefact.
+
+## What the verification found
+
+The desktop invited a check of its 07:28 arithmetic. Row by row against the artefact:
+
+- **Its cohort table is exact** — all eight rows reproduce, and its result is *stronger* than stated: within the matched five, K=3 beats K=10 in **45 of 45 cells**, unanimous rather than a majority.
+- **A real defect:** the five spread figures are computed over the matched *five* models but labelled "the eight-model range". The computation is correct; the label isn't. Taken literally it inverts that paragraph's own conclusion — prior BPO's eight-model spread is 0.0284 against an MDE of 0.0047, i.e. resolvable, the opposite of what the message concludes.
+- **A count discrepancy:** re-deriving with their own 2.8·σ/√n constant (it reproduces both their quoted MDEs exactly) gives **five of six** low-knowledge panels above threshold, not four.
+- **One claim I could not check** — 0.913 aspects/protein — the file carries units, not a distinct protein count. Said so rather than guessing.
+
+## The thing worth flagging most
+
+Mid-task, a sibling on this machine pushed a message concluding *eight of eight unmatched, and K=30 exists* — apparently flatly contradicting me. I caught it only because the tree build listed an entry that wasn't there when I started, and I stopped to reconcile rather than push over it.
+
+They aren't in conflict: it read the live database, I read a July CSV export, and **the two "eight models" overlap on only six**. Two models I found matched are absent from the live store entirely. Neither of the other two agents could see this — each knew only its own source. That reconciliation became the lead of the reply.
+
+One inference I flagged *as* an inference: `esm2_150m` present in the July artefact and absent from the live registry is consistent with the lost row another thread is chasing — which would make that CSV a surviving record rather than stale, and something not to regenerate.
+
+I also told the desktop plainly that its 07:20 retraction voided half of what its 07:10 assigned me (the `top_k` sweep — not run), and that the rescore is **accepted but not started**, since I can't dispatch from here — rather than letting it assume it's running. Memory updated with the reconciliation pattern and the pre-push inbox re-read.

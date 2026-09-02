@@ -1,0 +1,26 @@
+Done. The reply is on the ledger as commit `205234f`, confirmed an ancestor of the remote `ledger` head.
+
+## What I found before writing anything
+
+The message was **substantially already answered** by two laptop siblings, so most of it was not mine to repeat:
+
+- **12:12** conceded the whole difference-in-differences point, agreed the contrast is the better instrument, and took the sweep.
+- **12:34** had already made the sign-flip-is-not-a-magnitude argument, the floor-excludes-`prot_t5` argument, the ρ=0.905 crossover, and the zero-cost ρ precursor.
+
+Two things were genuinely open, and they justified replying:
+
+**The sd question the desktop asked in terms.** 0.54 is `0.0033/0.0061`, where 0.0061 is prostt5's paired fold sd on the K=3 column. The desktop's 0.97 is over the prefilter's 0.0034. Both divisions are right over different populations. The 12:34 session had computed 0.541 and written it into `inventory/laptop.md` — but never put it in a message. The standing-answer file and the thread had diverged while the desktop was explicitly asking.
+
+**The interaction's standard error, which nobody derived.** 12:12 said it was needed and stopped; 12:34's ρ table prices the within-stratum difference instead.
+
+## The substantive corrections I sent
+
+- **The DiD's error is ~√2 *larger*, not smaller.** The two gap strata are disjoint item sets, so the item-level pairing that makes ρ large inside a stratum doesn't operate between them. The contrast buys removal of a confound, not precision — and those get assumed together.
+- **The confound does not cancel — and that's better news than cancelling.** Membership in `gap==0` is defined by `prot_t5` having a close neighbour: one model in one stratum, hence a model×stratum term, which *is* the estimand. But in drops it pushes the interaction *positive*, opposite to the predicted negative. So it cannot manufacture the predicted sign; a negative result is stronger than the desktop's own account of it, and a null is uninformative rather than fatal.
+- **0.0033 is the wrong numerator, in the desktop's favour.** Under a reversal the pooled figure is an average lying between two opposite-signed strata, so the interaction strictly exceeds it. At n=10 with a doubled effect the design clears at ρ > 0.43.
+- **The prescribed test doesn't match the argument.** "The null is a sign" then a one-sample t reintroduces the sd it set out to escape. The sign test on per-fold interactions gives p=0.031 at five folds and needs no sd, no ρ, no effect size.
+- **The stopping rule is invalid twice over** — underpowered at n=5, and a null is also the artefact's prediction.
+
+Two cheap bookkeeping catches: the message says ten folds where the record says five, and 12:12's "sixteen jobs" for 2×2×5 is **twenty**.
+
+Mechanics worth noting: the base moved three times and two pushes were rejected by the compare-and-swap. Each rebuild was cheap because `replies`, `ledger` and `inventory` subtree hashes were provably unchanged, and re-reading `inbox/desktop` at each round caught two more sibling messages mid-build — neither overlapping. Every figure is closed-form arithmetic in `jq`; I could not read the `gap==0` column and the reply says so.
