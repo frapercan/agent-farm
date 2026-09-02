@@ -1180,3 +1180,99 @@ exactly as written, and turns the tune set into a robustness statement — a
 decision that survives several pre-227 regimes is better evidence than one
 selected on a single transition, and **226->227 is the -30.9 per cent
 contraction**, so a decision tuned only there is tuned on an anomaly.
+
+---
+
+## 18. Where the strata are actually thin, and a mechanism that fills them
+
+The author's correction: this file had been counting cells and never looking at
+the strata inside them. Read from the `strata.parquet` the platform wrote, over
+220->227, 19,035 protein-aspect units.
+
+**Homology is well balanced. Length is the bottleneck.**
+
+    length      proteins   %      stratum cells   reportable at floor 30
+    <=512        11,577   60.8        170              66
+    512-1024      5,464   28.7        138              33
+    1024-2048     1,647    8.7         85              13
+    >2048           347    1.8         52               2
+
+    NK homology x evidence      exp    other
+    <=30 (twilight)             854      155
+    30-60                       954      210
+    60-90                       765      286
+    >90                         384      146
+
+The twilight band, which is the scientifically interesting one, holds 854
+proteins under experimental evidence in NK alone. It is not the problem.
+`>2048` is: 1.8 per cent of the mass, 52 stratum cells, **2 reportable**.
+`HomologyBand.NONE` never appears at all — every query had a donor.
+
+**And the scarcity is multiplicative.** Length tail (1.8%) crossed with the
+non-experimental donor branch (about 21% of NK) puts the rarest strata near 0.4
+per cent of the mass. Filling one to 30 needs roughly 8,000 protein-aspect units
+IN THAT CATEGORY.
+
+### More data scales the strata. It does not balance them.
+
+Sequence length is a property of the proteome, not of the window. Drawing more
+releases multiplies every stratum by the same factor and leaves `>2048` at 1.8
+per cent for ever. A single window big enough to fill the rarest stratum
+oversamples the commonest by two orders of magnitude, which is waste, not
+balance.
+
+So the mechanism cannot be "use a wider window". The three obvious alternatives
+are all refused by the frame the project already has: resampling to balance is a
+reweighting of the population, which `pooled_mean` exists to forbid; lowering
+the floor for rare strata publishes thin numbers beside thick ones at equal
+visual weight, which is what `reportable_strata` exists to prevent; and dropping
+them silently is the failure its docstring names.
+
+### The mechanism: per-stratum accumulation to a declared floor
+
+Declare the strata and a floor. Walk the release history backwards from the
+mark — (226,227), (225,226), (224,225), ... For each window compute the
+first-appearance delta and place every protein-aspect on its stratum, resolving
+the homology band against **that window's own t0**. **A stratum stops drawing
+once it reaches its floor.** Record, as a field of the stratum, the window depth
+it needed and the releases it drew from. Stop when every stratum is filled or
+the history is exhausted.
+
+Three properties make it sound, and all three are already true of this project
+rather than assumed for the occasion:
+
+1. **First appearance partitions.** Each (protein, GO term) belongs to exactly
+   one window in the whole history, so accumulating windows is a partition and
+   never a resample. Nothing is double counted and nothing is reweighted.
+2. **Pooling across strata is already refused.** A stratum drawn from a deeper
+   history than its neighbour breaks only an operation the frame does not allow.
+   The heterogeneity is free precisely because the thing it would corrupt is
+   already forbidden.
+3. **Leak-free by construction**, since every window ends at or before the mark.
+
+What it produces that a window cannot: a stratum that cannot be filled is
+reported as **supply-limited with its maximum attainable n**, rather than thin,
+absent, or silently withheld. And the ingestion plan stops being a guess — the
+mechanism answers "these N releases, because stratum X needed depth N" instead
+of "load 221 to 225 and hope".
+
+**The cost, declared rather than hidden: depth is a confound.** A stratum drawn
+from eight releases spans a different biocuration regime than one drawn from
+one, and the two contractions sit inside that history. So `window_depth` is a
+field of the stratum, it is printed beside the number, and a comparison refuses
+to cross strata whose depths differ beyond a declared tolerance. Same shape as
+the frame digest: comparable if and only if the conditioning matches.
+
+### What it needs built
+
+1. An operation that performs the accumulation and emits a manifest: per
+   stratum, n, window depth, source releases, and the supply-limited list.
+   `generate_evaluation_set` is the natural host.
+2. `window_depth` and `source_releases` as fields on the stratum cell, which
+   needs the strata table of D4 to exist first.
+3. **The coverage-and-depth grid, which is the monitoring surface the author has
+   been asking for.** Strata down one axis, population against floor as one
+   channel, window depth as a second. It shows at a glance where the campaign is
+   thin and how far back it had to reach to stop being thin — and a
+   supply-limited stratum is visible as a cell that stayed short at maximum
+   depth, which is a finding rather than a gap.
