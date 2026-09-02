@@ -130,5 +130,62 @@
 # against the live store and failed against a schema built from the models. That
 # invisibility is also how the seal came to describe the wrong column for a day.
 
-coordinator 957e9757e1459e91b1d60b511c8a552cbb146be4
-schema-applied 957e9757e1459e91b1d60b511c8a552cbb146be4
+# 2026-09-02, fourth hop: 957e975 -> 9af9204. THIS ONE MOVES A MIGRATION, so the
+# schema-applied line below is load-bearing and not ceremony: a node that follows
+# the coordinator without it runs code that sets three new NOT NULL columns
+# against a table that has none, and every insert fails from the node's side with
+# nothing on the node able to explain why. The schema lives on this machine.
+#
+# THE SERVER GATE the header demands was run before this edit and it has never
+# been this clean: no job in QUEUED or RUNNING, zero prediction sets in the
+# database, no queue in the broker holding a message. The campaign was reset
+# earlier today, so there is nothing in flight for the node's guard to refuse.
+# This is the cheapest moment a migration hop will ever get.
+#
+# WHAT IT CARRIES. PROTEA#933 only. An EvaluationSet was UNIQUE on (old, new),
+# which treats a pair of GOA releases as if it settled which delta the row holds.
+# It does not. Measured on 220 -> 227 with experimental ground truth: propagating
+# each side under its own native DAG instead of both under the pivot moves the PK
+# bucket by 21 percent of its annotations and by 51 percent of its proteins, and
+# NK and LK move by exactly zero, which is the check that the count is right. The
+# cause is 592 terms whose ancestors were rewired between the two releases; the
+# top twelve are half of it. Nobody annotated anything.
+#
+# So the three snapshots that decide the delta became columns and joined the key,
+# stored resolved rather than as the overrides that were requested.
+#
+# THE MIGRATION, d4b8c2f10a37, is already applied here. It backfilled the one row
+# this database holds, b7cfed9a, from the producing job's payload rather than
+# from the annotation sets: GOA 220 is bound to an ontology eleven months after
+# its own publication, so the set's own binding would have recorded a graph that
+# never ran. The row now reads pivot 2024-03-28, natives 2024-03-28 and
+# 2025-07-22, which is exactly what was asked for.
+#
+# WHAT WIDENING THE KEY REOPENED, and why it is worth knowing on the node too:
+# _resolve_train_split_eval called .one_or_none() on the bare pair, and that call
+# raising MultipleResultsFound is how the LB.1 incident of 2026-05-12 read from
+# outside. It now collects candidates and, when there is more than one, names
+# them with the graphs that tell them apart and stops.
+#
+# NO SIBLING MOVES. cafaeval-protea stays at e937e0e.
+#
+# WHAT IT COST TO RESTART, because it is the header's own subject. An idle
+# worker is the SLOWEST one to stop: the consumer only notices the stop signal
+# when it wakes to handle a message, so protea.predictions.batch sat
+# "deactivating" for its full five-minute TimeoutStopSec and was killed at the
+# deadline. Ten units at five minutes of worst case do not fit in one sequential
+# pass, and the first attempt here was cut off after restarting five of them.
+#
+# That left five workers still running 957e975 while five ran 9af9204 -- which is
+# the exact shape of the 30 August incident this file was written about, arrived
+# at from the other direction, and it was two minutes from being declared as
+# though all ten had moved. The check that caught it was reading
+# ExecMainStartTimestamp on every unit rather than trusting that "restart"
+# returned. Nothing was in flight, so nothing was mislabelled.
+#
+# The rule that follows: restart the units CONCURRENTLY, and verify by timestamp
+# per unit before editing this file. "systemctl restart" returning is not
+# evidence, and neither is is-active -- a unit that never stopped is also active.
+
+coordinator 9af9204831c2c18d72a5e611a4ec129fa8a13c07
+schema-applied 9af9204831c2c18d72a5e611a4ec129fa8a13c07
