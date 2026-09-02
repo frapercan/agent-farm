@@ -187,5 +187,29 @@
 # per unit before editing this file. "systemctl restart" returning is not
 # evidence, and neither is is-active -- a unit that never stopped is also active.
 
-coordinator 9af9204831c2c18d72a5e611a4ec129fa8a13c07
-schema-applied 9af9204831c2c18d72a5e611a4ec129fa8a13c07
+# 2026-09-02, fifth hop: 9af9204 -> fb9f766. NO MIGRATION MOVES, so
+# schema-applied simply follows the coordinator and no node needs to consult it.
+# Server gate run before the edit: no job QUEUED or RUNNING, zero prediction sets.
+#
+# WHAT IT CARRIES. PROTEA#934, and it is the defect the previous hop uncovered by
+# making the case reachable. generate_evaluation_set chose between its two delta
+# paths on whether the three snapshot ARGUMENTS coincided. The fast path resolves
+# annotations through go_term.id, a column scoped to a snapshot, so it is correct
+# only when the annotation SETS are bound to the graph in use. The two tests agree
+# until an override is passed and diverge exactly when one is. Of the 11,197,453
+# experimental annotations in the 220 -> 227 corpora, ZERO resolve under the pivot
+# they were asked to be read in; every one was dropped without comment and a
+# well-formed EvaluationSet was stored holding zero of everything. It did not
+# raise, and nothing downstream could have told it from a real one.
+#
+# The mode now leads on the sets' own bindings, and an empty delta over non-empty
+# corpora is refused rather than persisted.
+#
+# THE RESTART, under the rule the previous entry wrote. All ten units concurrently,
+# verified by ExecMainStartTimestamp one by one: 21:46:37 to 21:51:37. Three took
+# the full five-minute TimeoutStopSec, the idle ones, exactly as predicted. In
+# parallel that is five minutes total rather than twenty-five, and no window in
+# which half the fleet ran one revision and half another.
+
+coordinator fb9f7663c2d6e9e549c81d20e2c55e7f9f4d24ca
+schema-applied fb9f7663c2d6e9e549c81d20e2c55e7f9f4d24ca
