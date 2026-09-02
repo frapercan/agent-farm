@@ -464,3 +464,58 @@ unreviewed retrieval hop still carries the provenance split. And evaluation
 still runs through the first-appearance builder rather than the retired one,
 which is the part of D-04 that survives intact: certifying a chain with the
 component being discarded proves nothing about the chain that ships.
+
+---
+
+## D-09 The campaign's stored results are deleted, because they were measured on the holdout
+
+**Decided 2026-08-26 by the author, on a presented inventory of four stores.**
+
+Four stores go: the candidate table, the evaluation results, the prediction sets
+and the evaluation object store. Roughly 49 GB and 128,191,567 candidate rows.
+The `job` table stays and was never on the list, because it is what keeps the
+surviving census attributable.
+
+### Why this is not a loss of a node
+
+The scoring node is a pure re-read of the candidate table and the only node in
+the graph that could have closed without recomputing anything. That is the
+strongest argument for keeping it, and it fails.
+
+The 225 prediction sets were built for the release pair 220 to 230, which is the
+**union of the experimental and competitive cohorts**. 594 of the 1,296 results
+sit on that union and **not one sits on either declared cohort**. Weighted by
+use, two thirds of every decision-bearing comparison in the campaign reads the
+window reserved as blind: scoring preset 66.7 per cent, neighbourhood depth 65.0,
+representation 70.8.
+
+Closing the scoring node on those predictions would therefore be a decision
+informed by the holdout. **Deleting the table does not cost a node. It removes a
+temptation.**
+
+### What the deletion does not repair
+
+The blind reserve was already read. Neighbourhood depth, preset and
+representation were chosen on a window containing the competitive cohort, and no
+preservation fixes that. The restart is the occasion to stamp it rather than
+inherit it in silence: **no figure from those rows may seed a prior over the
+competitive cohort.**
+
+### What survives, and why the order mattered
+
+Three findings were materialised with producers before anything was dropped, so
+that the deletion destroyed no verifiability:
+
+- the floor census, 11,664 rows, one per result and panel, each carrying its full
+  conditioning set beside its metric, and reproducible **from the file alone**;
+- the coverage hole by panel, with its digest;
+- the frame sensitivity, which lives inside the census as a column.
+
+The deletion was gated on reading those three back from disk and checking them
+against their manifest, rather than on a claim that they had been written.
+
+### What this accepts
+
+Regenerating predictions costs roughly 150 dispatches. That price is accepted
+deliberately, because any regeneration will be on the experimental cohort alone,
+which is the frame the graph declares and none of the deleted rows had.
