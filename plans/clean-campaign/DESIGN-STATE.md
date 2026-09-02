@@ -1444,3 +1444,74 @@ honest and it is also a defect: a declaration that cannot name its own baseline
 until after the fact is half a declaration, and the level-naming change of
 PROTEA #925 landed after this run was written. Reconciling it is the first thing
 to do when the arms finish.
+
+---
+
+## 22. Three revisions on one queue, and the guard held
+
+The first arms of the declared run were refused. Two failed instantly with
+`ForeignRevisionError` and the third was cancelled before it could finish a
+short prediction set.
+
+    coordinator, this laptop   b0f164dc   PR #909, 2026-08-30
+    worker, the desktop node   a5de702    the DECLARED revision, correct
+    deploy tree                bfc97f9    three ahead of the declaration
+
+The laptop's worker processes had loaded their code on 30 August and never
+reloaded, so they opened prediction sets stamping `b0f164dc` — which is an
+ancestor of the declared revision, so they were three commits BEHIND, not ahead.
+The desktop node was in-sync at `a5de702` throughout and refused every batch it
+was handed.
+
+**No number was mislabelled and nothing reported success.** That is the exact
+counterpart of the 2026-08-30 incident, where two arms recorded a revision no
+process had ever held. And the commit the guard refused as foreign is
+`b0f164dc`, which is PR #909, *"a process declares what it loaded, not what the
+tree says now"* — the guard was refused by its own author.
+
+### The minimal action was not one step, because of reuse-in-place
+
+Sobremesa's diagnosis was right and its prescription was one step short. It
+proposed restarting the laptop's workers and leaving the tree and the
+declaration alone. But `farm.env` sets `DEPLOY` to the repository itself and the
+worker units set `WorkingDirectory` to it, **so a worker loads whatever the tree
+holds**. Restarting against a tree at `bfc97f9` would have produced a fourth
+revision rather than the declared one.
+
+The reconciliation was therefore two steps: put the tree at `a5de702`, then
+restart. Both done, with nothing in flight.
+
+**And that is the reuse-in-place hazard, demonstrated twice in one night.** The
+tree a worker loads is the tree development happens in, so it cannot be at the
+declared revision and on `develop` at the same time. Tonight it was left on a
+feature branch once and three commits ahead once. Development on this machine
+has to move to clones — which is what the second agent run was already told to
+do — and the deploy tree has to stay pinned at the declaration.
+
+### The guard that would have caught it does not exist
+
+`deploy/systemd/protea-guard-queue.sh` runs as `ExecStartPre` on every worker
+unit, and it checks exactly one thing: that no other worker is already serving
+that queue. It does not compare the tree against
+`plans/DECLARED-REVISION.txt`. A worker can therefore start on any revision the
+tree happens to hold and announce nothing.
+
+The node has this check and the server does not, which is backwards: the node
+holds no state and refuses rather than guesses, while the machine that owns
+every artefact will start a worker on whatever is checked out. Eleventh
+instrumentation item, and the cheapest of the eleven — the declaration is one
+`git show` away and the comparison is a string equality.
+
+### The three void prediction sets are annotated, not deleted
+
+    66c185b7   limit_per_entry 30   171,780 rows   SHORT
+    638048de   limit_per_entry 10             0
+    f8ddd1a6   limit_per_entry  5             0
+
+All three carry zero evaluation results and all three are recorded in the
+`findings` of experiment run `8cbd5946` as sets that must not be scored. They
+are annotated rather than deleted deliberately: section 15 found that the
+remediation of the last poisoned series was a deletion that nothing recorded,
+leaving five jobs reporting SUCCEEDED with no rows and no account. Repeating
+that to tidy up would be repeating the defect. When a retraction path exists,
+these are its first candidates.
