@@ -98,5 +98,19 @@
 # SIBLINGS unchanged: cafaeval-protea stays at e937e0e, which a5de702's own
 # poetry.lock already named.
 
-coordinator c4b12041b76b46023bdfc8a293ab9c76cda57a90
-schema-applied c4b12041b76b46023bdfc8a293ab9c76cda57a90
+# 2026-09-02, second hop of the day: c4b1204 -> 8f43cea. Server gate run before
+# the edit as the header requires: no job QUEUED or RUNNING, no prediction set
+# being written. No migration moves, so schema-applied follows the coordinator.
+#
+# WHAT IT CARRIES. PROTEA#929, the revision guard stops guessing: neither the
+# deploy tree nor the farm root has a default any more, it compares DEPLOY
+# against its own working directory so it cannot watch a tree the worker is not
+# starting in, and a missing farm clone is a refusal rather than an allowance.
+# PROTEA#930, the reason this hop is worth making today: build_graph handed the
+# declared floors to one node builder out of ten, so nine nodes could not reach
+# `measured` whatever an experiment_run declared. PROTEA#922, the split registry
+# had the TUNE window inside the validation split. PROTEA#923, the seal named
+# the harness label instead of the digest column it writes.
+
+coordinator 8f43ceaa5219b1cd5c057f9e326804c54f563cab
+schema-applied 8f43ceaa5219b1cd5c057f9e326804c54f563cab
