@@ -153,9 +153,98 @@ exacto**. El eje `metric` sobre ellas no mediría nada, y sólo tiene sentido en
 tres rung2, que son las únicas sin normalizar.
 
 Eso reinterpreta la escala de distancias. El 0,0004 de `ankh_base@d79` no es un
-problema de escala —está normalizado— sino **colapso direccional**: a esa
-profundidad el modelo da casi la misma dirección a todas las proteínas. Que es
-justamente lo que la rejilla `@d` está para medir.
+problema de escala —está normalizado, norma L2 exactamente 1,0000— sino
+**colapso direccional**: a esa profundidad el modelo da casi la misma dirección
+a todas las proteínas.
+
+### Posición y dispersión, que no son lo mismo (2026-09-04)
+
+Medido sobre 1.500 vectores por configuración, muestra determinista:
+
+| | dist. media | p99/p50 | 1er vecino |
+|---|---|---|---|
+| `prot_t5@d100` | 0,5992 | 1,5× | 0,1667 |
+| `ankh_base@d100` | 0,4023 | 1,7× | 0,0964 |
+| `esmc_600m@d100` | 0,2444 | 3,5× | 0,0522 |
+| `esm2_650m@d100` | 0,1408 | 5,4× | 0,0281 |
+| `ankh_base@d79` | **0,0004** | **2,6×** | 0,00006 |
+
+**Una corrección, señalada por el nodo de cómputo.** La primera versión de esta
+tabla traía además una columna de *anisotropía* —norma del centroide de los
+vectores unitarios— presentada como segunda evidencia. No lo es. Para vectores
+unitarios `|centroide|² = 1/n + (n−1)/n · cos_medio`, y la distancia coseno media
+es `1 − cos_medio`; luego **anisotropía y distancia media son la misma cantidad**.
+Verificado contra las cinco filas: discrepancia máxima 4·10⁻⁵. Citarlas como dos
+mediciones concurrentes era contar un hecho dos veces.
+
+Lo que queda, ya sin duplicar:
+
+- **La posición** —la distancia media— varía por un factor de **1.500** entre
+  configuraciones. Es lo que hace imposible un `distance_threshold` global: no
+  porque las magnitudes difieran (todas son norma 1), sino porque el umbral cae
+  en un sitio distinto de cada distribución.
+- **La dispersión** —`p99/p50`— varía sólo por **3,6×**, y es la columna
+  independiente. `@d79` tiene 2,6×, **más** que `ankh_base@d100` con 1,7×.
+
+Y de ahí sale por qué el colapso no cuesta lo que parecería: el ranking coseno es
+invariante de escala, así que un cono mil veces más estrecho conserva el orden
+mientras la dispersión relativa aguante. La medición previa del nodo penalizaba
+esa profundidad en sólo −0,0076, y esto lo explica sin contradicción.
+
+**La distancia media no predice calidad.** `esm2_650m@d100` está entre las
+mejores y su distancia media es 0,1408, cerca del extremo colapsado.
+
+### El truncamiento no es un detalle de coste, es un confundido de estrato
+
+`max_length` es **1022** y `use_chunking` está en `false` en las trece
+configuraciones, así que toda secuencia más larga se corta. Medido sobre el
+corpus vivo:
+
+| banda | secuencias | residuos | % procesado | % de secuencias cortadas |
+|---|---|---|---|---|
+| `<=512` | 412.915 | 109.032.448 | **100,0** | 0,0 |
+| `512-1024` | 92.109 | 63.281.004 | **100,0** | 0,1 |
+| `1024-2048` | 19.299 | 25.825.275 | **76,4** | **100,0** |
+| `>2048` | 3.971 | 12.561.129 | **32,3** | **100,0** |
+
+En agregado son 14.604.680 de 210.699.856 residuos, un 6,93%. Pero el agregado
+esconde el reparto: **en `>2048` el modelo ve un tercio de la proteína**, y en
+`1024-2048` se corta el **100%** de las secuencias.
+
+**Y la banda que se llama `TRUNCATED` no es donde empieza el truncamiento.**
+`strata.py` nombra así a `>2048`, pero el corte lo fija `max_length` en 1022, dos
+bandas antes. El nombre marca un umbral que no es el que opera — la misma clase
+de defecto que el resto de esta auditoría.
+
+**Lo que esto cambia.** La banda larga ya estaba identificada como muro por
+potencia: 347 proteínas, 1,8% del corpus, por debajo del suelo en seis de siete
+paneles. Ahora tiene una segunda razón, y **son muros distintos**:
+
+- *No hay suficientes proteínas* se arregla con más datos.
+- *No hemos mirado la proteína entera* no se arregla con más datos. Se arregla
+  con `use_chunking` o con un `max_length` mayor, y las dos están en
+  `IDENTITY_FIELDS`, así que cada una crea configuraciones distintas y es
+  ablacionable.
+
+Mientras el truncamiento no se mida por banda, cualquier conclusión sobre
+longitud en las dos bandas altas **mide truncamiento y no biología**. El campo
+`residues_truncated` de `compute_embeddings_batch.done` (PROTEA#938) es lo que
+permite separarlas, y hay que leerlo **por banda**, no agregado.
+
+Hallazgo del nodo de cómputo, que vio que el 6,93% se perdía en el 4,4% de las
+secuencias y preguntó cómo quedaba el reparto.
+
+### Lo que la rejilla tiene que registrar
+
+Si posición y anisotropía son una sola cantidad, entonces *dónde empieza el
+colapso* y *cómo cae la distancia media con la profundidad* son **una sola
+curva**, y medir las dos no añade nada.
+
+La información que nadie tiene es **la dispersión por profundidad**. Registrar
+`p99/p50` —o mejor el rango relativo p1→p99— **por configuración y por barra de
+la rejilla**, no sólo la media. Doce configuraciones por cuatro profundidades dan
+una curva de dispersión que es la que predice si el ranking sobrevive al colapso;
+la de la media queda determinada en cuanto se conoce un punto.
 
 ## 6. El estado que hay que limpiar
 
