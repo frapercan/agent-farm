@@ -334,3 +334,50 @@ reports what it would do and touches nothing. `node-sync.state` in the log
 directory carries the last verdict, and it is written on every path including
 the ones that do nothing, because a state file left over from an earlier run
 reads as a current one.
+
+## The throughput sampler, retired 2026-09-04
+
+`protea-lab-sampler.service` is stopped and disabled on the compute node. It is
+described here rather than deleted quietly, because a removal that nothing
+records is the defect this project keeps finding in its own history.
+
+**What it was.** A one minute poll that queried Prometheus for the queue depth,
+the consumer count and the acknowledged batch total, read the card with
+`nvidia-smi`, and appended a row to a tab separated file under
+`storage/throughput/`. It produced 34,429 samples between 2026-07-29 and
+2026-09-04 across four files, one per backbone. Those files are left in place,
+frozen. Nothing reads them: a search across the plan store, the deploy tree and
+the lab returns no reference to the directory, the script or any of the files.
+
+**Why it is retired, and any one of these would be enough.**
+
+It counts acknowledged batches. The quantity the campaign needs is residues per
+second, because sequence length spans 113x from the median to the longest and
+the layer grid compares four lineages with different tokenizers, so a batch of
+256 short sequences and a batch of 256 long ones are two different jobs under
+one name. A sampler polling a counter cannot recover that.
+
+Its label froze. The run label comes from a `CURRENT_RUN` file that has read
+`ankh_large-2026-07-29` since 2026-07-30, so five weeks of samples from other
+work were appended under the name of a run that had ended. The mechanism for
+labelling by backbone exists and the four files show it working; what stopped
+was the file that says which one is current.
+
+It lives under `storage/`, and the systemd unit executes it from there. That is
+the campaign invariant's named failure mode, with an extra turn of the screw: a
+procedure that exists only as a script under `storage/` is a capability that
+dies with the disk, and here a wipe of `storage/` would also break a running
+service rather than merely losing an output.
+
+**What replaces it, and why the replacement is better rather than equal.**
+PROTEA#938 puts `residues_available`, `residues_processed` and
+`residues_truncated` into the fields of `compute_embeddings_batch.done`, the
+event that already carries the clock. Cost then comes from the worker's own
+event, per batch and per configuration, in the platform, with no second source
+of truth for the same quantity. The three fields differ because the tokenizer
+truncates at `max_length` without chunking: measured on the live corpus, 6.93
+per cent of residues never reach the model, concentrated on the 4.4 per cent of
+sequences above the limit, which lose 624 residues each on average. Length is
+one of the campaign's stratification axes, so without those fields a finding
+that long proteins score worse could not be separated from the model having
+seen less of them.
