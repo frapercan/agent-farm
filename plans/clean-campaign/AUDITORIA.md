@@ -194,45 +194,79 @@ esa profundidad en sólo −0,0076, y esto lo explica sin contradicción.
 **La distancia media no predice calidad.** `esm2_650m@d100` está entre las
 mejores y su distancia media es 0,1408, cerca del extremo colapsado.
 
-### El truncamiento no es un detalle de coste, es un confundido de estrato
+### El truncamiento: una medición, dos poblaciones
 
-`max_length` es **1022** y `use_chunking` está en `false` en las trece
-configuraciones, así que toda secuencia más larga se corta. Medido sobre el
-corpus vivo:
+`use_chunking` está en `false` en las veinticinco configuraciones, pero
+**`max_length` NO es uno solo**:
+
+| `max_length` | configuraciones |
+|---|---|
+| **2048** | las 22 preentrenadas, incluidas las 12 de la rejilla |
+| **1022** | las 3 aprendidas rung2 |
+
+La primera versión de esta sección midió el corpus entero a 1022 —el valor de las
+rung2— y aplicó la conclusión a la rejilla, que corre a 2048. Correcta sobre tres
+configuraciones, falsa sobre veintidós. Es exactamente el defecto que esta
+campaña persigue: la misma medición correcta sobre dos poblaciones distintas.
+Corregido por el nodo de cómputo.
+
+**A 2048, que es el valor de la rejilla:**
 
 | banda | secuencias | residuos | % procesado | % de secuencias cortadas |
 |---|---|---|---|---|
-| `<=512` | 412.915 | 109.032.448 | **100,0** | 0,0 |
-| `512-1024` | 92.109 | 63.281.004 | **100,0** | 0,1 |
-| `1024-2048` | 19.299 | 25.825.275 | **76,4** | **100,0** |
-| `>2048` | 3.971 | 12.561.129 | **32,3** | **100,0** |
+| `<=512` | 412.915 | 109.032.448 | 100,0 | 0,0 |
+| `512-1024` | 92.109 | 63.281.004 | 100,0 | 0,0 |
+| `1024-2048` | 19.299 | 25.825.275 | 100,0 | 0,0 |
+| `>2048` | 3.971 | 12.561.129 | **64,7** | **100,0** |
 
-En agregado son 14.604.680 de 210.699.856 residuos, un 6,93%. Pero el agregado
-esconde el reparto: **en `>2048` el modelo ve un tercio de la proteína**, y en
-`1024-2048` se corta el **100%** de las secuencias.
+**2,10% del corpus**, una sola banda. Y `strata.py` marca el umbral **correcto**:
+`TRUNCATED` es `>2048` y el límite de las preentrenadas es 2048. El nombre está
+bien puesto — para las veintidós. Para las tres rung2 el corte cae en 1022 y
+entonces sí llega dos bandas antes.
 
-**Y la banda que se llama `TRUNCATED` no es donde empieza el truncamiento.**
-`strata.py` nombra así a `>2048`, pero el corte lo fija `max_length` en 1022, dos
-bandas antes. El nombre marca un umbral que no es el que opera — la misma clase
-de defecto que el resto de esta auditoría.
+A 1022, para las rung2: 6,93% del corpus, `1024-2048` al 76,4% y `>2048` al
+32,3%, con el 100% de las secuencias cortadas en ambas.
 
-**Lo que esto cambia.** La banda larga ya estaba identificada como muro por
-potencia: 347 proteínas, 1,8% del corpus, por debajo del suelo en seis de siete
-paneles. Ahora tiene una segunda razón, y **son muros distintos**:
+### La ventana de entrenamiento, que no es el truncamiento
 
-- *No hay suficientes proteínas* se arregla con más datos.
-- *No hemos mirado la proteína entera* no se arregla con más datos. Se arregla
-  con `use_chunking` o con un `max_length` mayor, y las dos están en
-  `IDENTITY_FIELDS`, así que cada una crea configuraciones distintas y es
-  ablacionable.
+El backend de ESM pasa `max_length` directo al tokenizador con `truncation=True`
+(`protea_backends/esm/__init__.py:236-241`). Con 2048 emite hasta 2048 tokens. La
+pregunta que abre eso es si los cuatro linajes de la rejilla pueden con ello:
 
-Mientras el truncamiento no se mida por banda, cualquier conclusión sobre
-longitud en las dos bandas altas **mide truncamiento y no biología**. El campo
-`residues_truncated` de `compute_embeddings_batch.done` (PROTEA#938) es lo que
-permite separarlas, y hay que leerlo **por banda**, no agregado.
+| linaje | posiciones | mecanismo |
+|---|---|---|
+| `esm2` (8M, 650M, 3B) | `max_position_embeddings` **1026** | rotatorio |
+| `ankh` (base, large) | — | sesgo relativo, **64** cubos |
+| `prot_t5`, `prostt5` | — | sesgo relativo, **32** cubos |
+| `esmc_600m` | — | no declarado |
 
-Hallazgo del nodo de cómputo, que vio que el 6,93% se perdía en el 4,4% de las
-secuencias y preguntó cómo quedaba el reparto.
+Ninguno falla a 2048. El rotatorio no tiene tope de array, y el sesgo relativo
+satura en el último cubo. Pero **esm2 se entrenó a 1024 y extrapola a partir de
+ahí**, mientras la familia T5 degrada saturando. Y el `model_max_length` del
+tokenizador de esm2 es el centinela (10³⁰), así que no impone nada: manda
+`config.max_length`.
+
+**La consecuencia importa para el instrumento.** `residues_processed` será
+**idéntico** en los cuatro linajes, porque la tokenización corta en el mismo
+sitio. Así que comparar ese campo entre linajes **no detecta esto**: la
+diferencia no está en cuánta proteína ve cada modelo, sino en si lo que ve más
+allá de su ventana de entrenamiento significa algo.
+
+La población afectada son las dos bandas altas —`1024-2048` y `>2048`, **23.270
+secuencias, 4,4% del corpus**— donde esm2 opera fuera de su ventana y las T5 no.
+Ahí la comparación **entre barras del mismo eje** queda contaminada, y eso no se
+arregla estratificando.
+
+### Longitud y truncamiento son colineales
+
+A `max_length` fijo el truncamiento es una función determinista de la longitud:
+el borde de la banda **es** el umbral. Ninguna estratificación puede separarlos.
+La única identificación posible es **variar `max_length` o `use_chunking`**, que
+están los dos en `IDENTITY_FIELDS` y por tanto crean configuraciones distintas.
+
+Eso asciende la ablación del chunking de "convendría" a **la única estrategia de
+identificación disponible** para cualquier afirmación sobre longitud. Hallazgo
+del nodo de cómputo.
 
 ### Lo que la rejilla tiene que registrar
 
