@@ -44,6 +44,37 @@ corrección no toca ni una fila de anotación, es el parámetro
 anotación del corpus 220 tiene un `go_id` ausente de `releases/2024-03-28`.
 Corpus y snapshot pertenecen el uno al otro.
 
+**Y confirmada por la cabecera del propio GAF (2026-09-04).** Cada fichero GOA
+declara contra qué ontología se generó, lo que sustituye la heurística de
+cercanía por un hecho leído:
+
+| GAF | `!go-version` | publicada más reciente ≤ | enlazada | |
+|---|---|---|---|---|
+| 220 | `releases/2024-04-13` | `releases/2024-03-28` | `releases/2025-03-16` | ✗ |
+| 226 | `releases/2025-04-27` | `releases/2025-03-16` | `releases/2025-03-16` | ✓ |
+| 227 | `releases/2025-08-31` | `releases/2025-07-22` | `releases/2025-07-22` | ✓ |
+| 230 | `releases/2026-03-01` | `releases/2026-01-23` | `releases/2026-01-23` | ✓ |
+
+Las cuatro versiones declaradas son builds de `go-plus` que GO no archiva como
+release pública. La regla es entonces *la publicada más reciente igual o anterior
+a la declarada*, y bajo ella el pivote `releases/2024-03-28` no es una elección
+cómoda: lo obliga la cabecera de GAF 220. El enlace de 227 también sale correcto,
+así que el marco declarado aguanta sin cargar ninguna ontología nueva.
+
+**Corregido el 2026-09-04.** `GOA 220` está ahora enlazada a
+`releases/2024-03-28` y sus 5.317.051 anotaciones re-expresadas en ese snapshot,
+cero fuera, verificado dentro de la transacción. La IA `b5f134b1`, las dos
+evaluaciones y los tres encoders rung2 quedaron sin cambio — que era la
+predicción, porque todo lo derivado ya leía 220 bajo esa ontología. El guardia
+que impide que se repita está en `protea/core/operations/_gaf_header.py`.
+
+**Lo que el parámetro no alcanzaba.** `old_native_snapshot_id` corrige la
+evaluación, pero no la predicción: cada término predicho sale de una anotación
+del donante, así que el `go_term_id` guardado *es* la identidad del candidato y
+no hay parámetro que lo traduzca. Por eso 220 necesita además el remapeo de sus
+`go_term_id`, que no cambia ninguna cifra ya medida — sólo hace que los ids
+vivan en el snapshot que el resto del marco ya usa.
+
 ## El conjunto de IA, y sus cifras
 
 `compute_information_accretion`, régimen `lafa`, pivote t0, corpus 220:
