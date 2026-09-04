@@ -210,6 +210,38 @@
 # the full five-minute TimeoutStopSec, the idle ones, exactly as predicted. In
 # parallel that is five minutes total rather than twenty-five, and no window in
 # which half the fleet ran one revision and half another.
+#
+# fb9f766 -> 8699bfd. Two commits, and a schema change that made the move
+# obligatory rather than optional.
+#
+# 46ceaf1 gives the GOA loader the check it never had. Every GAF declares the GO
+# build it was generated against in a !go-version header, and nothing was reading
+# it: ontology_snapshot_id was a required payload field with no default and no
+# validation, so GOA 220 was loaded bound to an ontology eleven months after its
+# own publication and nothing objected. Evaluation survived it, because the
+# reconcile works in go_id text space; prediction could not, because a predicted
+# term IS a donor annotation's go_term_id. The loader now refuses a snapshot
+# newer than the declared build, and refuses too when the header cannot be read
+# unless the payload says allow_unverified_ontology -- a guard that passes
+# silently when it cannot check is not a guard.
+#
+# 8699bfd renames the embedding registry. It also ADDS embedding_config.kind as
+# NOT NULL with no server default, which is why this move could not wait: the
+# migration is already applied to the live store, so code that predates the
+# column cannot insert an embedding_config at all. A server default was rejected
+# -- defaulting to 'pretrained' would silently misclassify a learned config,
+# which is the invisible-failure shape this file exists to prevent.
+#
+# THE WINDOW. Moved with no campaign live: nothing queued, and the only
+# experiment_run marked abandoned. That is the condition the entry above asks
+# for, and it will not hold again once phase 0 starts.
+#
+# THE RESTART. All ten units concurrently, verified per unit by
+# ExecMainStartTimestamp: 21:31:34 to 21:36:34. Three took the full five-minute
+# TimeoutStopSec, the idle ones -- the same three as last time
+# (embeddings.write, predictions.batch, predictions.write). The worker log now
+# also prints its own sha at startup, which is stronger evidence than a
+# timestamp: "Worker started. queue=protea.jobs revision=8699bfd7...".
 
-coordinator fb9f7663c2d6e9e549c81d20e2c55e7f9f4d24ca
-schema-applied fb9f7663c2d6e9e549c81d20e2c55e7f9f4d24ca
+coordinator 8699bfd7eec382aadd03f471b127f8be6f71cffd
+schema-applied 8699bfd7eec382aadd03f471b127f8be6f71cffd
