@@ -153,9 +153,180 @@ exacto**. El eje `metric` sobre ellas no mediría nada, y sólo tiene sentido en
 tres rung2, que son las únicas sin normalizar.
 
 Eso reinterpreta la escala de distancias. El 0,0004 de `ankh_base@d79` no es un
-problema de escala —está normalizado— sino **colapso direccional**: a esa
-profundidad el modelo da casi la misma dirección a todas las proteínas. Que es
-justamente lo que la rejilla `@d` está para medir.
+problema de escala —está normalizado, norma L2 exactamente 1,0000— sino
+**colapso direccional**: a esa profundidad el modelo da casi la misma dirección
+a todas las proteínas.
+
+### Posición y dispersión, que no son lo mismo (2026-09-04)
+
+Medido sobre 1.500 vectores por configuración, muestra determinista:
+
+| | dist. media | p99/p50 | 1er vecino |
+|---|---|---|---|
+| `prot_t5@d100` | 0,5992 | 1,5× | 0,1667 |
+| `ankh_base@d100` | 0,4023 | 1,7× | 0,0964 |
+| `esmc_600m@d100` | 0,2444 | 3,5× | 0,0522 |
+| `esm2_650m@d100` | 0,1408 | 5,4× | 0,0281 |
+| `ankh_base@d79` | **0,0004** | **2,6×** | 0,00006 |
+
+**Una corrección, señalada por el nodo de cómputo.** La primera versión de esta
+tabla traía además una columna de *anisotropía* —norma del centroide de los
+vectores unitarios— presentada como segunda evidencia. No lo es. Para vectores
+unitarios `|centroide|² = 1/n + (n−1)/n · cos_medio`, y la distancia coseno media
+es `1 − cos_medio`; luego **anisotropía y distancia media son la misma cantidad**.
+Verificado contra las cinco filas: discrepancia máxima 4·10⁻⁵. Citarlas como dos
+mediciones concurrentes era contar un hecho dos veces.
+
+Lo que queda, ya sin duplicar:
+
+- **La posición** —la distancia media— varía por un factor de **1.500** entre
+  configuraciones. Es lo que hace imposible un `distance_threshold` global: no
+  porque las magnitudes difieran (todas son norma 1), sino porque el umbral cae
+  en un sitio distinto de cada distribución.
+- **La dispersión** —`p99/p50`— varía sólo por **3,6×**, y es la columna
+  independiente. `@d79` tiene 2,6×, **más** que `ankh_base@d100` con 1,7×.
+
+Y de ahí sale por qué el colapso no cuesta lo que parecería: el ranking coseno es
+invariante de escala, así que un cono mil veces más estrecho conserva el orden
+mientras la dispersión relativa aguante. La medición previa del nodo penalizaba
+esa profundidad en sólo −0,0076, y esto lo explica sin contradicción.
+
+**La distancia media no predice calidad** — dentro del grupo de cabeza.
+`esm2_650m@d100` está entre las mejores con distancia media 0,1408, cerca del
+extremo colapsado. **Cuidado con generalizar esto**: ver la sección siguiente,
+donde con Fmax medido resulta falso a lo largo del rango completo.
+
+### El truncamiento: una medición, dos poblaciones
+
+`use_chunking` está en `false` en las veinticinco configuraciones, pero
+**`max_length` NO es uno solo**:
+
+| `max_length` | configuraciones |
+|---|---|
+| **2048** | las 22 preentrenadas, incluidas las 12 de la rejilla |
+| **1022** | las 3 aprendidas rung2 |
+
+La primera versión de esta sección midió el corpus entero a 1022 —el valor de las
+rung2— y aplicó la conclusión a la rejilla, que corre a 2048. Correcta sobre tres
+configuraciones, falsa sobre veintidós. Es exactamente el defecto que esta
+campaña persigue: la misma medición correcta sobre dos poblaciones distintas.
+Corregido por el nodo de cómputo.
+
+**A 2048, que es el valor de la rejilla:**
+
+| banda | secuencias | residuos | % procesado | % de secuencias cortadas |
+|---|---|---|---|---|
+| `<=512` | 412.915 | 109.032.448 | 100,0 | 0,0 |
+| `512-1024` | 92.109 | 63.281.004 | 100,0 | 0,0 |
+| `1024-2048` | 19.299 | 25.825.275 | 100,0 | 0,0 |
+| `>2048` | 3.971 | 12.561.129 | **64,7** | **100,0** |
+
+**2,10% del corpus**, una sola banda. Y `strata.py` marca el umbral **correcto**:
+`TRUNCATED` es `>2048` y el límite de las preentrenadas es 2048. El nombre está
+bien puesto — para las veintidós. Para las tres rung2 el corte cae en 1022 y
+entonces sí llega dos bandas antes.
+
+A 1022, para las rung2: 6,93% del corpus, `1024-2048` al 76,4% y `>2048` al
+32,3%, con el 100% de las secuencias cortadas en ambas.
+
+### La ventana de entrenamiento, que no es el truncamiento
+
+El backend de ESM pasa `max_length` directo al tokenizador con `truncation=True`
+(`protea_backends/esm/__init__.py:236-241`). Con 2048 emite hasta 2048 tokens. La
+pregunta que abre eso es si los cuatro linajes de la rejilla pueden con ello:
+
+| linaje | posiciones | mecanismo |
+|---|---|---|
+| `esm2` (8M, 650M, 3B) | `max_position_embeddings` **1026** | rotatorio |
+| `ankh` (base, large) | — | sesgo relativo, **64** cubos |
+| `prot_t5`, `prostt5` | — | sesgo relativo, **32** cubos |
+| `esmc_600m` | — | no declarado |
+
+Ninguno falla a 2048. El rotatorio no tiene tope de array, y el sesgo relativo
+satura en el último cubo. Pero **esm2 se entrenó a 1024 y extrapola a partir de
+ahí**, mientras la familia T5 degrada saturando. Y el `model_max_length` del
+tokenizador de esm2 es el centinela (10³⁰), así que no impone nada: manda
+`config.max_length`.
+
+**La consecuencia importa para el instrumento.** `residues_processed` será
+**idéntico** en los cuatro linajes, porque la tokenización corta en el mismo
+sitio. Así que comparar ese campo entre linajes **no detecta esto**: la
+diferencia no está en cuánta proteína ve cada modelo, sino en si lo que ve más
+allá de su ventana de entrenamiento significa algo.
+
+La población afectada son las dos bandas altas —`1024-2048` y `>2048`, **23.270
+secuencias, 4,4% del corpus**— donde esm2 opera fuera de su ventana y las T5 no.
+Ahí la comparación **entre barras del mismo eje** queda contaminada, y eso no se
+arregla estratificando.
+
+### Longitud y truncamiento son colineales
+
+A `max_length` fijo el truncamiento es una función determinista de la longitud:
+el borde de la banda **es** el umbral. Ninguna estratificación puede separarlos.
+La única identificación posible es **variar `max_length` o `use_chunking`**, que
+están los dos en `IDENTITY_FIELDS` y por tanto crean configuraciones distintas.
+
+Eso asciende la ablación del chunking de "convendría" a **la única estrategia de
+identificación disponible** para cualquier afirmación sobre longitud. Hallazgo
+del nodo de cómputo.
+
+### Con Fmax medido, la posición ordena y la dispersión no (2026-09-06)
+
+La sección anterior concluía que la distancia media no predice calidad y que la
+dispersión es la columna informativa. Con trece sustratos ya evaluados sobre las
+nueve celdas, **las dos afirmaciones se caen**:
+
+```
+                          dist. media   p99/p50   fmax_w
+ankh_large@d100              0.5652      1.47     0.2953
+protst@d100                  0.8769      1.36     0.2909
+prot_t5@d100                 0.6305      1.42     0.2892
+ankh_base@d100               0.4381      1.65     0.2864
+esmc_600m@d100               0.2645      3.10     0.2850
+rung2-residue                0.9132      1.06     0.2712
+esm2_650m@d100               0.1489      3.69     0.2045
+esm2_8m@d100                 0.1569      4.29     0.1757
+esm2_3b@d100                 0.0648      2.88     0.1070
+ankh_base@d79                0.0004      2.51     0.0784
+
+correlacion  distancia media  vs  fmax_w :  +0,747
+correlacion  dispersion       vs  fmax_w :  -0,594
+```
+
+**La posición predice; la dispersión predice al revés.** `esm2_8m` tiene la mayor
+dispersión de todas, 4,29, y es de las peores.
+
+El error fue generalizar desde un tramo plano. Dentro del grupo de cabeza la
+media efectivamente no discrimina —que es lo único que yo había mirado— pero a lo
+largo del rango completo, de 0,9132 a 0,0004, ordena casi exacto.
+
+**Se registran las dos columnas. La que ordena es la posición.**
+
+Dos cosas que esto no toca. El colapso de `ankh_base@d79` es real y ahora está
+cuantificado: **0,0784 frente a 0,2864** de su propia capa final, una caída de
+0,208, donde el prior traído de otro marco lo ponía en −0,0076. El signo era
+correcto y la magnitud no era transferible, exactamente como el nodo de cómputo
+advirtió al darlo. Y `esmc_600m` es la excepción que hay que perseguir: distancia
+media 0,2645, de las más bajas, y aun así en el grupo de cabeza.
+
+**Y absuelve a `esm2_3b`.** En la tabla de cabecera el modelo de 3.000 millones
+pierde contra el de 8 millones de su propia familia, lo que parecía defecto
+bloqueante. No lo es: dimensión correcta (2560), cobertura completa (528.294), y
+una capa final **cuatro veces más colapsada** que la de sus hermanos pequeños.
+Escalar dentro de la familia empeoró la última capa para recuperación. Es el
+resultado, y es justo lo que la rejilla de capas existe para contestar.
+
+### Lo que la rejilla tiene que registrar
+
+Si posición y anisotropía son una sola cantidad, entonces *dónde empieza el
+colapso* y *cómo cae la distancia media con la profundidad* son **una sola
+curva**, y medir las dos no añade nada.
+
+La información que nadie tiene es **la dispersión por profundidad**. Registrar
+`p99/p50` —o mejor el rango relativo p1→p99— **por configuración y por barra de
+la rejilla**, no sólo la media. Doce configuraciones por cuatro profundidades dan
+una curva de dispersión que es la que predice si el ranking sobrevive al colapso;
+la de la media queda determinada en cuanto se conoce un punto.
 
 ## 6. El estado que hay que limpiar
 
