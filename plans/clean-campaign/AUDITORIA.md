@@ -191,8 +191,10 @@ invariante de escala, así que un cono mil veces más estrecho conserva el orden
 mientras la dispersión relativa aguante. La medición previa del nodo penalizaba
 esa profundidad en sólo −0,0076, y esto lo explica sin contradicción.
 
-**La distancia media no predice calidad.** `esm2_650m@d100` está entre las
-mejores y su distancia media es 0,1408, cerca del extremo colapsado.
+**La distancia media no predice calidad** — dentro del grupo de cabeza.
+`esm2_650m@d100` está entre las mejores con distancia media 0,1408, cerca del
+extremo colapsado. **Cuidado con generalizar esto**: ver la sección siguiente,
+donde con Fmax medido resulta falso a lo largo del rango completo.
 
 ### El truncamiento: una medición, dos poblaciones
 
@@ -267,6 +269,52 @@ están los dos en `IDENTITY_FIELDS` y por tanto crean configuraciones distintas.
 Eso asciende la ablación del chunking de "convendría" a **la única estrategia de
 identificación disponible** para cualquier afirmación sobre longitud. Hallazgo
 del nodo de cómputo.
+
+### Con Fmax medido, la posición ordena y la dispersión no (2026-09-06)
+
+La sección anterior concluía que la distancia media no predice calidad y que la
+dispersión es la columna informativa. Con trece sustratos ya evaluados sobre las
+nueve celdas, **las dos afirmaciones se caen**:
+
+```
+                          dist. media   p99/p50   fmax_w
+ankh_large@d100              0.5652      1.47     0.2953
+protst@d100                  0.8769      1.36     0.2909
+prot_t5@d100                 0.6305      1.42     0.2892
+ankh_base@d100               0.4381      1.65     0.2864
+esmc_600m@d100               0.2645      3.10     0.2850
+rung2-residue                0.9132      1.06     0.2712
+esm2_650m@d100               0.1489      3.69     0.2045
+esm2_8m@d100                 0.1569      4.29     0.1757
+esm2_3b@d100                 0.0648      2.88     0.1070
+ankh_base@d79                0.0004      2.51     0.0784
+
+correlacion  distancia media  vs  fmax_w :  +0,747
+correlacion  dispersion       vs  fmax_w :  -0,594
+```
+
+**La posición predice; la dispersión predice al revés.** `esm2_8m` tiene la mayor
+dispersión de todas, 4,29, y es de las peores.
+
+El error fue generalizar desde un tramo plano. Dentro del grupo de cabeza la
+media efectivamente no discrimina —que es lo único que yo había mirado— pero a lo
+largo del rango completo, de 0,9132 a 0,0004, ordena casi exacto.
+
+**Se registran las dos columnas. La que ordena es la posición.**
+
+Dos cosas que esto no toca. El colapso de `ankh_base@d79` es real y ahora está
+cuantificado: **0,0784 frente a 0,2864** de su propia capa final, una caída de
+0,208, donde el prior traído de otro marco lo ponía en −0,0076. El signo era
+correcto y la magnitud no era transferible, exactamente como el nodo de cómputo
+advirtió al darlo. Y `esmc_600m` es la excepción que hay que perseguir: distancia
+media 0,2645, de las más bajas, y aun así en el grupo de cabeza.
+
+**Y absuelve a `esm2_3b`.** En la tabla de cabecera el modelo de 3.000 millones
+pierde contra el de 8 millones de su propia familia, lo que parecía defecto
+bloqueante. No lo es: dimensión correcta (2560), cobertura completa (528.294), y
+una capa final **cuatro veces más colapsada** que la de sus hermanos pequeños.
+Escalar dentro de la familia empeoró la última capa para recuperación. Es el
+resultado, y es justo lo que la rejilla de capas existe para contestar.
 
 ### Lo que la rejilla tiene que registrar
 
