@@ -208,10 +208,36 @@ plural, so a reader checking coverage finds the plural and stops.
 It is greppable, and worth grepping: prose that says both, all or every, next to
 code that names one thing. Run over one test suite the signature returned two
 candidates, of which one was real and one was a false positive whose plural
-claim was backed by a second test that walked the whole tree. Two of one hundred
-and thirty plural docstrings hardcode a path at all, so the signature only sees
-the shape where a check reads files. Where a check reads classes, queues or
-tables the same shape exists and this search cannot see it.
+claim was backed by a second test that walked the whole tree.
+
+**Two boundaries on that search, and the second is the larger one.** Two of one
+hundred and thirty plural docstrings hardcode a path at all, so the signature
+only sees the shape where a check reads files; where a check reads classes,
+queues or tables it is invisible. And more importantly the signature only sees
+prose that made a plural claim. **A check whose docstring promises nothing and
+covers half does not appear**, and that is the commoner variant, because the
+plural docstring is what turns an omission into a false statement. The search
+finds the liars, not the incomplete.
+
+**And the three cases are not three defects. They are one fix, migrated three
+times and finished none.** The fix lived in another package and was carried into
+a path, a module and a test; all three stopped halfway in the same movement,
+which is why all three surfaced on the same day as soon as the right arm ran.
+
+That changes what to ask for. Not "does the test cover the sibling too", which
+is a question you have to remember to ask about each artifact separately, but:
+**a migration is not done until no call site of the original remains.** One
+question, and it is checkable rather than rememberable.
+
+Checkable, but only if the superseded thing says it is superseded. The module at
+the centre of these three carried zero deprecation markers, so nothing
+distinguished "the helper you should use" from "the helper that was replaced",
+and a reader picking it up found a docstring arguing convincingly for its own
+use. The idiom already exists in the same codebase in two forms, a
+``_SUPERSEDED_BY`` constant on a retired router and ``DeprecationWarning`` in
+the settings loader, and there is a project smell checker. None of the three is
+connected to the other two. Marking the replaced symbol is what turns "no call
+sites remain" from an audit somebody has to run into a rule that runs itself.
 
 **The rule.** Before an instrument is trusted, run it at a setting where it MUST
 refuse, and check that it does. Not "does it pass" but "can it fail".
