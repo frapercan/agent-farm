@@ -432,12 +432,39 @@ El reparto propuesto era además inaplicable: los dos consumidores tiran de una
 sola cola, así que el reparto ya se autoequilibra por consumo y no hay nada que
 asignar. La cifra era descriptiva presentada como accionable.
 
-### Lo que une a los cinco
+### `SUCCEEDED` es una afirmación sobre la recuperación, no sobre los datos
+
+El primer brazo redespachado del eje C dio `SUCCEEDED` 24/24. Leída entonces, su
+cobertura era **20.776 proteínas frente a las 23.737 de los brazos
+`aspect_separated_knn=true`**: una brecha del 12,5% y, de haberse creído, un
+hallazgo mayor —dos brazos puntuando poblaciones distintas no son una
+comparación de un solo campo—.
+
+Es falso. Tres lecturas consecutivas del mismo conjunto dieron 8.236.157,
+8.266.157 y 8.296.157 mientras `protea.predictions.write` retenía 71 mensajes.
+Con la cola a cero y dos lecturas idénticas, la cifra real es **23.737 proteínas
+en los dos brazos**: misma población, ninguna brecha.
+
+La causa estaba anotada y sin arreglar: `progress_total` cuenta **lotes** y
+`progress_current` avanza con los mensajes de **escritura**, así que el estado
+terminal llega cuando la recuperación acaba, no cuando los datos están. El
+número intermedio es plausible y no deja rastro de estar incompleto.
+
+**Regla operativa: ningún brazo se lee ni se evalúa por el estado del job, sino
+con su cola de escritura a cero y dos conteos iguales seguidos.** Con eso, la
+comparación limpia sobre `protst@d100:mean` es 9.449.890 predicciones con
+separación por aspecto frente a 8.886.453 sin ella, sobre las mismas 23.737
+proteínas.
+
+Es el caso más agudo de la lista porque la conclusión equivocada **ya estaba
+formada** y sólo la deshizo comprobar el instrumento antes de creerle.
+
+### Lo que une a los seis
 
 Un observable barato sustituyendo a la propiedad cara, con la sustitución nunca
 comprobada: `is-active` por *ejecuta este código*, tasa de acks por *el proceso
 avanza*, `issubclass(Stoppable)` por *la señal llega al bucle*, un default que
-resuelve por *el objeto correcto*. y un tiempo de reloj por *un tiempo de proceso*. La regla operativa que lo
+resuelve por *el objeto correcto*, un estado terminal por *los datos están*. y un tiempo de reloj por *un tiempo de proceso*. La regla operativa que lo
 cubre es que **un guardia o una prueba tiene que demostrar que puede rehusar**: no "¿pasa?", sino
 "¿puede fallar?". Es lo que separa un instrumento de una decoración, y es lo
-único que distingue los cinco casos de arriba de sus versiones sanas.
+único que distingue los seis casos de arriba de sus versiones sanas.
