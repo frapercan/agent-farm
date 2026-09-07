@@ -22,8 +22,30 @@ set -euo pipefail
 FARM="${PROTEA_FARM:-${HOME}/Thesis2/agent-farm}"
 SLOT="${PROTEA_REPO:-${HOME}/Thesis2/worktrees/protea-deploy}"
 VENV="${PROTEA_VENV:-${HOME}/.cache/pypoetry/virtualenvs/protea-M-JALCmz-py3.12}"
-QUEUE="${PROTEA_QUEUE:-protea.predictions.batch}"
-UNIT="protea-lab-worker@${QUEUE}.service"
+# EVERY worker unit on this node, not one.
+#
+# WHAT THIS USED TO BE, AND WHAT IT COST. Until 2026-09-07 this script carried
+# a single QUEUE with a default, and derived one UNIT from it. The node has run
+# two instantiated worker units, both enabled at boot, since the embeddings
+# queue was authorised. So on every declaration move this script stopped,
+# resynced and restarted ONE of them, then wrote "synced <sha>" to the state
+# file, which reads as a statement about the node and was a statement about one
+# unit. On 2026-09-04 that left the embeddings consumer running code from two
+# days earlier while the state file said the node was in sync; the divergence
+# was found from the broker, by the other machine, not here.
+#
+# Worse than the staleness: the refusal below ("not touching the tree under a
+# running process") only ever checked the unit it knew, so this script could
+# rewrite the deploy tree while the other consumer was inside a batch. That is
+# the project's own rule, broken by the automation written to keep it.
+#
+# The units are enumerated from systemd rather than listed here, because a list
+# in this file is one more place to forget a queue.
+mapfile -t UNITS < <(
+  systemctl --user list-unit-files 'protea-lab-worker@*.service' --no-legend 2>/dev/null | awk '{print $1}'
+  systemctl --user list-units 'protea-lab-worker@*.service' --all --no-legend --plain 2>/dev/null | awk '{print $1}'
+)
+mapfile -t UNITS < <(printf '%s\n' "${UNITS[@]}" | grep -v '@\.service$' | sort -u)
 DECL_PATH="${PROTEA_DECL_PATH:-plans/DECLARED-REVISION.txt}"
 STATE="${HOME}/Thesis2/storage/logs/node-sync.state"
 PY="${VENV}/bin/python"
@@ -170,11 +192,17 @@ if [[ -r "${LOG}" ]]; then
 fi
 
 # --- act ---------------------------------------------------------------------
-say "stopping ${UNIT}"
-systemctl --user stop "${UNIT}" || refuse "could not stop the worker; not touching the tree under a running process"
+if [[ ${#UNITS[@]} -eq 0 ]]; then
+  refuse "no protea-lab-worker units on this node; nothing to keep in step, and syncing a tree nobody runs is not a sync"
+fi
+say "stopping ${#UNITS[@]} unit(s): ${UNITS[*]}"
+for u in "${UNITS[@]}"; do
+  systemctl --user stop "${u}" \
+    || refuse "could not stop ${u}; not touching the tree under a running process"
+done
 
 git -C "${SLOT}" checkout --quiet --detach "${WANT_COORD}" \
-  || { echo "failed checkout ${WANT_COORD}" > "${STATE}"; systemctl --user start "${UNIT}" || true; refuse "checkout failed; worker restarted on the old revision"; }
+  || { echo "failed checkout ${WANT_COORD}" > "${STATE}"; for u in "${UNITS[@]}"; do systemctl --user start "${u}" || true; done; refuse "checkout failed; workers restarted on the old revision"; }
 say "slot now at $(git -C "${SLOT}" rev-parse --short HEAD)"
 
 while read -r name want url; do
@@ -206,6 +234,26 @@ if (( BAD )); then
   refuse "verification failed after sync; worker stays DOWN, a silent wrong consumer is worse than no consumer"
 fi
 
-systemctl --user start "${UNIT}" || { echo "failed start ${WANT_COORD}" > "${STATE}"; refuse "worker would not start"; }
+for u in "${UNITS[@]}"; do
+  systemctl --user start "${u}" \
+    || { echo "failed start ${WANT_COORD}" > "${STATE}"; refuse "${u} would not start"; }
+done
+
+# The state file says "synced" only when EVERY unit self-reports the declared
+# revision in its own log. A unit being active is not evidence that it loaded
+# this code: it may be a process that never stopped. The line each worker
+# writes at startup is the only self-report there is, so that is what is read.
+sleep 5
+BEHIND=()
+for u in "${UNITS[@]}"; do
+  q="${u#protea-lab-worker@}"; q="${q%.service}"
+  log="${HOME}/Thesis2/storage/logs/protea-lab-worker-${q}.log"
+  got="$(tail -c 200000 "${log}" 2>/dev/null | grep -a -o 'revision=[0-9a-f]\{40\}' | tail -1 | cut -d= -f2)"
+  [[ "${got}" == "${WANT_COORD}" ]] || BEHIND+=("${q}:${got:-none}")
+done
+if [[ ${#BEHIND[@]} -gt 0 ]]; then
+  echo "partial ${WANT_COORD}" > "${STATE}"
+  refuse "checked out ${WANT_COORD:0:12} but these do not self-report it yet: ${BEHIND[*]}"
+fi
 echo "synced ${WANT_COORD}" > "${STATE}"
-say "synced to ${WANT_COORD:0:12} and the worker is back on ${QUEUE}"
+say "synced to ${WANT_COORD:0:12}; ${#UNITS[@]} unit(s) self-report it"
