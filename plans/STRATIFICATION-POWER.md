@@ -8,6 +8,67 @@ the evaluation standard.
 The short answer is that the stratum floor and the effect of interest are two
 numbers that were never compared, and they are fifty times apart.
 
+## 0. RETRACTION, 2026-09-08, before anything below is read
+
+**The arithmetic in sections 2 and 3 does not apply to the metric it is applied
+to, and the author of this document is the one retracting it.**
+
+Minimum detectable effect as `2.802 * sigma / sqrt(n)` is the expression for the
+mean of a per-protein score. The campaign's metric is not one. Read from the
+kernel, `cafaeval/evaluation.py:633-639` and `:880`:
+
+    pr_micro_w = sum(tp_w) / (sum(tp_w) + sum(fp_w))
+    rc_micro_w = sum(tp_w) / (sum(tp_w) + sum(fn_w))
+    f_micro_w  = harmonic mean of those two, then maximised over tau
+
+That is a ratio of sums over the whole population, then a non-linear combination
+of two such ratios, then a maximum over a threshold grid. **There is no
+per-protein score whose standard deviation is the sigma in that formula**, so
+`sigma / sqrt(n)` is not its standard error, under any sigma. The same objection
+holds for `fmax_w`, and the platform side raised it there first.
+
+**What the sigma in section 1 actually was, and why it is still worth
+something.** It was not a per-protein standard deviation. It was obtained by
+inverting the published BCa half-widths of seven measured paired bootstraps,
+`sigma = h * sqrt(n) / 1.96`, so it is a rescaling of an interval that had
+already been measured on this metric and these panels, and it inherits whatever
+that bootstrap captured, including the threshold selection, at its own reference
+population. Its weakness is different from the one above: **extrapolating a
+measured interval to another population size assumes it scales as one over the
+square root of n**, and for a functional that maximises over a threshold that is
+an approximation with no bound established here. The measured fraction of
+proteins that change operating point between arms is 26.85 per cent, so the
+selection does real work and the scaling may fail.
+
+So the numbers in sections 2 and 3 are a **prior, not a test**. They are left
+in place, marked, rather than deleted, because they circulated and because the
+shape of the argument is what survives.
+
+**What survives, and it is most of the document.** The structural conclusion in
+section 4 does not depend on the formula: a stratum resolves less than the panel
+it came from under any consistent interval, so detection belongs to the panel
+and stratification to explanation. Every rule in section 5 survives, and one of
+them changes only in its instrument: **every stratified number still carries its
+own detectable effect, and that effect is now measured by a paired bootstrap on
+that stratum, not computed from a standard error that does not exist.**
+
+**What does not survive**: the specific figures. The 0.1417 at a population of
+thirty, the 1,506 needed for an effect of 0.02, the factor of fifty, and the one
+cell in twenty eight. Their direction is right and their magnitudes are not
+established. Where this document is used to size anything, the number has to
+come from `scripts/bootstrap_fmax_ci.py` on the cell in question.
+
+**How this got here, since it is the point of the norm it now illustrates.** The
+formula was read from the campaign's own planning documents, which carried it
+with a sigma of 0.1157, the tightest of nine measured values. This document did
+not use that sigma, but it did use the formula, and it built a design
+recommendation on top that the platform side accepted. A correction had been
+made in conversation and had not reached any document, so the only evidence
+available at the time said what this document then repeated. The rule that
+covers it is the one this project wrote three days later: **a correction is not
+done until no site asserts the old thing**, and a document is a call site.
+
+
 ## 1. The measured anchor, and the assumption it carries
 
 The only per-protein paired variability measured anywhere in this project comes
@@ -43,7 +104,7 @@ comparison publishes the per-protein paired sigma it observed**, so that the
 next design can be sized from a measurement rather than from this one borrowed
 number.
 
-## 2. The arithmetic nobody had done
+## 2. The arithmetic nobody had done (RETRACTED, see section 0)
 
 Minimum detectable effect at a two-sided five per cent level and eighty per cent
 power is 2.802 times sigma over the square root of the population.
@@ -66,7 +127,7 @@ The campaign's declared effect of interest is **0.02**. Detecting it needs about
 population, and the effect a stratum at the floor can actually see is 0.14,
 which is seven times the effect the campaign says it cares about.
 
-## 3. What that does to a single crossed axis
+## 3. What that does to a single crossed axis (RETRACTED, see section 0)
 
 Take the panels above and cross them with one axis only, sequence length, at the
 measured composition of the corpus (60.8 per cent at or below 512 residues, 28.7
