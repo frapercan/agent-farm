@@ -414,3 +414,104 @@ agregación de votos: todo eso quedó quieto. El tensor a K=200 está materializ
 y **el censo del libro mayor da cobertura 100 %** (10.423.562 de 10.423.562 con
 `sequence_rank` y `donor_count` en `ankh_large`), así que `_depth_unit_guard` no
 bloqueará y los cortes del eje B salen de él sin recuperar de nuevo.
+
+---
+
+# El eje B, medido: dos monotonías hacia bordes opuestos (2026-09-07)
+
+Haz de tres —`protst`, `prot_t5`, `ankh_large`— por siete profundidades
+{1,2,3,5,10,20,30,200} por dos variantes. Los cortes salen del tensor a K=200 sin
+recuperar de nuevo, así que **las siete profundidades se comparan sobre
+exactamente la misma población**. `experiment_run` **`bbb96a35`**.
+
+## Con `fmax_w`: menos es mejor, monótono, sin óptimo interior
+
+```
+sustrato        K=2      K=3      K=5      K=10     K=20     K=30     K=200
+ankh_large    0.3800   0.3680   0.3523   0.3358   0.3249   0.3198   0.2953
+prot_t5       0.3791   0.3676   0.3526   0.3347   0.3224   0.3158   0.2892
+protst        0.3818   0.3701   0.3527   0.3378   0.3250   0.3180   0.2909
+```
+
+Y **no es el artefacto de «predice menos»**, que era la sospecha obvia. Si lo
+fuera, la profundidad corta tendría más precisión y menos recall. Ocurre lo
+contrario: K=2 gana **en las dos**.
+
+```
+K      cobertura   precision_w   recall_w   cob_en_tau     tau
+2       0.9337       0.2319       0.4376      0.9101      0.833
+30      0.9968       0.1783       0.3112      0.7639      0.971
+200     0.9994       0.1619       0.2568      0.7714      0.970
+```
+
+Añadir vecinos **empeora el recall**, y `tau` sube de 0,833 a 0,970: con 200
+donantes hay que subir el listón de confianza para filtrar ruido, y aun así se
+pierde. La cobertura baja un 6 % en K=2, en contra del resultado y no a favor.
+
+## Con el bootstrap pareado: más es mejor, monótono, sin óptimo interior
+
+El estadístico que decide (§ regla corregida en `PLAN-EXPERIMENTAL.md`) dice lo
+contrario, y con los cinco intervalos excluyendo el cero:
+
+```
+protst, NK               Δ = A − B         IC 95%
+  K1  vs K2            -0.0123   [-0.0136, -0.0106]      K2  mejor
+  K2  vs K3            -0.0063   [-0.0076, -0.0051]      K3  mejor
+  K3  vs K5            -0.0069   [-0.0080, -0.0059]      K5  mejor
+  K20 vs K30           -0.0019   [-0.0025, -0.0012]      K30 mejor
+  K30 vs K200          -0.0033   [-0.0039, -0.0027]      K200 mejor
+```
+
+Idéntico signo en PK. Los tamaños decrecen —0,0123 → 0,0063 → 0,0069 → 0,0019 →
+0,0033— así que **hay saturación pero no reversión**: cada vecino sigue ayudando,
+cada vez menos, y **la curva no se dobla dentro del rango medido**.
+
+## El mecanismo, que explica la discrepancia y una nota vieja del registro
+
+`fmax_w` maximiza una **curva agregada** sobre un umbral: con pocos vecinos las
+predicciones son escasas y confiadas, y la curva sale favorecida. El pareado da a
+cada proteína **su propio mejor F1**: más vecinos son más oportunidades de que
+los términos verdaderos de esa proteína concreta estén presentes.
+
+**`fmax_w` premia predecir poco y seguro; el pareado premia cubrir a cada
+proteína.** No son dos formas de medir lo mismo.
+
+Y explica de golpe la nota `protea-depth-is-monotone` del registro —«deeper is
+worse en 70 de 72 series, el ganador siempre en el borde»—: **eso era `fmax_w`,
+no la profundidad.** No había óptimo porque no se estaba midiendo lo que se creía.
+
+## El K=30 por defecto no lo sostiene ninguno de los dos
+
+Es peor que K=2 bajo `fmax_w` y peor que K=200 bajo el pareado. **Tierra de
+nadie**, probablemente heredado de la convención CAFA sin que nadie lo midiera en
+este marco. El tensor materializado a K=200 por eficiencia resulta ser, bajo el
+estadístico que decide, **el mejor punto medido**.
+
+---
+
+# El hallazgo que abarca a los dos ejes
+
+**La campaña ha medido dos ejes y en los dos el resultado ha dependido de una
+elección de métrica que el marco no declaraba.**
+
+```
+eje A    fmax_w pone a ankh_large primero;  el pareado pone a protst
+         y lo invierte en las tres categorías con el cero fuera del intervalo
+eje B    fmax_w gana en K=2;  el pareado gana en K=200
+         monotonías completas hacia bordes OPUESTOS
+```
+
+Los dos estadísticos **coinciden donde hay señal grande** —la cola del eje A se
+separa igual bajo ambos, +0,0710— y **discrepan donde las diferencias son
+pequeñas**, que es exactamente donde los ejes pretendían decidir.
+
+Y sólo uno de los dos tiene error estándar: `fmax_w` no es una media de nada.
+
+**Lo que esto fuerza, y es una decisión del investigador y no del dato: declarar
+qué optimiza esta tesis.** Si el objetivo es la métrica agregada de CAFA, K bajo
+y `ankh_large`. Si es acertar por proteína, K alto y `protst`. **No se pueden
+tener las dos**, y hasta ahora el marco no obligaba a elegir.
+
+Ese campo —el estadístico de decisión— entra en el sello, junto a los seis que ya
+estaban. Dos números no son comparables si difieren en él, igual que si difieren
+en el pivote o en la ventana.
