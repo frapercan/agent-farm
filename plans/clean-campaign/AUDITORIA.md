@@ -347,3 +347,65 @@ era posible; se decidió no hacerlo. El marco declarado —pivote
 población de 23.737— queda intacto y verificado.
 
 Nada de lo anterior toca `n`. CCO/LK sigue en 821 proteínas y su MDE en 0,0113.
+
+---
+
+## El eje de capa, leído (2026-09-07)
+
+Doce configuraciones de rejilla sobre banco reducido, más las de corpus completo
+del eje A. `fmax_w` medio de las nueve celdas, variante A:
+
+```
+linaje        @d0     @d3     @d33    @d67    @d79    @d100
+ankh_base     0.0907  --      0.0230  0.0326  0.0784  0.2864
+ankh_large    --      --      --      --      --      0.2953
+esm2_3b       --      --      --      --      --      0.1070
+esm2_650m     0.0754  --      0.0801  0.1932  --      0.2045
+esm2_8m       --      --      --      --      --      0.1757
+esmc_600m     --      0.0216  0.0750  0.2121  --      0.2850
+prostt5       --      --      --      --      --      0.2820
+prot_t5       0.0183  --      0.1788  0.1958  --      0.2892
+protst        --      --      --      --      --      0.2909
+```
+
+### Lo que contesta
+
+**Ninguna capa temprana bate a una tardía, monótonamente, en tres de cuatro
+linajes.** `esm2_650m` 0,075 → 0,080 → 0,193; `esmc_600m` 0,022 → 0,075 → 0,212;
+`prot_t5` 0,018 → 0,179 → 0,196. La señal se acumula hacia la salida y no hay
+óptimo intermedio en el rango medido.
+
+Ésa era la pregunta que la campaña necesitaba: el eje A usa `@d100` en todo, y lo
+que había que descartar era que una capa intermedia lo mejorase. Descartado.
+
+### La columna que NO es comparable, y por qué es un error de diseño
+
+`@d100` y `@d79` están medidas sobre el corpus completo (556.306 donantes); el
+resto sobre la muestra reducida (40.000). **El salto a 0,28 es sobre todo el
+banco, no la profundidad.**
+
+El error fue mío y al montar la rejilla: dije *"`@d100` ya existe, sólo faltan
+tres profundidades"*. Existía, pero **en otro marco**, así que la rejilla se
+quedó sin su propio punto de referencia.
+
+Y no tiene arreglo barato. `PredictGOTermsPayload` **no expone ninguna forma de
+restringir el pool de donantes** — hay `query_accessions`, que limita las
+consultas, y `donor_policy`, que es permisivo/estricto, y nada más. El banco se
+deriva de quién tiene embedding para esa configuración. Así que bajar `@d100` al
+banco reducido exige añadir un campo al código, y subir las tres profundidades al
+corpus completo son las 8,6 horas por configuración medidas — 206 en total.
+
+### La pregunta que queda abierta, con su cifra
+
+**`ankh_base` no es monótono.** Su capa de embedding, `@d0` = 0,0907, **bate a
+sus dos intermedias**, 0,0230 y 0,0326. Es el único de los cuatro que baja antes
+de subir, y es el mismo linaje cuyo `@d79` mostró anisotropía 0,9998 —colapso
+direccional casi total— con la dispersión relativa intacta.
+
+Si `@d0` sería mejor que `@d100` en ankh **no está contestado y no se puede
+contestar** sin una de las dos opciones caras de arriba.
+
+**Se deja abierto a propósito**, no por descuido: es un linaje de nueve,
+`ankh_large@d100` ya encabeza el eje A con 0,2953, y gastar días de GPU para
+cerrar una anomalía de una fila es la clase de expansión que esta campaña paró el
+2026-09-06 precisamente por hacerla demasiadas veces.
