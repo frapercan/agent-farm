@@ -172,17 +172,9 @@ las 23.736 distintas:
 | MFO | 1.129 | 943 | 4.953 | 7.025 |
 | **total** | **3.754** | **2.978** | **23.701** | **30.433** |
 
-Efecto mínimo detectable, sigma pareada 0,1157:
-
-| aspecto | NK | LK | PK |
-|---|---|---|---|
-| BPO | 0,0083 | 0,0093 | 0,0028 |
-| CCO | 0,0097 | **0,0113** | 0,0046 |
-| MFO | 0,0096 | 0,0106 | 0,0046 |
-
-**La celda más pequeña, LK:CCO con 821, resuelve 0,0113.** Las nueve ven por
-debajo de 0,012 — seis veces mejor que el 0,02 que la campaña quiere declarar.
-Antes sólo PK:BPO llegaba.
+> **Tabla de MDE retirada el 2026-09-07.** La fórmula no la admite `fmax_w` y la
+> σ era la más apretada de nueve. Ver `PLAN-EXPERIMENTAL.md`. **Ninguna celda
+> está declarada potenciada mientras no tenga su intervalo pareado.**
 
 Con 30.433 unidades sobre 9.720 estratos completos, la media por celda sigue
 siendo **3,1**. Por eso los estratos no se pueden tratar como 9.720
@@ -204,19 +196,15 @@ por nodo:
 
 Ninguna celda se pinta de verde gratis, y ninguna se esconde.
 
-`n_min` no es un número, es una curva. Con la sigma pareada medida de 0,1157:
+> **Curva `n_min` retirada el 2026-09-07, por lo mismo.** Daba un efecto
+> detectable por tamaño de celda desde `2,8016·σ/√n`, y se leía como «una celda
+> con n=50 ve efectos de 0,046»: una potencia concreta, disponible para
+> cualquier eje futuro, que nunca se midió. Era el sitio más peligroso de los
+> cinco, porque no hablaba de esta campaña sino de las que vinieran.
 
-| n en la celda | efecto mínimo detectable |
-|---|---|
-| 25 | 0,065 |
-| 50 | 0,046 |
-| 100 | 0,032 |
-| 263 | 0,020 |
-| 500 | 0,015 |
-| 1.000 | 0,010 |
-
-Una celda con n=50 no es inútil: ve efectos de 0,046. Lo que no puede es ver
-0,02 y decir que lo ha visto.
+`n_min` sigue sin ser un número, pero la curva que lo sustituye hay que
+**medirla** por celda con el bootstrap pareado, no derivarla de una σ. Una celda
+sin intervalo dice `unpowered`.
 
 ### 3.2 La estimación es jerárquica, no celda a celda
 
