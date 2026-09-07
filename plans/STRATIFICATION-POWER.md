@@ -58,15 +58,27 @@ cell in twenty eight. Their direction is right and their magnitudes are not
 established. Where this document is used to size anything, the number has to
 come from `scripts/bootstrap_fmax_ci.py` on the cell in question.
 
-**How this got here, since it is the point of the norm it now illustrates.** The
-formula was read from the campaign's own planning documents, which carried it
-with a sigma of 0.1157, the tightest of nine measured values. This document did
-not use that sigma, but it did use the formula, and it built a design
-recommendation on top that the platform side accepted. A correction had been
-made in conversation and had not reached any document, so the only evidence
-available at the time said what this document then repeated. The rule that
-covers it is the one this project wrote three days later: **a correction is not
-done until no site asserts the old thing**, and a document is a call site.
+**How this got here, corrected 2026-09-08, because the first version of this
+retraction got its own cause wrong.** It said the formula was read from the
+campaign's planning documents. That is false and the dates refute it: this
+document is 2026-09-02 and `plans/clean-campaign/PLAN-EXPERIMENTAL.md` was
+created 2026-09-04. Nothing was inherited. **A standard expression was applied
+to a metric without checking that the metric admits it, here, first, and by this
+author.** The sigma was this document's own construction, obtained by inverting
+seven published bootstrap half-widths; the formula it was fed into was taken as
+given.
+
+That the planning documents later carried the same expression is a separate
+fact, and a more interesting one than propagation would have been: **two sides
+reached the same wrong formula independently, two days apart.** An error that
+easy to reach from nothing is an argument for a written norm rather than for a
+fix to whichever document is found first.
+
+The first version of this section gave the error a provenance that shared it.
+That is worth recording next to the error itself, because it is the same shape
+one level up: **a retraction that misattributes its own origin, in the direction
+that is easier to carry.** Both sides of this exchange did it on the same day,
+about the same defect, in the corrections of that defect.
 
 
 ## 1. The measured anchor, and the assumption it carries
