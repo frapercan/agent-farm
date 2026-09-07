@@ -152,6 +152,60 @@ opposite of the summary.
   identical, 0.2202 against 0.2219, and precision is exactly half. Those are two
   different problems and only one of them is visible in the summary.
 
+
+## 6. A guard has to be able to refuse, and a test has to be able to fail
+
+The first five rules are about numbers. This one is about the instruments that
+check them, and it was paid for over one week in which every operational defect
+had the same shape: **a cheap observable standing in for the expensive property,
+with the substitution never tested.**
+
+The substitution is always reasonable when it is made. That is why it survives.
+Nobody writes down "active means it loaded this code"; they write `is-active`
+because it is what the tool gives, and the gap only exists in the space between
+what was asked and what was answered.
+
+**The cases, all of them from 2026-09-01 to 2026-09-07.**
+
+| the instrument said | it was standing in for |
+|---|---|
+| `systemctl is-active` | this process loaded this code |
+| the deploy slot's revision | the running process executes it |
+| a state file reading `synced` | every unit on the node is current |
+| `residues_processed` equal across lineages | each model saw the same protein |
+| anisotropy and mean distance, as two columns | one quantity, since one is `1 - the other squared` |
+| `issubclass(OperationConsumer, Stoppable)` | the stop signal reaches the IO loop |
+| the acknowledgement rate | the process is advancing |
+| a worker log that stopped advancing | the worker is wedged |
+
+Each cost real work. The state file hid a consumer running two-day-old code for
+two days. The `Stoppable` assertion was green through the outage whose docstring
+it quotes: both classes did inherit it, and only one of them woke the loop. The
+acknowledgement rate was made survivable by raising its grace to 5400 seconds,
+which does not distinguish stuck from slow, it waits until the difference stops
+mattering, and the price is that a real jam takes ninety minutes to be named.
+The last one is a false positive in the other direction: a healthy worker goes
+eleven minutes without a log line while it loads a reference pool, so acting on
+that symptom would have restarted a sound arm mid-retrieval.
+
+**The rule.** Before an instrument is trusted, run it at a setting where it MUST
+refuse, and check that it does. Not "does it pass" but "can it fail".
+
+- The sync guard was run against a false revision and had to report every unit
+  behind. It did. Without that, a guard that always passes and a guard that
+  works read identically.
+- The signal test was parameterised over both consumers: without the fix, all
+  seven cases of the affected class fail and all seven of the unaffected class
+  pass. That asymmetry **proves** the healthy class never had the defect, rather
+  than asserting it, and a third consumer inherits the requirement instead of
+  the bug.
+
+The discriminator, when the question is whether a process is working: two reads
+of `/proc/<pid>/stat` a few seconds apart. User ticks advancing means working;
+flat ticks with bytes in the socket send queue means wedged. `ps` `%CPU` is a
+mean over the process lifetime and reported 2.5 per cent for a worker consuming
+two thirds of a core.
+
 ---
 
 ## Using this
@@ -165,8 +219,10 @@ answer:
 4. For every negative or zero here, where did I look, and would it have been
    there?
 5. Have I looked at the distribution, or only at its summary?
+6. If this is an instrument rather than a number: has it been run at a setting
+   where it must refuse, and did it?
 
-Five questions, not a process. If the answer to any of them is uncomfortable,
+Six questions, not a process. If the answer to any of them is uncomfortable,
 that discomfort is the finding, and it is cheaper now than after the number has
 been cited.
 
