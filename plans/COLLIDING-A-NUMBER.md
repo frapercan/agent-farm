@@ -188,6 +188,31 @@ The last one is a false positive in the other direction: a healthy worker goes
 eleven minutes without a log line while it loads a reference pool, so acting on
 that symptom would have restarted a sound arm mid-retrieval.
 
+**One shape deserves its own name, because it has no excuse.** Most of the table
+above is a cheap observable standing in for an expensive one, and that at least
+has a reason: the expensive thing is expensive. Three of this week's cases are
+something else, and all three are in one repository:
+
+- a module whose header says both retrieval paths need it, serving one, because
+  the fix was made in another package and only one call site migrated;
+- an interface inherited by two consumers and honoured by one;
+- a test whose docstring opens "both searches now take their depth from" and
+  which reads one file by a fixed path, with an assertion that explicitly
+  forbids the superseded helper, in one of the two paths.
+
+Reading the second file cost exactly what reading the first cost. This is not
+cheap standing in for expensive, it is **one half standing in for the whole**,
+and what hides it is the name: the file, the class or the docstring says the
+plural, so a reader checking coverage finds the plural and stops.
+
+It is greppable, and worth grepping: prose that says both, all or every, next to
+code that names one thing. Run over one test suite the signature returned two
+candidates, of which one was real and one was a false positive whose plural
+claim was backed by a second test that walked the whole tree. Two of one hundred
+and thirty plural docstrings hardcode a path at all, so the signature only sees
+the shape where a check reads files. Where a check reads classes, queues or
+tables the same shape exists and this search cannot see it.
+
 **The rule.** Before an instrument is trusted, run it at a setting where it MUST
 refuse, and check that it does. Not "does it pass" but "can it fail".
 
