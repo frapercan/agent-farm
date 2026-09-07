@@ -282,5 +282,5 @@
 # consumidor de esa cola. El guardia hizo exactamente su trabajo. Parado el
 # transitorio, la unidad arranco y autoinforma 5674c933 como las demas.
 
-coordinator 5674c9331ce079a8abd275c9078b49befbfa2670
+coordinator 087fefebc494a231443255739a673bcfe5c9194f
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
