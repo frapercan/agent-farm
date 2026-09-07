@@ -242,6 +242,45 @@
 # (embeddings.write, predictions.batch, predictions.write). The worker log now
 # also prints its own sha at startup, which is stronger evidence than a
 # timestamp: "Worker started. queue=protea.jobs revision=8699bfd7...".
+#
+# 8699bfd -> 5674c93. Dos entradas, y la segunda desbloquea un eje.
+#
+# fc6fe78 lleva los tres apagones silenciosos: el broker OOM con su watermark
+# 26 veces por encima de su techo, la cache de referencias cuya frescura de 300 s
+# era mas corta que la consulta de 338 s que existe para evitar, y el latido que
+# ahora vigila colas retenidas sin consumidor. Ninguno era defecto nuevo: la
+# campana es lo primero que apreto lo suficiente para encontrarlos.
+#
+# 5674c93 arregla dos cosas de la misma forma: algo identificado por un nombre
+# que se mantuvo estable mientras cambiaba lo que el nombre significaba.
+#
+#   La clave de la cache de pool nombra el PUNTERO, no el contenido. GOA 220 se
+#   reparo el 04-09 de releases/2025-03-16 a releases/2024-03-28, y los ids de
+#   termino GO son por snapshot. El id del conjunto no cambio; cambio lo que ese
+#   id significa. 517 ficheros aqui y 260 en el nodo quedaron con anotaciones de
+#   donante resueltas contra una ontologia que el conjunto ya no declara, bajo
+#   una clave todavia valida: 0 de 4.000 ids muestreados pertenecen al snapshot
+#   actual, y los rangos ni se solapan. Nada lo habria cazado. _CACHE_EPOCH va a
+#   3, que es el instrumento que el propio docstring del fichero defiende porque
+#   no exige juzgar que entradas estan afectadas.
+#
+#   VERIFICADO ANTES DE DESPLEGAR: los ejes A, B y C no leyeron nada envenenado.
+#   Cero ficheros de politica permisiva son anteriores a la reparacion, y la
+#   campana limpia corre permisiva. Fue suerte, no diseno.
+#
+#   Y ref_data_by_aspect era un nombre sobre dos estructuras, lo que bloqueaba
+#   entero el brazo de separacion por aspecto del eje C.
+#
+# LA VENTANA. Movida con cero trabajos en vuelo, verificado en la base antes de
+# tocar nada. Es la condicion que la cabecera de arriba pide.
+#
+# EL REINICIO. Once unidades concurrentes, verificadas una a una por
+# ExecMainStartTimestamp Y por la revision que cada worker autoinforma al
+# arrancar. Diez movieron a la primera; predictions.write fue RECHAZADA por su
+# propio ExecStartPre porque un escritor TRANSITORIO lanzado el 06-09 para
+# drenar una cola seguia vivo -- con la revision anterior, y siendo el unico
+# consumidor de esa cola. El guardia hizo exactamente su trabajo. Parado el
+# transitorio, la unidad arranco y autoinforma 5674c933 como las demas.
 
-coordinator 8699bfd7eec382aadd03f471b127f8be6f71cffd
-schema-applied 8699bfd7eec382aadd03f471b127f8be6f71cffd
+coordinator 5674c9331ce079a8abd275c9078b49befbfa2670
+schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
