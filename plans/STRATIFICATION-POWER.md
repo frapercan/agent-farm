@@ -8,7 +8,7 @@ the evaluation standard.
 The short answer is that the stratum floor and the effect of interest are two
 numbers that were never compared, and they are fifty times apart.
 
-## 0. RETRACTION, 2026-09-08, before anything below is read
+## 0. RETRACTION, 2026-09-07, before anything below is read
 
 **The arithmetic in sections 2 and 3 does not apply to the metric it is applied
 to, and the author of this document is the one retracting it.**
@@ -58,7 +58,7 @@ cell in twenty eight. Their direction is right and their magnitudes are not
 established. Where this document is used to size anything, the number has to
 come from `scripts/bootstrap_fmax_ci.py` on the cell in question.
 
-**How this got here, corrected 2026-09-08, because the first version of this
+**How this got here, corrected 2026-09-07, because the first version of this
 retraction got its own cause wrong.** It said the formula was read from the
 campaign's planning documents. That is false and the dates refute it: this
 document is 2026-09-02 and `plans/clean-campaign/PLAN-EXPERIMENTAL.md` was
