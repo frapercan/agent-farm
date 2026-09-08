@@ -349,3 +349,124 @@ población de 23.737— queda intacto y verificado.
 Nada de lo anterior toca `n`. CCO/LK sigue en 821 proteínas — pero **su «MDE de
 0,0113» queda retirado el 2026-09-07**: la fórmula no la admite el estadístico.
 Ver `PLAN-EXPERIMENTAL.md`.
+
+## 8. Los instrumentos, auditados con el mismo criterio que los números (2026-09-07)
+
+El eje C se bloqueó porque `ref_data_by_aspect` tiene dos formas y el mapa de
+secuencias leía sólo una. Arreglado en PROTEA #941, y **confirmado en
+producción**: la tanda anterior murió entera en el camino
+`aspect_separated_knn=false`; la de hoy escribe predicciones en los seis brazos.
+Lo que sigue es lo que salió al auditar, con el mismo criterio, los instrumentos
+que debían haberlo detectado.
+
+### El consumidor ocioso no oía SIGTERM, y su prueba estaba verde
+
+`OperationConsumer._handle_stop` ponía la bandera y volvía. `_on_message` es su
+único lector, así que se consulta **exactamente cuando llega un mensaje**: un
+consumidor con la cola vacía queda dentro de `start_consuming` y la señal no
+tiene ningún efecto. El que se cuelga es el **ocioso**, y por eso esto se leía
+como drenaje lento y no como fallo al parar. `_OPERATION_QUEUES` cubre todas las
+colas de cómputo, así que ninguna podía pararse limpiamente. Coste el 2026-09-07:
+cuatro muertes duras en el nodo y una aquí, cada una pagando su timeout entero.
+PROTEA #942.
+
+**Y la prueba de este incidente ya existía.** `test_worker_honours_sigterm.py`
+nombra el suceso en su docstring —*once de doce workers ignoraron SIGTERM*— y lo
+que fija es que ambas clases heredan de `Stoppable`. Las dos lo cumplían durante
+todo el apagón. El incidente correcto, el invariante equivocado, verde todo el
+tiempo. La prueba nueva está parametrizada sobre las dos clases: sin el arreglo
+fallan los siete casos `[operation]` y pasan los siete `[queue]`, de modo que
+**demuestra** la asimetría en vez de afirmarla.
+
+### El latido de cola tiene la misma forma, resuelta con una constante
+
+`queue_heartbeat.py` no mira el log, mira la tasa de acks. No es mejor: un
+consumidor dentro de una carga de referencias no acka durante minutos igual que
+no escribe. La gracia se puso a 5400 s en las colas de lote **para que
+"trabajando despacio" se despeje solo**, o sea que tampoco distingue atascado de
+trabajando: espera lo bastante para que la diferencia deje de importar. El
+precio es simétrico y está sin pagar: un atasco real en una cola de lote tarda
+hora y media en ser nombrado. El discriminador que sí separa los dos casos es el
+contador de CPU del proceso —dos lecturas de `/proc/<pid>/stat`, más `send-q`—,
+no el silencio. `pcpu` de `ps` no sirve: es la media sobre la vida del proceso.
+
+### Esta máquina no tiene slot de despliegue
+
+Los workers sirven desde `~/Thesis-laptop/PROTEA`, que es el checkout principal.
+La autoría sí está aislada —cada PR se escribe en un worktree aparte— pero
+**mover la revisión desplegada obliga a hacer `checkout` en el árbol que está
+sirviendo**. Las tres violaciones de la regla "no se edita el árbol mientras hay
+trabajo" no fueron tres descuidos: aquí desplegar y servir son la misma operación
+sobre el mismo directorio, así que la regla no es aplicable, sólo memorizable. El
+nodo tiene `worktrees/protea-deploy` separado. Decisión abierta.
+
+### `farm.env` no existe en esta máquina
+
+El `CLAUDE.md` de la raíz avisa de que sin él todo guion de la granja cae a los
+defaults `~/Thesis2/...`. **`~/Thesis2` existe entero**, con su PROTEA, su
+agent-farm y sus backups. Así que un guion de granja no falla aquí: acierta sobre
+el árbol equivocado, y un guardia que lea la declaración desde ahí compararía
+contra una copia congelada y aprobaría. Decisión abierta, junto con dónde debe
+vivir ese fichero y si debe estar versionado.
+
+### Y ocurrió otra vez, midiendo el reparto entre las dos máquinas (mismo día)
+
+Para repartir los 144 lotes hacían falta los ritmos de las dos máquinas. El
+nodo informó de mediana 36,0 s sobre 109 lotes de su propio log; este equipo
+había citado 0,93 min/lote. De ahí salía un 1,55x a favor del nodo y un reparto
+proporcional 88/56.
+
+**Las dos cifras estaban mal, y de la misma forma.** La de aquí no era un tiempo
+por lote sino el **espaciado de reloj entre eventos consecutivos de las dos
+máquinas juntas**, que incluye el tiempo del otro consumidor; el tiempo real
+por lote medido en `elapsed_seconds` es 49,2 s. La del nodo era una mediana
+sobre una población distinta —lotes de otros ejes, con otros sustratos, y la
+dimensión del embedding cambia el coste del KNN—. Comparadas, no eran dos
+medidas de la misma cosa ni sobre el mismo conjunto.
+
+Sobre los seis brazos de hoy, que es la única comparación de un solo campo
+disponible, `child.predict_go_terms_batch.done` da mediana 48,5 s aquí (n=19) y
+45,1 s en el nodo (n=2): **indistinguibles, y n=2 no sostiene ninguna
+afirmación**. En todo el histórico se invierte: 38,4 s aquí sobre 720 lotes
+frente a 51,6 s en el nodo sobre 177.
+
+El reparto propuesto era además inaplicable: los dos consumidores tiran de una
+sola cola, así que el reparto ya se autoequilibra por consumo y no hay nada que
+asignar. La cifra era descriptiva presentada como accionable.
+
+### `SUCCEEDED` es una afirmación sobre la recuperación, no sobre los datos
+
+El primer brazo redespachado del eje C dio `SUCCEEDED` 24/24. Leída entonces, su
+cobertura era **20.776 proteínas frente a las 23.737 de los brazos
+`aspect_separated_knn=true`**: una brecha del 12,5% y, de haberse creído, un
+hallazgo mayor —dos brazos puntuando poblaciones distintas no son una
+comparación de un solo campo—.
+
+Es falso. Tres lecturas consecutivas del mismo conjunto dieron 8.236.157,
+8.266.157 y 8.296.157 mientras `protea.predictions.write` retenía 71 mensajes.
+Con la cola a cero y dos lecturas idénticas, la cifra real es **23.737 proteínas
+en los dos brazos**: misma población, ninguna brecha.
+
+La causa estaba anotada y sin arreglar: `progress_total` cuenta **lotes** y
+`progress_current` avanza con los mensajes de **escritura**, así que el estado
+terminal llega cuando la recuperación acaba, no cuando los datos están. El
+número intermedio es plausible y no deja rastro de estar incompleto.
+
+**Regla operativa: ningún brazo se lee ni se evalúa por el estado del job, sino
+con su cola de escritura a cero y dos conteos iguales seguidos.** Con eso, la
+comparación limpia sobre `protst@d100:mean` es 9.449.890 predicciones con
+separación por aspecto frente a 8.886.453 sin ella, sobre las mismas 23.737
+proteínas.
+
+Es el caso más agudo de la lista porque la conclusión equivocada **ya estaba
+formada** y sólo la deshizo comprobar el instrumento antes de creerle.
+
+### Lo que une a los seis
+
+Un observable barato sustituyendo a la propiedad cara, con la sustitución nunca
+comprobada: `is-active` por *ejecuta este código*, tasa de acks por *el proceso
+avanza*, `issubclass(Stoppable)` por *la señal llega al bucle*, un default que
+resuelve por *el objeto correcto*, un estado terminal por *los datos están*. y un tiempo de reloj por *un tiempo de proceso*. La regla operativa que lo
+cubre es que **un guardia o una prueba tiene que demostrar que puede rehusar**: no "¿pasa?", sino
+"¿puede fallar?". Es lo que separa un instrumento de una decoración, y es lo
+único que distingue los seis casos de arriba de sus versiones sanas.
