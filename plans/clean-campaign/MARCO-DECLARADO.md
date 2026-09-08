@@ -132,17 +132,16 @@ en más de un aspecto, así que la suma 30.433 excede las 23.736 distintas.
 | MFO | 1.129 | 943 | 4.953 | 7.025 |
 | **total** | **3.754** | **2.978** | **23.701** | **30.433** |
 
-Efecto mínimo detectable con sigma pareada 0,1157:
+### La tabla de efecto mínimo detectable, retirada el 2026-09-07
 
-| aspecto | NK | LK | PK |
-|---|---|---|---|
-| BPO | 0,0083 | 0,0093 | 0,0028 |
-| CCO | 0,0097 | 0,0113 | 0,0046 |
-| MFO | 0,0096 | 0,0106 | 0,0046 |
+Aquí había una tabla de MDE por celda con `2,8016·σ/√n` y σ = 0,1157, y la frase
+*«las nueve celdas ven por debajo de 0,012»*. **Se retira entera y se deja dicho
+por qué, en vez de borrarla**, porque el número circuló. El razonamiento está en
+`PLAN-EXPERIMENTAL.md`: la fórmula no la admite el estadístico, y la σ era la
+más apretada de nueve.
 
-**La celda más pequeña, LK:CCO con 821, resuelve 0,0113.** Las nueve celdas de
-decisión ven por debajo de 0,012, que es seis veces mejor que el efecto de 0,02
-que la campaña quiere declarar.
+**Ninguna celda está declarada potenciada mientras no tenga su intervalo**, y el
+intervalo lo da el bootstrap pareado a nivel de proteína.
 
 ### Una observación que hay que mirar antes de fiarse
 

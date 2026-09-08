@@ -346,4 +346,6 @@ era posible; se decidió no hacerlo. El marco declarado —pivote
 `releases/2024-03-28`, IA `b5f134b1`, evaluaciones `b7cfed9a` y `b7452c0e`,
 población de 23.737— queda intacto y verificado.
 
-Nada de lo anterior toca `n`. CCO/LK sigue en 821 proteínas y su MDE en 0,0113.
+Nada de lo anterior toca `n`. CCO/LK sigue en 821 proteínas — pero **su «MDE de
+0,0113» queda retirado el 2026-09-07**: la fórmula no la admite el estadístico.
+Ver `PLAN-EXPERIMENTAL.md`.
