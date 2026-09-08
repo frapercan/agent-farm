@@ -97,7 +97,7 @@ Then cut that headroom by every axis we can reach from frozen data:
 | count of t0-known terms | `anc2vec_query_known_count` | does more prior knowledge help or hurt us? |
 | neighbour identity | `neighbor_min_distance` | the twilight zone |
 | taxon | `taxonomy_*` | is the loss clade-specific? |
-| **pool recall per protein** | oracle vs propagated gt | separate "unreachable" from "misordered". **MEASURED and it barely matters**: only **2.3%** of PK proteins are truly unreachable and excusing them is worth **+0.0007**. Unreachability is per-TERM, not per-protein: 52% of the FN IA mass is not in the pool at all |
+| **pool recall per protein** | oracle vs propagated gt | separate "unreachable" from "misordered". **MEASURED and it barely matters**: only **2.3%** of PK proteins are truly unreachable and excusing them is worth **+0.0007**. Unreachability is per-TERM, not per-protein: the false-negative IA mass outside the pool is **26-29%** (LK-BPO 26.1%, PK-BPO 28.6%), measured by CG.1 on 2026-07-20. An earlier **52%** stood here and was wrong: it counted LEAVES, not information-accretion mass, so it weighted a shallow term the same as a deep one in exactly the quantity the metric weights by depth. The pool captures 71-74% of true IA mass. |
 
 **Deliverable:** the concentration curve. **DONE 2026-07-17, and the gate fired: there is no
 subpopulation.** The top 20% of proteins carry 45.2% of the headroom against a random control
