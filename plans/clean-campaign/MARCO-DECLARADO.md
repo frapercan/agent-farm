@@ -132,17 +132,16 @@ en más de un aspecto, así que la suma 30.433 excede las 23.736 distintas.
 | MFO | 1.129 | 943 | 4.953 | 7.025 |
 | **total** | **3.754** | **2.978** | **23.701** | **30.433** |
 
-Efecto mínimo detectable con sigma pareada 0,1157:
+### La tabla de efecto mínimo detectable, retirada el 2026-09-07
 
-| aspecto | NK | LK | PK |
-|---|---|---|---|
-| BPO | 0,0083 | 0,0093 | 0,0028 |
-| CCO | 0,0097 | 0,0113 | 0,0046 |
-| MFO | 0,0096 | 0,0106 | 0,0046 |
+Aquí había una tabla de MDE por celda con `2,8016·σ/√n` y σ = 0,1157, y la frase
+*«las nueve celdas ven por debajo de 0,012»*. **Se retira entera y se deja dicho
+por qué, en vez de borrarla**, porque el número circuló. El razonamiento está en
+`PLAN-EXPERIMENTAL.md`: la fórmula no la admite el estadístico, y la σ era la
+más apretada de nueve.
 
-**La celda más pequeña, LK:CCO con 821, resuelve 0,0113.** Las nueve celdas de
-decisión ven por debajo de 0,012, que es seis veces mejor que el efecto de 0,02
-que la campaña quiere declarar.
+**Ninguna celda está declarada potenciada mientras no tenga su intervalo**, y el
+intervalo lo da el bootstrap pareado a nivel de proteína.
 
 ### Una observación que hay que mirar antes de fiarse
 
@@ -298,3 +297,220 @@ real.
 Los seis campos del marco están fijados para las dos variantes. Falta el query
 set y el primer brazo para que `frame.declared` pase a verdadero: se cierra
 cuando el primer resultado lo selle.
+
+---
+
+# El eje A, medido y leído (2026-09-07)
+
+Trece sustratos × nueve celdas de decisión × dos variantes de propagación, 26
+evaluaciones. Recuperación a K=200, coseno, numpy en CPU, auto-donación excluida
+por identidad de secuencia; sin alineamientos, sin rasgos de reranker, sin
+taxonomía. `experiment_run` **`70b1dec8`**, que supersede al voraz `f2a10398`.
+
+## El resultado, en una frase
+
+**El eje A separa dos grupos y no ordena dentro de ellos.** Nueve sustratos son
+mutuamente indistinguibles; cuatro quedan por debajo con márgenes que superan a
+los del grupo de cabeza en **dos órdenes de magnitud**.
+
+## La medida que decide, y por qué no es `fmax_w`
+
+`fmax_w` **no tiene error estándar definido**: es 2·pr·rc/(pr+rc) sobre dos
+promedios calculados por separado y maximizado sobre τ, no una media de
+puntuaciones por proteína. La fórmula `MDE = 2,8016·σ/√n` que el plan declara
+(`RUTA.md:175`) no le aplica, ni siquiera con la σ correcta.
+
+Y la σ declarada era la equivocada. **0,1157 es la más apretada de las nueve
+medidas**, no la típica: la mediana es 0,2528 y el máximo 0,4051. El plan la cita
+como «la sigma pareada medida», en singular. Con la dispersión que el propio
+registro mide, **ninguna de las nueve celdas resuelve**, no dos.
+
+La medida que sí decide es el **bootstrap pareado a nivel de proteína**
+(`scripts/bootstrap_fmax_ci.py`): mejor F1 de cada proteína, índices emparejados
+entre los dos brazos, remuestreo sobre las mismas proteínas. Tiene error
+estándar porque es una media de algo.
+
+## Lo que dice el bootstrap pareado (variante A, 200 remuestreos)
+
+```
+                                   NK                        LK                        PK
+ankh_large vs protst    -0.0033 [-0.0048,-0.0015]  -0.0032 [-0.0045,-0.0016]  -0.0015 [-0.0018,-0.0013]
+ankh_large vs prot_t5   -0.0017 [-0.0033,-0.0001]  -0.0012 [-0.0028,+0.0003]  -0.0010 [-0.0013,-0.0008]
+protst     vs prot_t5   +0.0016 [-0.0003,+0.0032]  +0.0020 [+0.0004,+0.0037]  +0.0005 [+0.0003,+0.0008]
+protst     vs rung2-dense +0.0006 [-0.0010,+0.0021]                           +0.0014 [+0.0011,+0.0017]
+rung2-residue vs esm2_650m +0.0710 [+0.0678,+0.0740]                          +0.0182 [+0.0176,+0.0188]
+ankh_large vs esm2_8m   +0.0749 [+0.0718,+0.0781]
+```
+
+Orden transitivo y coherente: **`protst` > `prot_t5` > `ankh_large`**, los tres
+indistinguibles de `rung2-dense`, y todos ellos muy por encima de la cola.
+
+**Y ahí está la escala del asunto**: los deltas del grupo de cabeza van de 0,0005
+a 0,0033; el salto a la cola es **+0,0710**. Ciento cuarenta veces mayor.
+
+## La advertencia metodológica, que vale para todos los ejes
+
+**El orden del grupo de cabeza depende de qué estadístico se elija.** Con
+`fmax_w`, `ankh_large` encabeza siete de nueve celdas. Con el mejor F1 pareado
+por proteína, `protst` lo bate en las tres categorías con el intervalo excluyendo
+el cero.
+
+Los dos **coinciden donde hay señal** —la cola se separa igual bajo ambos— y
+**discrepan donde no la hay**, que es justo donde el eje pretendía decidir. Una
+configuración puede ganar la curva agregada y perder proteína a proteína: pasa
+cuando acierta muy bien en unas pocas y algo peor en muchas.
+
+Elegir estadístico es, por tanto, un campo del marco que nadie declaró. Va al
+sello.
+
+## Cuatro afirmaciones que se publicaron mal y quedan retiradas
+
+1. **«Las dos variantes dan orden idéntico, B uniformemente +0,02».** Falsa en
+   sus dos mitades. NK+LK se mueve **+0,00039** de media (rango −0,0026 a
+   +0,0024) y PK **+0,05067** (rango +0,0106 a +0,0705): un factor **130** entre
+   estratos, no un desplazamiento uniforme. **25 de 117 celdas bajan** en B,
+   todas en NK/LK. Y el orden es idéntico en **3 de 9 celdas**, no en nueve.
+   La causa está en `variantes.txt`: la cohorte de PK cae de 19.836 a 9.768
+   proteínas, **−50,8 %**, contra −0,4 % en NK y −0,8 % en LK. **A y B no miden
+   la misma cantidad en PK**, así que el «+0,02» es un cambio de denominador
+   presentado como robustez.
+2. **«`protst` queda por debajo del líder en 2 de 9 celdas».** Son **3 de 9**, y
+   `prot_t5` también 3. El orden 0/2/3 colapsa a 0/3/3: no son separables.
+3. **«La familia esm2 está invertida por tamaño».** No lo está: 8M → 650M sube
+   **+0,0288 con el tamaño**, y sólo el 3B rompe. La forma es no monótona con
+   pico en 650M.
+4. **«La posición ordena, casi exacto».** Pearson +0,747 pero **Spearman +0,599
+   y 22 de 78 pares invertidos**. Y la prueba directa: elegir por máxima
+   distancia da `rung2-residue`, que pierde contra el líder de cada celda por
+   0,0086 a 0,0404 — **de forma resoluble en 9 de 9 celdas**, más de las que el
+   eje entero consigue decidir. Lo único que la geometría sostiene es un umbral
+   en d ≈ 0,20 que parte los trece sin error, y está confundido con familia.
+
+## Lo que sí se sostiene
+
+- `ankh_base@d79` es el suelo con **0,0784** frente a **0,2864** de su propia
+  capa final: caída de **0,2080**, el coste medido del colapso direccional.
+- La familia esm2 se separa del grupo de cabeza en **36 de 36 huecos** por
+  encima del MDE, en las dos variantes.
+- El líder se separa del suelo declarado (`esm2_8m`) por encima del MDE en
+  **9 de 9 celdas**, y el bootstrap lo confirma: **+0,0749 [+0,0718, +0,0781]**.
+
+## El veredicto, bajo la regla del propio plan
+
+`PLAN-EXPERIMENTAL.md` § 5: sella si un nivel gana en mayoría de las nueve celdas
+con fuerza `measured`. **No ocurre. El eje A queda ABIERTO: no sella y no se
+convierte en suelo.**
+
+Y eso contesta qué se arrastra al eje B: **ni uno ni nueve.** El eje A no ha
+elegido representación, ha descartado cuatro. Se lleva un **haz de tres**
+—`protst`, `prot_t5`, `ankh_large`— que son los que el pareado sitúa arriba, y
+el eje B decide entre ellos si puede.
+
+## Lo que el eje A no dice
+
+Nada sobre profundidad, regla de corte, política de donante, métrica ni
+agregación de votos: todo eso quedó quieto. El tensor a K=200 está materializado
+y **el censo del libro mayor da cobertura 100 %** (10.423.562 de 10.423.562 con
+`sequence_rank` y `donor_count` en `ankh_large`), así que `_depth_unit_guard` no
+bloqueará y los cortes del eje B salen de él sin recuperar de nuevo.
+
+---
+
+# El eje B, medido: dos monotonías hacia bordes opuestos (2026-09-07)
+
+Haz de tres —`protst`, `prot_t5`, `ankh_large`— por siete profundidades
+{1,2,3,5,10,20,30,200} por dos variantes. Los cortes salen del tensor a K=200 sin
+recuperar de nuevo, así que **las siete profundidades se comparan sobre
+exactamente la misma población**. `experiment_run` **`bbb96a35`**.
+
+## Con `fmax_w`: menos es mejor, monótono, sin óptimo interior
+
+```
+sustrato        K=2      K=3      K=5      K=10     K=20     K=30     K=200
+ankh_large    0.3800   0.3680   0.3523   0.3358   0.3249   0.3198   0.2953
+prot_t5       0.3791   0.3676   0.3526   0.3347   0.3224   0.3158   0.2892
+protst        0.3818   0.3701   0.3527   0.3378   0.3250   0.3180   0.2909
+```
+
+Y **no es el artefacto de «predice menos»**, que era la sospecha obvia. Si lo
+fuera, la profundidad corta tendría más precisión y menos recall. Ocurre lo
+contrario: K=2 gana **en las dos**.
+
+```
+K      cobertura   precision_w   recall_w   cob_en_tau     tau
+2       0.9337       0.2319       0.4376      0.9101      0.833
+30      0.9968       0.1783       0.3112      0.7639      0.971
+200     0.9994       0.1619       0.2568      0.7714      0.970
+```
+
+Añadir vecinos **empeora el recall**, y `tau` sube de 0,833 a 0,970: con 200
+donantes hay que subir el listón de confianza para filtrar ruido, y aun así se
+pierde. La cobertura baja un 6 % en K=2, en contra del resultado y no a favor.
+
+## Con el bootstrap pareado: más es mejor, monótono, sin óptimo interior
+
+El estadístico que decide (§ regla corregida en `PLAN-EXPERIMENTAL.md`) dice lo
+contrario, y con los cinco intervalos excluyendo el cero:
+
+```
+protst, NK               Δ = A − B         IC 95%
+  K1  vs K2            -0.0123   [-0.0136, -0.0106]      K2  mejor
+  K2  vs K3            -0.0063   [-0.0076, -0.0051]      K3  mejor
+  K3  vs K5            -0.0069   [-0.0080, -0.0059]      K5  mejor
+  K20 vs K30           -0.0019   [-0.0025, -0.0012]      K30 mejor
+  K30 vs K200          -0.0033   [-0.0039, -0.0027]      K200 mejor
+```
+
+Idéntico signo en PK. Los tamaños decrecen —0,0123 → 0,0063 → 0,0069 → 0,0019 →
+0,0033— así que **hay saturación pero no reversión**: cada vecino sigue ayudando,
+cada vez menos, y **la curva no se dobla dentro del rango medido**.
+
+## El mecanismo, que explica la discrepancia y una nota vieja del registro
+
+`fmax_w` maximiza una **curva agregada** sobre un umbral: con pocos vecinos las
+predicciones son escasas y confiadas, y la curva sale favorecida. El pareado da a
+cada proteína **su propio mejor F1**: más vecinos son más oportunidades de que
+los términos verdaderos de esa proteína concreta estén presentes.
+
+**`fmax_w` premia predecir poco y seguro; el pareado premia cubrir a cada
+proteína.** No son dos formas de medir lo mismo.
+
+Y explica de golpe la nota `protea-depth-is-monotone` del registro —«deeper is
+worse en 70 de 72 series, el ganador siempre en el borde»—: **eso era `fmax_w`,
+no la profundidad.** No había óptimo porque no se estaba midiendo lo que se creía.
+
+## El K=30 por defecto no lo sostiene ninguno de los dos
+
+Es peor que K=2 bajo `fmax_w` y peor que K=200 bajo el pareado. **Tierra de
+nadie**, probablemente heredado de la convención CAFA sin que nadie lo midiera en
+este marco. El tensor materializado a K=200 por eficiencia resulta ser, bajo el
+estadístico que decide, **el mejor punto medido**.
+
+---
+
+# El hallazgo que abarca a los dos ejes
+
+**La campaña ha medido dos ejes y en los dos el resultado ha dependido de una
+elección de métrica que el marco no declaraba.**
+
+```
+eje A    fmax_w pone a ankh_large primero;  el pareado pone a protst
+         y lo invierte en las tres categorías con el cero fuera del intervalo
+eje B    fmax_w gana en K=2;  el pareado gana en K=200
+         monotonías completas hacia bordes OPUESTOS
+```
+
+Los dos estadísticos **coinciden donde hay señal grande** —la cola del eje A se
+separa igual bajo ambos, +0,0710— y **discrepan donde las diferencias son
+pequeñas**, que es exactamente donde los ejes pretendían decidir.
+
+Y sólo uno de los dos tiene error estándar: `fmax_w` no es una media de nada.
+
+**Lo que esto fuerza, y es una decisión del investigador y no del dato: declarar
+qué optimiza esta tesis.** Si el objetivo es la métrica agregada de CAFA, K bajo
+y `ankh_large`. Si es acertar por proteína, K alto y `protst`. **No se pueden
+tener las dos**, y hasta ahora el marco no obligaba a elegir.
+
+Ese campo —el estadístico de decisión— entra en el sello, junto a los seis que ya
+estaban. Dos números no son comparables si difieren en él, igual que si difieren
+en el pivote o en la ventana.

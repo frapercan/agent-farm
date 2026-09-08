@@ -96,10 +96,33 @@ configuraciones; el umbral absoluto no lo es.
 **El ganador se busca en cada estrato.** No hay una tabla global con una fila
 por nivel; hay un veredicto por celda, y cada veredicto lleva su propia fuerza.
 
-Las **nueve celdas de decisión** (3 aspectos × 3 categorías CAFA) están todas
-potenciadas. σ pareada medida = **0,1157**; MDE = 2,8016·σ/√n. La celda más
-pequeña es CCO/LK con 821 proteínas y resuelve **Δ = 0,0113**; las nueve están
-por debajo de 0,012. Es decir: una diferencia de 0,02 se ve en las nueve.
+Las **nueve celdas de decisión** son 3 aspectos × 3 categorías CAFA. La celda
+más pequeña es CCO/LK, con 821 proteínas.
+
+> **CORREGIDO EL 2026-09-07, tras leer el eje A.** Este párrafo decía: «σ pareada
+> medida = 0,1157; MDE = 2,8016·σ/√n; la celda más pequeña resuelve Δ = 0,0113;
+> una diferencia de 0,02 se ve en las nueve». **Las dos mitades estaban mal.**
+>
+> **El estadístico no admite esa fórmula.** `fmax_w` no es una media de
+> puntuaciones por proteína, sino 2·pr·rc/(pr+rc) sobre dos promedios calculados
+> aparte y maximizado sobre τ. **σ/√n no es su error estándar bajo ninguna σ.**
+>
+> **Y la σ era la equivocada.** 0,1157 es la **más apretada** de las nueve
+> medidas —mediana 0,2528, máximo 0,4051— citada en singular como si fuera *la*
+> sigma. Con la dispersión que el propio registro mide, ninguna celda resuelve.
+>
+> **El listón pasa a ser el bootstrap pareado a nivel de proteína**
+> (`scripts/bootstrap_fmax_ci.py`, que ya existía): mejor F1 de cada proteína,
+> índices emparejados entre brazos, remuestreo sobre las mismas proteínas. Un
+> margen resuelve si su intervalo del 95 % excluye el cero. Tiene error estándar
+> porque es una media de algo.
+>
+> **Y el estadístico deja de ser implícito.** Con `fmax_w` y con el pareado el
+> orden del grupo de cabeza del eje A **no coincide**: `fmax_w` pone a
+> `ankh_large` primero, el pareado pone a `protst`, con el intervalo excluyendo
+> el cero en las tres categorías. Los dos coinciden donde hay señal y discrepan
+> donde no la hay — que es donde el eje pretendía decidir. Cuál se usa es un
+> campo del marco y va declarado antes de despachar.
 
 Tres mecanismos, en este orden:
 
