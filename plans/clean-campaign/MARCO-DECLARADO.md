@@ -155,6 +155,132 @@ sostenga una decisión.
 
 ---
 
+## El eje C, medido y cerrado (2026-09-08)
+
+El eje C pregunta por la **política de vecindario**: dos perillas de recuperación,
+`exclude_self_neighbour` y `aspect_separated_knn`, sobre el haz de tres sustratos
+que dejó el eje A. Se midió el 2×2 completo, en los tres sustratos y en las **dos
+variantes de propagación**, con el bootstrap pareado a nivel de proteína
+(`compare_paired_panels`: `f_micro_w`, 2000 remuestreos, BCa, τ reelegido dentro
+de cada remuestreo, ponderación por IA, poblaciones intersectadas) y con
+`effect_of_interest = 0,02` declarado.
+
+Ese 0,02 no es nuevo: es **el efecto que la campaña ya decía querer declarar**,
+en el texto que acompañaba a la tabla de MDE retirada. Lo que se retiró fue la
+fórmula y la σ, no el objetivo.
+
+### Excluir la propia proteína: 54 paneles de 54
+
+`exclude_self_neighbour=true` contra `false`, con `aspect_separated_knn=false`
+en los dos lados. Deltas de `f_micro_w`, variante B:
+
+| panel | ankh_large | protst | prot_t5 |
+|---|---|---|---|
+| LK:BPO | −0,0446 | −0,0419 | −0,0672 |
+| LK:CCO | −0,0617 | −0,0661 | −0,0874 |
+| LK:MFO | −0,0469 | −0,0412 | −0,0652 |
+| NK:BPO | −0,0302 | −0,0316 | −0,0477 |
+| NK:CCO | −0,0435 | −0,0418 | −0,0515 |
+| NK:MFO | −0,0497 | −0,0537 | −0,0850 |
+| PK:BPO | −0,0065 | −0,0072 | −0,0117 |
+| PK:CCO | −0,0277 | −0,0272 | −0,0372 |
+| PK:MFO | −0,0206 | −0,0192 | −0,0326 |
+
+**Los 54 paneles resuelven** —27 por variante— **ninguno es positivo, y ninguno
+queda como nulo**: los 54 salen con estado `ok`. Las dos variantes coinciden
+hasta la cuarta cifra.
+
+**Y esto no es un veredicto de rendimiento.** El número baja porque estaba
+inflado. Medido el 2026-08-28 y registrado en el docstring de
+`_self_neighbour`: con auto-recuperación permitida, **el vecino más cercano es la
+propia proteína en el 95,0 % de las filas candidatas a profundidad 1**, y el
+**81,8 %** de las 14.032 consultas no tiene ningún otro vecino a esa profundidad.
+Un vecindario de uno, donde el uno eres tú, no es una transferencia.
+
+Así que **el coste de excluir ES la medida de esa inflación**, por sustrato. La
+lectura correcta es al revés de como se lee sola: el número que sube es el que no
+se puede usar.
+
+### Separar por aspecto: nada, y medido donde podía moverse
+
+`aspect_separated_knn=true` contra `false`, con `exclude_self_neighbour=true` en
+los dos lados —es decir, **dentro del régimen limpio**—, en las dos variantes:
+
+| sustrato | variante | resuelven | positivos | rango de delta |
+|---|---|---|---|---|
+| ankh_large | A | 7/9 | 0 | −0,0030 … −0,0002 |
+| ankh_large | B | 7/9 | 0 | −0,0030 … −0,0003 |
+| protst | A | 5/9 | 0 | −0,0010 … −0,0002 |
+| protst | B | 4/9 | 0 | −0,0009 … −0,0002 |
+| prot_t5 | A | 4/9 | 0 | −0,0027 … −0,0001 |
+| prot_t5 | B | 4/9 | 0 | −0,0027 … −0,0001 |
+
+**31 de 54 resuelven, ninguno positivo, y los 23 restantes son
+`null_with_power`, no `null_unread`.** Esa distinción es todo el resultado: un
+panel cuyo intervalo cruza el cero **y que tenía potencia frente a 0,02** dice
+que ahí no hay nada de ese tamaño, no dice que no se sepa. Es el sexto valor de
+fuerza que la campaña llevaba anotado como pendiente, y no hizo falta
+construirlo: hacía falta declarar el número.
+
+### La medición retirada, registrada y no borrada
+
+La separación por aspecto se midió antes con `exclude_self_neighbour=false` y se
+reportó como veredicto. **Se retiró el mismo día**, por dos defectos del par
+comparado: sus dos lados corrieron en revisiones distintas —`8699bfd` con época
+de caché 2 contra `5674c933` con época 3— y, decisivo, **la medida entera estaba
+dentro del régimen que el otro sub-eje acababa de mostrar dominado por
+auto-recuperación**. Era como mucho un techo.
+
+La re-corrida limpia coincide con ella. **Eso es un hecho sobre este caso y no
+una licencia para saltarse la comprobación**: la medida vieja era igual de
+consistente con «el eje no importa» que con «el eje no se pudo mover», y no las
+distinguía.
+
+### La preinscripción, y el desenlace que refutó su mecanismo
+
+El 2026-09-08 a las 10:37, con los brazos a 0/24, se registraron cuatro
+desenlaces en `PREINSCRIPCION-2026-09-08-ASPECTO.md`. La predicción era que el
+efecto de la separación por aspecto sería **mayor** en el régimen limpio, porque
+el pool de donantes dejaría de ser las anotaciones de la propia proteína.
+
+Salió **(D): menor**, en los tres sustratos. Y (D) estaba nombrado de antemano
+como *«refuta el mecanismo entero: si el pool propio explicaba el cero, quitarlo
+no puede reducir el efecto»*.
+
+Así que el mecanismo del pool compartido **queda refutado por su propio
+criterio**, y sólo se puede decir porque estaba escrito antes. Lo que queda del
+mecanismo es una explicación estructuralmente fundada de por qué el efecto es
+pequeño —las vistas por aspecto son índices sobre un pool unificado— **no una
+predicción confirmada**, y no debe leerse como tal.
+
+### El veredicto
+
+    exclude_self_neighbour = true     por correccion, no por puntuacion
+    aspect_separated_knn   = false    sin efecto de tamaño util, en los dos
+                                      regimenes y las dos variantes
+
+Y un hallazgo lateral que nadie predijo: **las dos perillas no interactúan.** La
+contaminación por auto-recuperación vale hasta 0,087 y quitarla no libera ningún
+efecto de aspecto.
+
+### Lo que hubo que arreglar para poder medirlo
+
+- **PROTEA #943.** El camino unificado pedía `k+1` y descartaba la propia
+  proteína **por accession**, mientras el método descarta **por secuencia**, así
+  que alcanzaba posiciones que el pre-search había recortado. Todos los brazos
+  `exclude_self_neighbour=true` morían con `SequenceIdentityMissingError`.
+- **El marco, declarado en el despacho.** `compare_paired_panels` rehúsa comparar
+  filas que no declaren `frame` y `temporal_window`, y ninguna de las 110
+  evaluaciones de la campaña los llevaba: son campos de payload que nadie pasaba.
+  Las doce del eje C se re-evaluaron con `frame=internal` y
+  `temporal_window=SELECT_220_227`.
+- **La revisión, emparejada por medición.** La comparación de auto-exclusión era
+  cruzada en revisión, porque el brazo `selfx=true` no podía existir en
+  `5674c933` —ahí estaba roto—. Se re-predijo la celda base sobre `087fefeb` y se
+  comprobó que reproduce: **117 de 117 métricas idénticas** en los tres sustratos
+  y las dos variantes.
+
+
 ## El desglose de las retiradas, y lo que destapó
 
 ### Las retiradas no se puntúan
