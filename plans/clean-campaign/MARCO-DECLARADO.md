@@ -281,6 +281,68 @@ efecto de aspecto.
   y las dos variantes.
 
 
+### El determinismo entre máquinas: medido, arreglado y NO desplegado (2026-09-08)
+
+El mismo brazo, la misma configuración y el mismo código, predicho dos veces,
+dio **82 y −73 filas de diferencia sobre diez millones**. La causa no era el
+código: cada trabajo reparte sus lotes entre las dos máquinas, OpenBLAS se
+compila `DYNAMIC_ARCH` y elige micro-kernel y partición de hilos según la CPU,
+así que `1 − Q@Rᵀ` reduce en otro orden en cada host. **838.885 filas llevaban
+el mismo donante con distinta distancia**, cada delta un múltiplo exacto de
+2⁻²⁴, hasta 13 ulps. Donde el corte de K cae en un empate, un ulp decide quién
+entra.
+
+**Impacto medido sobre el eje C: cero.** 117 de 117 métricas reproducen en los
+tres sustratos y las dos variantes. La razón es aritmética y no estadística: las
+filas que bailan están a distancia ≥ 0,100, o sea puntuación ≤ 0,95, y los
+puntos de operación son τ = 0,98 y 0,99, que admiten distancia ≤ 0,04. Ninguna
+entra en la matriz de confusión.
+
+**Mitigado**: las dos máquinas fijan `OPENBLAS_CORETYPE=HASWELL` y 8 hilos, con
+el techo escrito junto al pin — el valor debe ser ≤ el mínimo de CPUs lógicas de
+las dos, hoy 12, porque `OPENBLAS_NUM_THREADS` es una petición que se recorta y
+pedir 16 da 16 aquí y 12 allí. Medido: a 16 hilos las huellas difieren, a 1, 4 y
+8 son idénticas byte a byte, y **con versiones distintas de numpy en cada
+máquina**, lo que descarta la versión como causa.
+
+**Arreglado de verdad** en `protea-method#64`: acumular el producto escalar en
+`float64` por bloques de referencia. Da los mismos bytes en cuatro particiones de
+hilos y dos CPUs. No es una reducción de probabilidad —que es lo que era el
+redondeo a una rejilla, descartado con datos: el ruido llega a 7,75e-7 y un
+bucket de 1e-6 es 1,29 veces eso— sino invariancia: la dispersión del `float64`
+queda muy por debajo de la resolución del `float32`.
+
+**Y NO está desplegado, por su coste, medido sobre un lote real:**
+
+| sustrato | dim | recuperación antes | después | factor |
+|---|---|---|---|---|
+| protst | 512 | 9,2 s | 16,3 s | ×1,8 |
+| prot_t5 | 1024 | 14,0 s | 33,1 s | ×2,4 |
+| ankh_large | 1536 | 20,1 s | 67,4 s | ×3,4 |
+
+Sobre un lote de 67,7 s, en `ankh_large` la recuperación pasa del 30 % al 100 %:
+**el lote se iría a unos 115 s, un +70 %**. El factor crece con la dimensión,
+coherente con una penalización de ancho de banda.
+
+**La decisión, y su condición de revisión.** Queda en `develop`, medido y
+disponible, sin desplegar. Se despliega **si y sólo si** un eje mide donde el
+ruido puede entrar: fracción de votos, un τ por debajo de 0,95, o cualquier cosa
+que consuma identidad de donante — el reranker, señaladamente, porque
+`neighbor_min_distance` es igual a `distance` por construcción y hereda el mismo
+ruido. Mientras los puntos de operación sigan en 0,98 y 0,99, el `float32` basta
+y el 70 % no se paga.
+
+**Lo que queda abierto y no se resuelve aquí.** El arreglo cubre sólo el backend
+`numpy`. Las 53 predicciones almacenadas lo usan, pero `search_backend` viene por
+defecto a `faiss` en cinco payloads de exportación y entrenamiento, así que una
+exportación de dataset o una corrida de reranker cae en el camino no cubierto sin
+que nadie lo elija. Por eso el arreglo avisa una vez por proceso en vez de
+callarse. Y para `torch` no existe hoy una declaración a la que alinearse: el
+lock declara `2.10.0+cpu`, las dos máquinas corren ruedas de GPU distintas
+—`2.11.0+cu128` aquí, `2.12.0+cu130` en el nodo— y alinearse al lock sería
+quedarse sin tarjeta. No es una divergencia que arreglar: falta la declaración.
+
+
 ## El desglose de las retiradas, y lo que destapó
 
 ### Las retiradas no se puntúan
