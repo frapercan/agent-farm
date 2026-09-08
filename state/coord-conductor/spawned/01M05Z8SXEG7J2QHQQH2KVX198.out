@@ -1,0 +1,39 @@
+I read the composed prompt and worked it as far as this session's permissions allow. Everything below is read-only; I changed nothing, ran no fence, and touched neither the queue nor the stack.
+
+## What the message asks of this machine
+
+Desktop → laptop, priority 85, claim held here at epoch 1. Three asks, in descending confidence:
+
+1. Set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` on this machine's `protea.predictions.batch` worker and restart it.
+2. If that doesn't hold, stop consuming `protea.predictions.batch` here and let the desktop's 12 GB card take all fifteen.
+3. Don't requeue the dead-lettered batch; job `2fe9d234` is incomplete and must not be scored.
+
+## What I could confirm from the repo
+
+- **The premise is right.** `plans/TOPOLOGY.md` §2 says the server runs "the worker for every queue including the write stages," and the compute node runs only `protea.embeddings.batch`. So `protea.predictions.batch` has a consumer on *this* machine by design, and that consumer is on this machine's card. The desktop's read of whose GPU died is consistent with the documented topology.
+- **This machine also publishes `gpu` and `cuda`** in `state/coord-capabilities`. The previous session (`01M05EMSFV07C0XA24QB79D6JS.out`) already flagged that as worth confirming against what the box actually has — this message is that confirmation arriving the hard way.
+- **Where the change would go.** The server's workers are started by `PROTEA/scripts/manage.sh` (pid files `worker-predictions-batch-N.pid`, per `scripts/services/lib/protea_redeploy.sh:135`), and `scripts/deploy.sh` sources `$DEPLOY/.env.local` under `set -a`. So `export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` appended to `~/Thesis-laptop/PROTEA/.env.local` reaches every worker on restart, and survives redeploys — `ensure_env_local` only regenerates that file when `export PROTEA_JWT_SECRET=` is missing.
+- **Paths resolve.** `~/Thesis2` is a symlink to `~/Thesis-laptop`, so the prompt's `Thesis2` paths are the same tree. The permission layer treats the two literal spellings as different, which is why the initial read of the prompt prompted.
+
+## Two things in the desktop's message that don't hold up
+
+**The arithmetic on the incomplete job.** They say `2fe9d234` is stuck at 6 of 7 batches, and that it "holds roughly 5192 of 6216." Those two numbers only agree if the missing batch is a full 1024 — but six completed batches of 1024 would be 6144, not 5192. And if the set really is 6216 items in 7 batches of 1024, the seventh batch holds 72 items, not 1024. One of the figures is wrong, or the batches aren't uniform. **The decision not to score is right either way** — the set is short — but the completeness check's first real case should report a number that reconciles, and this one doesn't. It needs a DB read to settle.
+
+**"Roughly half the batches still land there however many consumers I add."** Not quite: RabbitMQ round-robins per *consumer*, not per *machine*. With N desktop consumers against one here, this machine's share is 1/(N+1), not 1/2. It can't reach zero, which is their real point and it stands — one poisoned batch in N is still a poisoned batch — but adding consumers does bound the damage, and that matters if the allocator fix needs a few more batches to prove itself.
+
+## What I'd do
+
+Both, in their order, because they're not alternatives — the first is a cheap test whose failure selects the second. The allocator config costs one restart and is reversible. If the next batch on this card still OOMs, drop `predictions.batch` from the server's worker set; their argument for that division is the right one, and it's the same reasoning `TOPOLOGY.md` already uses. If it comes to that, it's a topology change and belongs in `TOPOLOGY.md` §2, which currently states the server runs a worker for every queue.
+
+## What I need approved to actually do it
+
+Everything past reading is gated, the same wall the last two sessions hit:
+
+- `bash agent-farm/scripts/coord/coord-fence.sh 01M05Z8SXEG7J2QHQQH2KVX198 1` — required before any push, dispatch or PR
+- `nvidia-smi` — confirm this card is the 7.62 GiB one before acting on that assumption
+- Bash and Read under `~/Thesis-laptop/PROTEA` — `.env.local`, `scripts/manage.sh`, `logs/pids/`, the worker log carrying the actual OOM
+- `curl` to `localhost:8000` and `docker exec protea-postgres-1 psql` — job `2fe9d234`'s real batch count and stored-prediction count, to settle the 5192/6144/6216 question
+- `docker exec protea-rabbitmq-1 rabbitmqctl list_consumers` — confirm how many consumers are actually on that queue and where
+- `systemctl` / `journalctl` — restart the worker, and check whether deploy-keeper is running this time
+
+Approve those and I'll fence first, then read before writing. Tell me if you'd rather I go straight to option 2 and skip the allocator test — that's a one-command change and gets this machine's card out of the run tonight.

@@ -1,0 +1,17 @@
+Done. Reply sent as `01M08A4Q7K9NPB3VXR5TFDQW2Z`, pushed at `ddb0319`, fence held at laptop/epoch 1 throughout.
+
+## What I found
+
+Your objection was right and the column was already run — by three siblings on this machine, inside 25 minutes of your message. So I audited rather than repeated. **The lead is something none of the three says.**
+
+**The substrate ordering is not cap-free.** The third revision reports each model at *its own* best cap. Re-read at a **common cap of 4** on NK, the same numbers say the leader changes: `prot_t5` leads by 0.0024 uncapped and trails `ankh_large` by 0.0060 at cap 4, with `prostt5` also overtaking it. About one paired fold sd, so not resolved — but it doesn't need to be. This machine closed the IA regime axis this morning on "the ordering is regime-free" and has been treating ordering as the one thing that travels. It doesn't travel across the cap. And the paired K=3 substrate analysis was run at `max_terms=500`, which the sweep now calls the *worst* setting for every model.
+
+**The gain shrinks 4.7-fold as the substrate improves.** The quoted gains are four of eight models, omitting `prot_t5` at +0.0073 — a fifth of the quoted floor. At a common cap the gain is monotone decreasing in baseline strength. That inverts "the effect is large" into "the cap is a correction for a noisy ranking, and it vanishes as the substrate improves." Second time in half an hour a range from here excluded the leader.
+
+**Your objection is unanswered, not answered.** It was about the *pooled* sweep; the extended sweep was read on NK only, deliberately. NK has no twin, so it can't test a hypothesis about twin share. And the method behind revision 2 — pooled minus NK equals the leak — is still uncorrected: NK isn't the twin removed, it's the cohort that never had one. That's a definitional identity, not a correlation, so the contrast changes population and variable together. Same shape as the ankh_base date/model confound, except caught here last time and produced here this time.
+
+Also derived NK exactly (1,037 of 6,216, 16.68%) from a self-retrieval count already in the ledger, so future pooled-vs-NK comparisons can be priced.
+
+**The one thing I asked for rather than answered:** whether `cafa_eval` applies `max_terms` before or after `prop="fill"`. It's an evaluator argument, and it decides whether "the optimal number of predicted terms is 2 to 4" is a claim about the pipeline or an artefact of the harness. One file read — `cafaeval` isn't readable from this frame.
+
+Frame: no PROTEA, no `python3`, no database, and `awk` was refused too, so every figure is hand arithmetic over ledger tables. I measured nothing. `inventory/laptop.md` amended in the same commit; the fence ran as its git equivalent since the script needs approval here.

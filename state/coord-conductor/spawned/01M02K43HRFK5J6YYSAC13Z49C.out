@@ -1,0 +1,62 @@
+I read the message and investigated from the server side. Read-only throughout — I changed nothing, ran no fence (the fence script needs approval), and touched neither queue nor stack.
+
+## Answer to the desktop's question: yes, they went down together — and more is down than they can see
+
+Right now, on this machine:
+
+- **Nothing is listening on :8000** (API) **or :3000** (frontend). `ss -ltnp` shows only the docker infra ports.
+- **There is not a single uvicorn, gunicorn, celery or PROTEA worker process running.** Not crashed-and-restarting — absent.
+- **The deploy-keeper is also not running.** That is the supervisor that healthchecks `:8000/jobs`, detects dead workers via `logs/pids/worker-*.pid`, and forces a redeploy (`scripts/services/lib/protea_redeploy.sh`). It is the thing that would have brought the API back on its own. It didn't, because it is down too.
+- The docker stack is fine and has been up since the Aug 13 boot: postgres, rabbitmq, minio, prometheus, loki, promtail, grafana, postgres-exporter. Those have a restart policy; the application does not run in docker and nothing restarted it.
+- Disk 45% (491G free), memory 30Gi with 3.5Gi used. Neither is a constraint *now*.
+
+So the desktop's read is right, and the 23 stranded `predictions.batch` messages have no consumer because the consumer's process does not exist.
+
+## The Aug 10 trigger, narrower than "around 18:46"
+
+First, a clock calibration: their broker failure at "10:36 on Aug 13" lines up with postgres logging `FATAL: the database system is shutting down` at **2026-08-13 10:35:05 UTC** — this machine rebooting. Their timestamps are UTC, so their death window is directly comparable to what follows. All times below are UTC.
+
+**2026-08-10**
+- `16:34:36` — postgres receives a **fast shutdown**. RabbitMQ restarts too, and its container IP moves `172.18.0.2` → `172.18.0.4`: the whole compose stack was recreated. Deliberate bounce, not a crash.
+- `16:35:23 / 16:35:25` — postgres and rabbitmq back. Watermark set to 12512 MiB of 31280 MiB.
+- `16:44:22–16:46:22` — a burst of ~14 AMQP connections from `172.18.0.1` (the docker host, i.e. the server-side workers). They restart.
+- `16:49:36` — postgres: `ERROR: column "source_release" does not exist`.
+- `17:03:31` onward — rabbit begins flapping `alarm_handler: {set,{system_memory_high_watermark}}` / `{clear,...}`, repeatedly, and keeps doing it through Aug 12. **While that alarm is set, publishers are blocked.**
+- `17:14:22`, `17:14:23`, `17:36:08`, `18:14:29` — host worker connections drop with `missed heartbeats from client, timeout: 600s`. Not clean closes: the processes stopped answering.
+- `18:40:06` and `18:40:35` — two host processes connect.
+- **`18:46` — the dead letters start** (their number).
+- `18:48:20.114492` and `18:48:20.114691` — **both connections die in the same millisecond**, `client unexpectedly closed TCP connection`.
+
+Two independent processes dying in the same 200 microseconds is not two consumers failing. That is the whole server-side worker group being killed at once — which is precisely the third of the desktop's three candidates ("every server-side worker going at once"), and it rules out the other two: the broker and the database were both up and serving across that instant.
+
+After `18:48:20` there are no host connections at all until `Aug 11 02:14:33`, which then goes silent again by `02:34` (missed heartbeats at `02:44:36`). That start-run-~30min-die-restart cycle repeats through Aug 12 23:15, matching their window end. It continues on Aug 13 morning (`08:03:49` connect, `08:33:49` missed heartbeats), then the reboot at `10:35`, and after that nothing comes back at all.
+
+## What this rules in and out
+
+Their correction of themselves was right — it isn't the write stage OOMing, and it isn't the compute node. It is server-side and it is wholesale.
+
+I can't yet separate the two remaining candidates for *why* the group keeps getting killed:
+
+- **Host memory pressure.** Fits the watermark flapping, fits the simultaneous kill (OOM killer reaping a cgroup), fits the 600s heartbeat losses (a swapping process misses heartbeats before it dies).
+- **Blocked publishers.** When the watermark alarm is set, a worker that finishes computing and tries to publish to the next stage blocks. That would strand *every* stage at its hand-off point, which explains the four-stage spread better than any single-consumer fault.
+
+The `source_release` column error is probably a red herring: there are only **47** postgres ERROR/FATAL lines across Aug 10–12 total, against 397 dead letters, and most of the Aug 12 ones are clearly interactive psql poking (`role "postgres" does not exist`, `syntax error at or near "\"`).
+
+## What I need to close it
+
+Three things are blocked by this session's permissions:
+
+1. **`~/Thesis-laptop/PROTEA` as a working directory.** The worker logs and `logs/pids/` are there and they hold the actual exception that produced the nacks. This is the one that would settle memory-pressure vs blocked-publisher outright.
+2. **`systemctl` and `journalctl`.** To see whether deploy-keeper is dead, disabled or crash-looping, and whether journald recorded an OOM kill at `2026-08-10 18:48:20`.
+3. **`docker exec` / `curl` to localhost.** For `rabbitmqctl list_queues` and the Loki API — Loki is up on :3100 and promtail is shipping, so the worker logs are probably queryable that way even without filesystem access.
+
+Say the word and I'll ask for those, or approve them and I'll continue.
+
+Two decisions that are yours, not mine — I've done neither:
+
+- **Restarting the stack.** The API, frontend and workers all need starting, and deploy-keeper needs starting or it will happen again on the next reboot. But a restart destroys the memory-pressure evidence, so the order matters: logs first, restart second, unless you'd rather have the platform back now.
+- **Replying on the ledger.** I can send this back to the desktop as a coordination message once the fence passes.
+
+One thing checked and clear: `~/Thesis2` is a symlink to `~/Thesis-laptop`, so the `AGENT_FARM_ROOT=/home/bioxaxi2/Thesis2/agent-farm` in the composed prompt resolves to the same tree as `farm.env`'s. No path drift there.
+
+I have not started on the evaluation census the desktop is still waiting on.

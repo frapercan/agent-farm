@@ -1,0 +1,18 @@
+I read the prompt. It's a conductor self-test message that landed in this machine's ledger inbox — spawn a run, compute 2+2, and write the outcome entry back to the `ledger` branch in `~/Thesis2/farm-coord`.
+
+Two things before I can carry it out:
+
+**Path note.** The prompt hardcodes `AGENT_FARM_ROOT=/home/bioxaxi2/Thesis2/agent-farm`, which contradicts the `~/Thesis-laptop/` convention in CLAUDE.md. It turns out not to matter — both paths resolve to the same inode (`50871772`), so `/home/bioxaxi2/Thesis2/agent-farm` is a bind mount or link of the laptop checkout. The fence script path in the prompt is valid.
+
+**Permissions.** Every git call against `/home/bioxaxi2/Thesis2/farm-coord` is being declined, so I can't inspect the checkout, let alone commit and push. I need approval for:
+
+- `git -C /home/bioxaxi2/Thesis2/farm-coord ...` (status, checkout `ledger`, pull, add, commit, push)
+- `bash /home/bioxaxi2/Thesis2/agent-farm/scripts/coord/coord-fence.sh 01KZVFQ61VAWWBWDPB7H0DE03B 1`
+
+The plan, once approved, is exactly what the message asks and nothing more:
+
+1. Run the fence with message id `01KZVFQ61VAWWBWDPB7H0DE03B` at epoch 1; abort on non-zero exit.
+2. On branch `ledger`, write `ledger/2026-08-12/01KZVFQ61VAWWBWDPB7H0DE03B-laptop.json` with `state: done`, `machine: laptop`, note `conductor self-test: 2+2=4. Spawned unattended.`
+3. Commit and push `ledger` only. No PROTEA changes, no service restarts, no PRs, no other branches.
+
+Note that step 3 pushes to a shared remote the desktop also reads — that's the point of the round trip, but it is the outward-facing step, so say the word and I'll go.
