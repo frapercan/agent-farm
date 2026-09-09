@@ -281,6 +281,119 @@ efecto de aspecto.
   y las dos variantes.
 
 
+### Las otras dos perillas: banco de donantes y expansión a ancestros
+
+Medidas el 2026-09-09 sobre la configuración ganadora —`exclude_self_neighbour=true`,
+`aspect_separated_knn=false`—, en los tres sustratos y las dos variantes, con la
+misma revisión en los dos lados de cada par y `effect_of_interest = 0,02`.
+
+#### La política de donante no es una perilla: son tres
+
+`DonorPolicy` tiene `reviewed_only`, `evidence_codes` y
+`exclude_reference_prefixes`, decisiones independientes. Llamarla «permisiva
+contra restringida» habría nombrado un nivel por menos cosas de las que varía.
+Se varió **una sola**: `evidence_codes`, al **régimen que la campaña ya
+declaraba** —el mismo con el que se calculó el conjunto de IA `b5f134b1`—, no a
+un nivel inventado.
+
+    permisiva      5.317.051 anotaciones   556.306 donantes
+    regimen lafa     584.618 (11%)          86.068 (15%)
+
+#### Restringir a evidencia experimental perjudica: 54 paneles de 54
+
+Deltas de `f_micro_w`, variante B:
+
+| panel | ankh_large | protst | prot_t5 |
+|---|---|---|---|
+| LK:BPO | −0,0534 | −0,0555 | −0,0483 |
+| LK:CCO | −0,0633 | −0,0388 | −0,0592 |
+| LK:MFO | −0,0375 | −0,0399 | −0,0290 |
+| NK:BPO | −0,0408 | −0,0407 | −0,0381 |
+| NK:CCO | −0,0874 | −0,0884 | −0,0809 |
+| NK:MFO | −0,0955 | −0,0679 | −0,0722 |
+| PK:BPO | −0,0126 | −0,0148 | −0,0135 |
+| PK:CCO | −0,0495 | −0,0540 | −0,0457 |
+| PK:MFO | −0,0509 | −0,0495 | −0,0470 |
+
+Los 54 resuelven, ninguno positivo.
+
+**Y responde una pregunta que el volumen no podía contestar.** Restringir el
+banco produce **más** candidatos, no menos: 1,35 a 1,60 veces. No es porque cada
+donante aporte más —aportan **menos**, 6,24 términos de media contra 8,49— sino
+porque con el banco seis veces y media más pequeño **los vecinos quedan más
+lejos**: distancia mediana 0,2835 contra 0,2246, un 27 % más. Vecindarios más
+dispersos, donantes que se solapan menos, más candidatos distintos.
+
+La pregunta era si la evidencia experimental compensaba esa peor similitud. **No
+compensa.** Los candidatos extra son ruido.
+
+#### Expandir a ancestros gana: 54 de 54, y es la primera perilla que suma
+
+| panel | ankh_large | protst | prot_t5 |
+|---|---|---|---|
+| LK:BPO | +0,0162 | +0,0210 | +0,0188 |
+| LK:CCO | +0,0117 | +0,0142 | +0,0148 |
+| LK:MFO | +0,0282 | +0,0350 | +0,0351 |
+| NK:BPO | +0,0140 | +0,0174 | +0,0137 |
+| NK:CCO | +0,0150 | +0,0135 | +0,0134 |
+| NK:MFO | +0,0400 | +0,0413 | +0,0437 |
+| PK:BPO | +0,0056 | +0,0070 | +0,0070 |
+| PK:CCO | +0,0088 | +0,0110 | +0,0100 |
+| PK:MFO | +0,0158 | +0,0186 | +0,0142 |
+
+Los 54 resuelven y **los 54 son positivos**, hasta +0,0437 — el mismo orden de
+magnitud que la auto-exclusión, con el signo contrario. Coste medido: ×1,16 en
+tiempo por lote y ×2,9 en volumen escrito, sobre una sonda cronometrada de un
+sustrato antes de comprometer los tres.
+
+#### Las dos muerden donde no hay conocimiento previo
+
+                        NK              PK
+    donante lafa    −0,087 … −0,096   −0,013 … −0,015
+    ancestros       +0,040 … +0,044   +0,006 … +0,007
+
+NK no tiene anotación previa y depende enteramente de los donantes, así que
+restringirlos la castiga más y enriquecer sus votos la ayuda más. PK ya llega
+con anotación propia y es la menos sensible a las dos. El patrón es coherente en
+las dos direcciones y no se buscó.
+
+### El veredicto del eje C, con sus cuatro perillas
+
+    exclude_self_neighbour     = true        por correccion, no por puntuacion
+    aspect_separated_knn       = false       sin efecto de tamaño util
+    donor_policy               = permisiva   restringir cuesta hasta 0,096
+    expand_votes_to_ancestors  = true        gana hasta 0,044, y es barato
+
+### El incidente que atravesó la medición
+
+El disco de esta máquina llegó al 100 %, con 488 MB libres de 937 GB, mientras
+los brazos de ancestros corrían. Rompió tres componentes por tres vías
+distintas:
+
+- **RabbitMQ** bloqueó a los publicadores al cruzar su umbral de 2 GB. Los lotes
+  no pudieron publicar su resultado, no se confirmaron, y volvieron a la cola:
+  **3.426 reentregas**. Las reentregas alcanzaron al **coordinador**, no sólo a
+  los lotes, y cada una acuñó un `prediction_set` nuevo: **27 conjuntos** para un
+  trabajo que debía crear uno. Los dos poblados de cada par resultaron
+  **idénticos** —diferencia simétrica de cero sobre 28,3 millones de filas—, que
+  es una verificación no planeada de que el pin de hilos funciona.
+- **MinIO** rechazó los artefactos con `XMinioStorageFull` y mató **siete
+  evaluaciones**.
+- **Postgres** aguantó.
+
+**El componente que falló mejor no fue el que menos daño hizo, fue el que lo
+dijo.** MinIO falló ruidosamente y con el motivo dentro; las reentregas fueron
+silenciosas y se encontraron por casualidad, mirando un conteo que no cuadraba.
+
+**Y el defecto que deja abierto:** `predict_go_terms` no es idempotente en su
+coordinador. El `ON CONFLICT DO NOTHING` protege las filas —y aquí hizo
+exactamente el trabajo para el que está, absorbiendo cada duplicado— pero nada
+protege la identidad del conjunto. Una reentrega acuña otro `prediction_set` en
+vez de reutilizar el suyo, así que el duplicado es indistinguible de un
+experimento legítimo desde la fila. Hoy se cazó porque el número era absurdo;
+un duplicado solo sería un brazo fantasma en una comparación.
+
+
 ## El desglose de las retiradas, y lo que destapó
 
 ### Las retiradas no se puntúan
