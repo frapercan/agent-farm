@@ -3,6 +3,29 @@
 Escrito el 2026-09-02, sobre el sustrato que sobrevivió al reinicio de la base.
 Este documento es la fuente; la pantalla que lo dibuja lo lee de aquí.
 
+> ## Aviso: partes de este documento describen un plan superado
+>
+> Se escribió bajo el **plan voraz** — un eje cada vez, un suelo, K=30, y un
+> brazo por nivel. El **2026-09-04** ese plan se abandonó por un **diseño
+> factorial**: el tensor de recuperación se materializa una vez a K=200 y todo
+> el grupo de puntuación pasa a ser relectura. La palabra «factorial» no aparece
+> en el resto de este fichero, y eso es la señal de que no se actualizó.
+>
+> **Cuando este documento y un `experiment_run` declarado digan cosas distintas,
+> manda el nodo.** El nodo se escribió para despachar; esto se escribió para
+> pensar, y el pensamiento cambió después.
+>
+> Lo comprobado hasta hoy:
+>
+> | sección | dice | los nodos dicen |
+> |---|---|---|
+> | 4 · eje B | cinco reglas de corte (`rank@k`, `global-d`, `ratio`, `local-scale`, `mutual`) | `bbb96a35` reduce B a **`max_k_position`** en seis niveles, leído del tensor |
+> | 4 · eje A | falta ablacionar `metric` | `651979be` la **retira con demostración**: los tres del haz normalizan, y sobre vectores unitarios coseno y euclídea ordenan igual |
+> | 6 · puerta 3 | «todo brazo tiene `experiment_run`» | no es satisfacible: bajo el factorial **un brazo del tensor sirve a varios nodos**, que es el objetivo del diseño |
+>
+> Esta lista es de lo que se ha contrastado, no de lo que se ha revisado. El
+> resto del documento no se ha auditado contra los nodos.
+
 Una regla gobierna todo lo demás: **un nivel se nombra por todos los campos que
 varían en él**. El defecto que esta campaña existe para no repetir siempre tuvo
 la misma forma — un nombre, dos cantidades.
@@ -478,8 +501,22 @@ fallar; si no puede fallar, no cuenta.
 
 1. Nada lee 227->230 sin el waiver declarado. Guardia ya cableada.
 2. Las dos máquinas en la revisión declarada. Código distinto etiqueta mal.
-3. Todo brazo tiene `experiment_run` con `graph_node` y `floor` **antes** de
-   despachar. El suelo es un nombre de nivel, no un número.
+3. ~~Todo brazo tiene `experiment_run` con `graph_node` y `floor` **antes** de
+   despachar.~~ **Retirada el 2026-09-11**, porque describe el plan voraz. Ahí
+   un brazo era un nivel de un eje y la correspondencia con un nodo era una.
+   Bajo el diseño factorial el mismo tensor sirve al nodo de corte, al de banco
+   y al de sustrato, así que estampar un `experiment_run_id` por brazo
+   inventaría una procedencia que el diseño niega.
+
+   Lo que ocupa su sitio, y hoy **no existe**: bajo el factorial el nodo es una
+   propiedad de la **comparación**, no del brazo. Una comparación pareada nombra
+   sus dos evaluaciones, sus paneles y su restricción, y debería nombrar también
+   el nodo que responde. Medido el 2026-09-11: `experiment_run` no tiene **ni una
+   clave foránea en todo el esquema**, ni entrante ni saliente, así que ningún
+   resultado está atado al grafo por construcción. Los 86 brazos de la campaña
+   llevan cero referencias a un nodo.
+
+   El suelo sigue siendo un nombre de nivel y no un número.
 4. Todo resultado sale sellado con `frame_digest`.
 5. El banco se construye con las anotaciones del INICIO de la ventana, nunca
    con las del final. Demostrado, no supuesto.

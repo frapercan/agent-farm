@@ -640,3 +640,97 @@ tener las dos**, y hasta ahora el marco no obligaba a elegir.
 Ese campo —el estadístico de decisión— entra en el sello, junto a los seis que ya
 estaban. Dos números no son comparables si difieren en él, igual que si difieren
 en el pivote o en la ventana.
+
+---
+
+## 2026-09-11 — El eje C, cerrado, y la ruta que describía otro plan
+
+### El eje C queda `done`
+
+Nodo `651979be`. Las cuatro perillas, medidas sobre rejilla de umbrales
+convergida (`th_step` 0,0005) y estratificadas.
+
+| perilla | resuelven | \|δ\| mediano | vuelcos por banda | cambios al afinar |
+|---|---|---|---|---|
+| `exclude_self_neighbour` | 387/387 | 0,048 | 0 | 0 de 207 celdas |
+| `expand_votes_to_ancestors` | 108/108 | 0,038 | 0 | 0 de 63 |
+| `aspect_separated_knn` | — | 0,0012 | sí, en bandas largas | 0 de 107 |
+| `donor_policy` permisiva | 54/54 | 0,047 | 0 | — |
+
+`aspect_separated_knn` cambia de signo entre bandas largas **porque no mide
+nada**: con efectos de una milésima, una perilla sin efecto cambia de signo al
+cambiar de población. Que cero veredictos cambien al afinar la rejilla es lo que
+permite decir «no hay efecto» en vez de «el protocolo no lo ve», que son dos
+afirmaciones distintas y la campaña sólo podía hacer la segunda.
+
+### El hallazgo del eje
+
+La política de donante permisiva gana **más** donde la homología es baja:
+
+| banda de identidad | resuelven | gana permisiva | \|δ\| mediano |
+|---|---|---|---|
+| sin restringir | 54 | 54 | 0,0465 |
+| ≤30 % | 50 | **50** | **0,0780** |
+| 30–60 % | 52 | 52 | 0,0539 |
+| 60–90 % | 54 | 54 | 0,0538 |
+| >90 % | 41 | 40 | 0,0456 |
+
+La explicación fácil era que la permisiva añade donantes fáciles — evidencia de
+alto rendimiento y curación que acompaña a homólogos cercanos. Bajo esa
+explicación el efecto se concentraría en `>90` y desaparecería en `≤30`. Pasa lo
+contrario: un 71 % mayor donde el donante se parece menos. Donde la secuencia
+deja de ayudar es donde más vale tener más evidencia disponible.
+
+La pertenencia a cada banda la define el brazo **restrictivo**, nunca el
+permisivo. Si la definiera el retador elegiría su propia población, y un método
+que recupera peor se autoconcedería un estrato más fácil.
+
+### El instrumento que el nodo declaraba bloqueado
+
+El nodo decía: *«`aspect_separated_knn`: BLOQUEADO POR INSTRUMENTO»*, porque
+`ref_data_by_aspect` tiene dos formas bajo un nombre. **PROTEA #941 lo arregló**
+— `_pool_accessions` deriva ahora el conjunto del pool real sea cual sea su
+forma. La medición es válida; lo que estaba desactualizado era el nodo.
+
+Vale la pena nombrarlo: durante una semana el registro dijo que esa perilla no se
+podía medir, mientras el código ya podía. Un bloqueo que se levanta y no se
+anota es indistinguible de uno que sigue en pie.
+
+### `RUTA.md` describe el plan voraz, no el que corrió
+
+`RUTA.md` se escribió el 2026-09-02. El diseño factorial llegó el 2026-09-04,
+cuando el nodo `f2a10398` se abandonó con esta razón escrita en su propio
+`findings`:
+
+> bajo el diseño factorial el tensor de recuperación se materializa a K=200 una
+> sola vez y todo el grupo de puntuación pasa a ser relectura, con lo que este
+> suelo y estos cortes dejan de ser un punto de partida
+
+La palabra «factorial» no aparecía en `RUTA.md`. Contrastado hoy, tres lugares
+donde el documento y los nodos discrepan:
+
+- **Eje B.** La ruta propone cinco reglas de corte. El nodo `bbb96a35` lo reduce
+  a `max_k_position` en seis niveles, leído del tensor sin recuperar de nuevo.
+- **`metric`.** La ruta la lista como ablación pendiente. El nodo `651979be` la
+  retira con demostración: los tres del haz normalizan, y sobre vectores
+  unitarios |a−b|² = 2 − 2·cos(a,b), así que coseno y euclídea ordenan igual.
+- **Puerta 3.** Ver abajo.
+
+El documento lleva ahora un aviso al principio con esa tabla. No se ha auditado
+entero contra los nodos; sólo esos tres puntos.
+
+### La puerta 3 se retira
+
+*«Todo brazo tiene `experiment_run` con `graph_node` y `floor` antes de
+despachar.»* Encaja con el plan voraz, donde un brazo era un nivel de un eje.
+Bajo el factorial **el mismo tensor sirve a varios nodos**, que es el objetivo
+del diseño, así que estampar un `experiment_run_id` por brazo inventaría una
+correspondencia que el diseño niega.
+
+Lo que ocupa su sitio no existe todavía. Bajo el factorial el nodo es una
+propiedad de la **comparación**: una comparación pareada nombra dos
+evaluaciones, sus paneles y su restricción, y debería nombrar el nodo que
+responde. Medido hoy: `experiment_run` **no tiene ni una clave foránea en todo
+el esquema**, ni entrante ni saliente. Los 86 brazos llevan cero referencias a un
+nodo. Ningún resultado está atado al grafo por construcción, sólo por el texto
+de estos documentos.
