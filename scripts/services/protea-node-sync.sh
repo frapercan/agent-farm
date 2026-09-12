@@ -41,11 +41,32 @@ VENV="${PROTEA_VENV:-${HOME}/.cache/pypoetry/virtualenvs/protea-M-JALCmz-py3.12}
 #
 # The units are enumerated from systemd rather than listed here, because a list
 # in this file is one more place to forget a queue.
+# TWO SOURCES, and neither alone is the set. Measured on 2026-09-12 with five
+# instances enabled and running:
+#
+#   list-unit-files 'protea-lab-worker@*.service'  -> the TEMPLATE only
+#   default.target.wants/protea-lab-worker@*        -> all five
+#   list-units --all 'protea-lab-worker@*.service'  -> all five
+#
+# `list-unit-files` does not expand a template into its instances, so after the
+# `grep -v '@\.service$'` below it contributes NOTHING. It read as a second
+# source and was one in name only, which is the failure this unit's own service
+# file warns about in a different place: an inert declaration is worse than no
+# declaration, because it stops anyone looking further.
+#
+# So the enabled set comes from the wants symlinks, which do name instances, and
+# the loaded set from `list-units`. Both are needed: `list-units` sees a unit
+# started by hand and never enabled, and the symlinks see one that is enabled
+# but currently unloaded, which `list-units` cannot report. Enumerating only the
+# loaded ones is how the final gate would pass over a subset and still write
+# "synced", which is PR #291's defect arriving by a different road.
+WANTS="${HOME}/.config/systemd/user/default.target.wants"
 mapfile -t UNITS < <(
-  systemctl --user list-unit-files 'protea-lab-worker@*.service' --no-legend 2>/dev/null | awk '{print $1}'
+  find "${WANTS}" -maxdepth 1 -name 'protea-lab-worker@*.service' -printf '%f\n' 2>/dev/null
   systemctl --user list-units 'protea-lab-worker@*.service' --all --no-legend --plain 2>/dev/null | awk '{print $1}'
 )
 mapfile -t UNITS < <(printf '%s\n' "${UNITS[@]}" | grep -v '@\.service$' | sort -u)
+mapfile -t QUEUES < <(printf '%s\n' "${UNITS[@]}" | sed 's/^protea-lab-worker@//; s/\.service$//')
 DECL_PATH="${PROTEA_DECL_PATH:-plans/DECLARED-REVISION.txt}"
 STATE="${HOME}/Thesis2/storage/logs/node-sync.state"
 PY="${VENV}/bin/python"
@@ -57,6 +78,19 @@ INFLIGHT_GRACE=1500
 
 say() { echo "$(date -Is) node-sync: $*"; }
 refuse() { say "REFUSED, $*"; exit 0; }
+
+# Bring every unit back up, concurrently, and never fail because one did not:
+# this exists for the failure paths, where the alternative to a best-effort
+# restart is leaving the node down. Callers that need proof a unit loaded the
+# new code read its self-reported revision afterwards; this one only restores.
+restart_all() {
+  local u pids=()
+  for u in "${UNITS[@]}"; do
+    systemctl --user start "${u}" &
+    pids+=("$!")
+  done
+  for u in "${pids[@]}"; do wait "${u}" || true; done
+}
 
 # --- read the declaration, without touching any working tree ----------------
 # `git show origin/main:<path>` reads the committed file directly. A checkout
@@ -175,8 +209,15 @@ fi
 # An unacknowledged batch is redelivered by the broker, so stopping mid-batch
 # costs duplicated compute rather than work. It is still worth one tick to
 # avoid, but not worth blocking on forever: past the grace it is a stall.
-LOG="${HOME}/Thesis2/storage/logs/protea-lab-worker-${QUEUE}.log"
-if [[ -r "${LOG}" ]]; then
+# EVERY unit's log, not one. This block read a single QUEUE until 2026-09-07,
+# and QUEUE stopped existing when the units began to be enumerated. Under set -u
+# that killed the run before it touched anything, which is the safe direction,
+# but the defect underneath was not the unbound name: deferring on one queue
+# while rewriting the tree is the same half-for-the-whole this script was just
+# fixed for, surviving in the one branch that was not read.
+for q in "${QUEUES[@]}"; do
+  LOG="${HOME}/Thesis2/storage/logs/protea-lab-worker-${q}.log"
+  [[ -r "${LOG}" ]] || continue
   last_disp="$(grep -a 'Dispatching operation' "${LOG}" | tail -1 || true)"
   last_ack="$(grep -a 'Operation acked' "${LOG}" | tail -1 || true)"
   if [[ -n "${last_disp}" && -z "${last_ack}" ]] || \
@@ -184,25 +225,49 @@ if [[ -r "${LOG}" ]]; then
     age=$(( $(date +%s) - $(stat -c %Y "${LOG}") ))
     if (( age < INFLIGHT_GRACE )); then
       echo "deferred in-flight ${WANT_COORD}" > "${STATE}"
-      say "a batch is in flight and the log moved ${age}s ago; deferring to the next tick"
+      say "a batch is in flight on ${q} and its log moved ${age}s ago; deferring to the next tick"
       exit 0
     fi
-    say "a batch has been in flight with a log silent for ${age}s; that is a stall, syncing anyway"
+    say "a batch has been in flight on ${q} with a log silent for ${age}s; that is a stall, syncing anyway"
   fi
-fi
+done
 
 # --- act ---------------------------------------------------------------------
 if [[ ${#UNITS[@]} -eq 0 ]]; then
   refuse "no protea-lab-worker units on this node; nothing to keep in step, and syncing a tree nobody runs is not a sync"
 fi
-say "stopping ${#UNITS[@]} unit(s): ${UNITS[*]}"
+# CONCURRENTLY, and the reason is arithmetic rather than taste. `systemctl stop`
+# blocks, and an IDLE consumer is the slowest one to stop: it only notices the
+# signal when it wakes to handle a message, so it burns its whole TimeoutStopSec
+# (120s here) before it is killed. Sequentially that is 120s times the number of
+# units; this node went from two units to five on 2026-09-12, so the worst case
+# went from four minutes to ten. The laptop's DECLARED-REVISION.txt wrote this
+# rule for itself after restarting eleven units serially, and this script was
+# breaking the rule the file it reads had already written.
+say "stopping ${#UNITS[@]} unit(s) concurrently: ${UNITS[*]}"
+stop_pids=()
 for u in "${UNITS[@]}"; do
-  systemctl --user stop "${u}" \
-    || refuse "could not stop ${u}; not touching the tree under a running process"
+  systemctl --user stop "${u}" &
+  stop_pids+=("$!")
+done
+stop_failed=()
+for i in "${!stop_pids[@]}"; do
+  wait "${stop_pids[$i]}" || stop_failed+=("${UNITS[$i]}")
 done
 
+# SYMMETRIC recovery. The checkout-failure path below restarts every unit it
+# stopped; this path used to refuse without restarting any, so a failure on the
+# third of five left two workers down with nothing to bring them back and no
+# human in the loop. A guard that can refuse but cannot undo its own half-done
+# work is not safer than no guard, it just fails less visibly.
+if [[ ${#stop_failed[@]} -gt 0 ]]; then
+  echo "failed stop ${WANT_COORD}" > "${STATE}"
+  restart_all
+  refuse "could not stop ${stop_failed[*]}; tree untouched and every unit restarted on the old revision"
+fi
+
 git -C "${SLOT}" checkout --quiet --detach "${WANT_COORD}" \
-  || { echo "failed checkout ${WANT_COORD}" > "${STATE}"; for u in "${UNITS[@]}"; do systemctl --user start "${u}" || true; done; refuse "checkout failed; workers restarted on the old revision"; }
+  || { echo "failed checkout ${WANT_COORD}" > "${STATE}"; restart_all; refuse "checkout failed; workers restarted on the old revision"; }
 say "slot now at $(git -C "${SLOT}" rev-parse --short HEAD)"
 
 while read -r name want url; do
@@ -234,10 +299,22 @@ if (( BAD )); then
   refuse "verification failed after sync; worker stays DOWN, a silent wrong consumer is worse than no consumer"
 fi
 
+# Concurrently here too, for the same arithmetic as the stop loop, and the
+# failure is collected rather than taken on the first one: knowing that three of
+# five would not start is worth more than knowing that the first did not.
+start_pids=()
 for u in "${UNITS[@]}"; do
-  systemctl --user start "${u}" \
-    || { echo "failed start ${WANT_COORD}" > "${STATE}"; refuse "${u} would not start"; }
+  systemctl --user start "${u}" &
+  start_pids+=("$!")
 done
+start_failed=()
+for i in "${!start_pids[@]}"; do
+  wait "${start_pids[$i]}" || start_failed+=("${UNITS[$i]}")
+done
+if [[ ${#start_failed[@]} -gt 0 ]]; then
+  echo "failed start ${WANT_COORD}" > "${STATE}"
+  refuse "these would not start on ${WANT_COORD:0:12}: ${start_failed[*]}"
+fi
 
 # The state file says "synced" only when EVERY unit self-reports the declared
 # revision in its own log. A unit being active is not evidence that it loaded
