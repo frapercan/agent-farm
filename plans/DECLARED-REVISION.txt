@@ -282,5 +282,64 @@
 # consumidor de esa cola. El guardia hizo exactamente su trabajo. Parado el
 # transitorio, la unidad arranco y autoinforma 5674c933 como las demas.
 
+# ==============================================================================
+# EL SALTO 5674c93 -> 087fefe (#295), escrito el 2026-09-12, con doce dias de
+# retraso, y la razon por la que el retraso importa mas de lo que parece.
+#
+# #295 se fusiono sin entrada aqui. Se leyo como un descuido de documentacion.
+# No lo era: era el hueco de la unica medida que decidia una cuestion abierta.
+#
+#   eb1dc83  09-07 19:05  salto a 5674c93   34 min ANTES del arreglo
+#   80fac63  09-07 19:39  PROTEA #942, "an idle consumer must still hear SIGTERM"
+#   75f3ee2  09-07 22:59  salto a 087fefe   3h 20m DESPUES del arreglo
+#
+# Las tres entradas de este fichero que registran unidades ociosas comiendose
+# sus 300 s enteros -- lineas 175, 210 y 241 -- son de los saltos d395242
+# (09-02 21:34), 6a2b78c (09-02 21:53) y c4436ab (09-04 21:38). Las tres
+# PRECEDEN al arreglo por tres y cinco dias. Estan explicadas por completo:
+# OperationConsumer._handle_stop ponia la bandera y nada mas, asi que un
+# consumidor ocioso no despertaba hasta que le llegaba un mensaje.
+#
+# Y el unico salto POSTERIOR al arreglo es precisamente el que no tiene entrada.
+# Asi que la narrativa que falta es la que habria llevado el primer reinicio
+# medido despues de #942. El hueco de documentacion y el hueco de la evidencia
+# son el mismo hueco.
+#
+# EL DATO, aportado por el nodo de computo el 2026-09-12 y medido en 087fefe,
+# que contiene 80fac63. Cinco unidades, nada en vuelo:
+#
+#   protea.embeddings.batch     598 ms    OperationConsumer
+#   protea.predictions.batch    773 ms    OperationConsumer
+#   protea.jobs                 626 ms    QueueConsumer
+#   protea.training             600 ms    QueueConsumer
+#   protea.evaluations          591 ms    QueueConsumer
+#   concurrente, las cinco      788 ms    frente a 3.188 ms en serie
+#
+# protea.jobs registro "Stop signal received ... in_flight=None" y
+# "Consumer stopped" 21 ms despues. Las dos colas de OperationConsumer son las
+# que importan, porque eran las que se comian los cinco minutos, y paran en
+# 598 y 773 ms.
+#
+# ES UN PROXY, Y VALE COMO TAL. Las plantillas difieren en KillSignal (SIGINT
+# alli, SIGTERM aqui) y en TimeoutStopSec (120 alli, 300 aqui). La primera no
+# puede introducir diferencia: consumer.py:122-123 y :354-355 cablean SIGINT y
+# SIGTERM al MISMO _handle_stop en las dos clases de consumidor. La segunda es
+# el techo, no el tiempo. La hipotesis de que KillSignal explicaba algo se
+# propuso y se retiro el mismo dia, por lectura del codigo y no por las fechas.
+#
+# LO QUE SIGUE SIN MEDIRSE, y se dice porque una prediccion confirmada en la
+# otra maquina sigue siendo una prediccion en esta: el proximo reinicio de once
+# unidades de ESTE host. Hay que cronometrarlo y anotarlo aqui.
+#
+# LA LINEA schema-applied. Estaba en 5674c933 mientras coordinator ya iba a
+# 087fefeb, y las lineas 95, 103 y 191 de este fichero dicen que sin migracion
+# schema-applied sigue al coordinador. Verificado: git log 5674c93..087fefe --
+# alembic/ esta vacio, y 087fefe..develop -- alembic/ tambien. alembic_version
+# en la base es f3a05d81c6e2. Ninguna migracion se movio, asi que la linea se
+# quedo sin actualizar en el mismo salto que se quedo sin entrada.
+#
+# Lo encontro el nodo de computo, que es quien lee este fichero.
+# ==============================================================================
+
 coordinator 087fefebc494a231443255739a673bcfe5c9194f
-schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
+schema-applied 087fefebc494a231443255739a673bcfe5c9194f
