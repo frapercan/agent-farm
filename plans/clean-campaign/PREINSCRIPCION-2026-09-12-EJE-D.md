@@ -22,9 +22,33 @@ antes de que dos pasadas adversariales las cortaran.
 
 ## Por qué existe el eje
 
-El eje D pregunta si añadir historia del lado de entrenamiento mejora la
-transferencia, y con qué rasgos. Lo que el registro ya cerró y el eje no
-reabre está en la tabla del final. Lo que hace que la pregunta siga abierta es
+El eje D pregunta **cuánto cuesta la caducidad del banco**, y con qué rasgos se
+explica ese coste. No pregunta si añadir historia compra señal, que es la
+pregunta contraria y no es la declarada: se puntúa contra la misma ventana con
+bancos de distinta antigüedad y se mide cuánto se degrada cada uno.
+
+La distinción no es de redacción y este documento la tuvo mal. Bajo el encuadre
+de comprar historia, lo que un banco viejo aporta sobre el actual son las
+anotaciones que el actual ha perdido, y lo que le falta es irrelevante. Bajo el
+encuadre declarado es al revés: lo que le falta **es** el mecanismo de la
+degradación. Medido en el canal curado, un banco de hace cinco años se degrada
+por dos vías independientes, y conviene nombrar las dos porque se separan con el
+mismo coste de carga:
+
+| Vía | Tamaño | Qué es |
+|---|---|---|
+| le falta | 34,85 % | no puede donar lo que no tiene |
+| lleva retirado | 17,45 % | de eso, cuatro de cada cinco son retractaciones curadas |
+
+La segunda es peor que la primera y no por su tamaño: no es ausencia de señal,
+es señal con el signo cambiado. Un donante que transporta una anotación que un
+curador quitó a propósito es el pariente débil del caso de las negaciones
+curadas, y el sistema ya demostró que no evita las fuertes. Las dos vías se
+aíslan puntuando el peldaño tal cual y puntuándolo con las retractaciones
+excluidas; la diferencia es el envenenamiento, solo.
+
+Lo que el registro ya cerró y el eje no reabre está en la tabla del final. Lo
+que hace que la pregunta siga abierta es
 que el valor del re-ranking está en **re-ponderar** y no en **re-ordenar**:
 permutar un conjunto fijo de candidatos vale exactamente cero, porque el
 puntuador es una suma conmutativa. Así que un eje de rasgos no puede
@@ -248,3 +272,18 @@ La evidencia completa de las tres pasadas queda en este directorio: seis
 informes de superficie con su verificación, dos ataques, dos cierres y una
 certificación. Las versiones largas están en `descartes/`, no borradas, porque
 el recuento de defectos que no baja es en sí mismo el resultado.
+
+### Corrección posterior a las tres pasadas, 2026-09-14
+
+El documento preguntaba en su primera sección si añadir historia mejora la
+transferencia, y su única predicción medía la degradación al retroceder. Son
+dos preguntas contrarias, y la declarada en el diseño de la campaña es la
+segunda. Corregido arriba.
+
+Importa cómo se escapó. Las dos pasadas adversariales buscaban predicciones que
+no pudieran fallar y resultados cerrados que se reabrieran, y la certificación
+buscaba contradicciones entre la cabecera y las tablas. **Ninguna comprobaba si
+la predicción mide la pregunta que el documento dice hacerse.** Una predicción
+puede ser perfectamente falsable y perfectamente ajena a su propio eje, y ese
+hueco no lo cerraba ninguno de los tres instrumentos. Lo encontró el servidor
+al leerlo, que es el control que este documento ya defiende en otro sitio.
