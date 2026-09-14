@@ -393,3 +393,43 @@ class TestSubprocess:
         )
         assert result.returncode == 1
         assert "v18" in result.stderr
+
+class TestAnArchiveIsNotPublishableProse:
+    """A retired document keeps the tokens it always had.
+
+    Archiving moves a document out of the current set and changes nothing
+    about its text. Before ``archive`` was pruned, moving eight retired
+    documents into ``docs/archive`` turned a successful archiving into a lint
+    failure over 21 tokens none of which had ever been published prose. The
+    only fix available then was to rewrite the retired documents, which
+    destroys the thing that makes them provenance.
+    """
+
+    def test_a_directory_named_archive_is_not_scanned(self, tmp_path: Path) -> None:
+        docs = tmp_path / "docs"
+        (docs / "archive").mkdir(parents=True)
+        (docs / "archive" / "retired.md").write_text(
+            "the old v3 reranker, retired\n", encoding="utf-8"
+        )
+        assert linter.main(["--paths", str(docs)]) == 0
+
+    def test_the_same_token_outside_an_archive_still_offends(
+        self, tmp_path: Path
+    ) -> None:
+        """The counterweight: pruning archive must not blunt the linter."""
+        docs = tmp_path / "docs"
+        docs.mkdir(parents=True)
+        (docs / "current.md").write_text(
+            "the old v3 reranker, retired\n", encoding="utf-8"
+        )
+        assert linter.main(["--paths", str(docs)]) != 0
+
+    def test_archive_nested_anywhere_is_pruned(self, tmp_path: Path) -> None:
+        """The three callers nest it differently: docs/, plans/, notes/."""
+        for parent in ("docs", "plans", "notes"):
+            root = tmp_path / parent
+            (root / "archive" / "deep").mkdir(parents=True)
+            (root / "archive" / "deep" / "old.md").write_text(
+                "v3 v9 v22\n", encoding="utf-8"
+            )
+        assert linter.main(["--paths", str(tmp_path)]) == 0

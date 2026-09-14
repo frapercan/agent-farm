@@ -90,6 +90,16 @@ SKIP_DIRS: frozenset[str] = frozenset({
     "_build", "build", "dist",
     ".tox", ".mypy_cache", ".pytest_cache", ".ruff_cache",
     "__pycache__",
+    # An archive is not publishable prose. The three repositories that call
+    # this linter all keep retired documents under a directory named
+    # ``archive`` -- ``docs/archive`` in PROTEA, ``plans/archive`` in this
+    # one, ``notes/archive`` in the thesis -- precisely so a reader can tell
+    # what is current from what is provenance. Scanning them turns a
+    # successful archiving into a lint failure: the retired document did not
+    # change, only its path did, and the tokens it always carried were never
+    # published prose in the first place. Rewriting a retired document to
+    # satisfy a linter would also destroy the thing that makes it provenance.
+    "archive",
 })
 
 # Default scan roots, relative to cwd. Used when neither positional
