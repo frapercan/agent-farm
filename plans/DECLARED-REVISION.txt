@@ -282,5 +282,26 @@
 # consumidor de esa cola. El guardia hizo exactamente su trabajo. Parado el
 # transitorio, la unidad arranco y autoinforma 5674c933 como las demas.
 
-coordinator 087fefebc494a231443255739a673bcfe5c9194f
+# 2026-09-14: 087fefeb -> d94684ee, nueve commits y una semana. Es el salto mas
+# largo que ha dado este fichero, y la razon es que la declaracion se quedo
+# quieta mientras el tronco recibia el sello del marco, el sello del metodo, el
+# disparador de integracion que faltaba en develop, el predicado de estado en la
+# lectura de umbrales, la negativa visible en el nodo, la sexta palabra de la
+# escala y el registro del camino de exito de la cola.
+#
+# Se movio porque el nodo lo hizo ver: un arreglo que la flota no ejecuta no es
+# un arreglo para la corrida, y los nueve estaban en esa brecha. Ninguno de los
+# dos lo tenia en el inventario de trabajo.
+#
+# La condicion de la cabecera se comprobo en el SERVIDOR y dos veces separadas
+# 45 s, porque una sola lectura detecta cambio y no distingue terminado de
+# atascado: cero en QUEUED y RUNNING, cero hijos de almacen vivos, y cero
+# mensajes sin consumir en el broker fuera de la cola de muertos. No hay campana
+# viva, que es la unica ventana en que este fichero se mueve.
+#
+# schema-applied NO se toca aqui. Cero commits tocan alembic/ entre 087fefeb y
+# d94684ee, y la correccion pendiente de esa linea vive en la PR #300, que sigue
+# abierta. Dos PRs editando la misma linea es como se pierde una de las dos.
+
+coordinator d94684ee1b3278f598adc3398ac4799e589fb62a
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
