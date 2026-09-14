@@ -5,11 +5,12 @@ description of that split. It lives here, in a repository both machines clone,
 because that is the only place an instruction can be written once and read by
 both.
 
-`CAMPAIGN.md` stays authoritative for what the run is. `RUN-LEDGER.md` records
-what has been computed and at what rate. `COLLIDING-A-NUMBER.md` says what has
-to be true before a number either machine produces is allowed to travel between
-them. This file answers a different question: which machine does what, and how
-each one learns what you decided.
+`CAMPAIGN.md` stays authoritative for what the run is, and **only for that**:
+the temporal window is declared in `protea/core/split_registry.py`
+(adjustment = `v220 -> v227` since 2026-09-14) and the campaign design in
+`clean-campaign/`. `RUN-LEDGER.md` **does not exist anywhere in the tree**
+(checked 2026-09-14); what actually records what ran is the `job` and
+`job_event` tables on the machine that owns the state.
 
 ---
 

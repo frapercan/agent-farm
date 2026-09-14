@@ -159,7 +159,7 @@ apply to the repo.
   a violation for me to flag. Still flag genuinely DESTRUCTIVE/dangerous ops
   (data loss, force-push main, wipes) and anything clearly outside "deploy a
   feature to develop".
-- Conductor productive: merged agent-farm #196; wrote plans/SDR-PROGRAM.md
+- Conductor productive: merged agent-farm #196; wrote plans/archive/SDR-PROGRAM.md
   (SDR-C design + fair-pooling re-test + embedding-recompute plan) on
   plan/sdr-program — exactly the non-GPU substantive prep. On-track, no steer
   needed.

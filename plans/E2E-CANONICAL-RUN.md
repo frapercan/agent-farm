@@ -1,5 +1,22 @@
 # E2E CANONICAL RUN: the single clean pass that covers the thesis
 
+> **SUPERSEDIDO EN PARTE, 2026-09-14.** La ventana de ajuste de la campaña
+> limpia es **220 -> 227**, no 226 -> 227. La razón no es que el argumento de la
+> sección 3 fuese malo: es que el hecho sobre el que se apoyaba cambió. GOA 226
+> **no está ingerida**, mientras que 220 -> 227 lleva los 315 resultados, los dos
+> conjuntos de evaluación del lado de puntuación y todos los sellos de marco que
+> la campaña ha producido. La decisión está ahora en el código, no solo aquí:
+> `protea/core/split_registry.py` nombra `ReleaseWindow("v220", "v227")` y sus
+> tests son la barrera.
+>
+> Lo que de este documento **sigue vigente**: la regla COMPETE (nada en la
+> release 227 o posterior, del lado nuevo, informa ninguna elección) y la
+> supersesión que declara sobre los roadmaps de junio.
+>
+> Documento vigente para el diseño: `clean-campaign/` (`RUTA.md`,
+> `PLAN-EXPERIMENTAL.md`, `MARCO-DECLARADO.md`).
+
+
 Author: Francisco Miguel Perez Canales.
 
 This is the authoritative specification for ONE clean end-to-end run whose
@@ -10,7 +27,7 @@ Trajectories (the decisions, mechanisms, and their measured place) are what
 survives, in the thesis + the signal registry + memory.
 
 It SUPERSEDES, for the definition of the scientific run, the June roadmaps
-(`ROADMAP-THESIS-10.md`, `THESIS-FINISH.md`, `beat-lafa-1/`). Those carried the
+(`archive/ROADMAP-THESIS-10.md`, `archive/THESIS-FINISH.md`, `archive/beat-lafa-1/`). Those carried the
 old window convention (SELECT 220->227 / FINAL 227->230, a mixed-metric story)
 and the pre-scale corpus. They move to `plans/archive/` for provenance; their
 governing principles are inherited verbatim below.
@@ -311,7 +328,7 @@ blend of the same signals (memory: sparse-contrastive #2, temporal datasets).
   Carry to the clean machine only raw inputs (`protea-frozen-v227`, `obo_cache`)
   and the code. Nothing derived travels.
 - `plans/`: move the superseded June roadmaps to `plans/archive/`; this file is
-  the single authoritative scientific-run spec. Update CATALOG.md accordingly.
+  the single authoritative scientific-run spec. Update `archive/CATALOG.md` accordingly.
 
 ## 8. Exit criteria (what "done" means)
 

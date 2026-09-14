@@ -1,9 +1,16 @@
 # THE CAMPAIGN: the clean run, defined
 
+> **NOTA, 2026-09-14.** Para la ventana temporal, la fuente es
+> `protea/core/split_registry.py`, que declara la de ajuste como
+> **220 -> 227**. Para el diseño de la campaña limpia, la fuente es
+> `clean-campaign/`. Este documento describe qué es la corrida; no declara la
+> ventana ni el sello.
+
+
 Author: Francisco Miguel Perez Canales. Written 2026-07-27.
 
 Fourth and operative companion to `E2E-CANONICAL-RUN.md` (axes and principles),
-`SIGNAL-REGISTRY.md` (what each signal is worth) and `GENESIS-STATE.md` (what the
+`archive/SIGNAL-REGISTRY.md` (what each signal is worth) and `archive/GENESIS-STATE.md` (what the
 new machine needs). Those three say what is true and what is missing. **This one
 says what we are going to run, in what order, and what each step has to answer.**
 
