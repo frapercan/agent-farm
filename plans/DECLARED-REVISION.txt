@@ -315,5 +315,26 @@
 # de denegacion de servicio en la ruta de subida, y la API esta publicada por
 # ngrok. Se resuelve sola al entrar #962.
 
-coordinator d94684ee1b3278f598adc3398ac4799e589fb62a
+# 2026-09-15, segundo salto: d94684e -> 0de335d. Puerta del servidor corrida
+# justo antes de la edicion: 0 jobs en QUEUED o RUNNING, 0 prediction sets,
+# ninguna cola del broker reteniendo mensajes. Ninguna migracion se mueve.
+#
+# POR QUE AHORA. Stage A paso 1 acaba de terminar -- insert_proteins SUCCEEDED,
+# 617.103 proteinas, 528.545 secuencias distintas -- y lo que viene son 71
+# releases de GOA. Ese es el momento de mover, no despues: el salto lleva
+# PROTEA#963, que estampa las versiones de libreria de cada job en la maquina
+# que lo ejecuta, y sin el las 71 cargas quedarian sin sellar. El propio
+# insert_proteins que acaba de correr lo demuestra: cero eventos provenance.*,
+# porque el worker arranco antes de fusionar.
+#
+# QUE LLEVA. PROTEA#962 (la pila que un arranque en frio levanta -- pg18 con su
+# montaje nuevo, minio desde quay.io, los ocho servicios por digest, y el fixture
+# de integracion movido de pg16 a pg18; el pulido de dependencias, con
+# python-multipart fuera de una version con doce avisos; y la guarda de
+# tokenizacion dorada) y PROTEA#963 (la procedencia de librerias).
+#
+# AMBOS ESTAN EN origin/develop, a diferencia del salto anterior: 0de335d es un
+# sha que el nodo puede encontrar en su clon.
+
+coordinator 0de335dc5e68263382748eec66535e686b31b78b
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
