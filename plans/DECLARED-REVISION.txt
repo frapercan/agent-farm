@@ -282,5 +282,38 @@
 # consumidor de esa cola. El guardia hizo exactamente su trabajo. Parado el
 # transitorio, la unidad arranco y autoinforma 5674c933 como las demas.
 
-coordinator 087fefebc494a231443255739a673bcfe5c9194f
+# 2026-09-15: 087fefeb -> d94684e, el primer movimiento tras el borrado de la
+# maquina. Chequeo del servidor corrido justo antes de esta edicion, como exige
+# la cabecera: 0 jobs en QUEUED o RUNNING, 0 prediction sets, ninguna cola del
+# broker reteniendo mensajes. Ninguna migracion se mueve entre 5674c933 y
+# d94684e, asi que schema-applied se queda y ningun nodo necesita consultarlo.
+#
+# POR QUE AHORA, y no es una mejora: sin esta linea no hay worker. El guardia de
+# revision rechaza arrancar sobre un arbol que la declaracion no nombra, y con el
+# worker abajo TODA operacion acaba corriendose fuera de la plataforma. Eso es
+# exactamente lo que acaba de pasar: un insert_proteins conducido a mano metio
+# 91.000 proteinas con la tabla job en cero y GET /v1/jobs devolviendo []. Las
+# filas estaban y el trabajo no existia -- sin procedencia, sin eventos, sin nada
+# que cancelar, y sin nada en pantalla. La declaracion de 087fefeb es del 07-09 y
+# es anterior al borrado, asi que llevaba caida desde que la maquina volvio.
+#
+# QUE LLEVA. Dieciseis commits que ya estaban en origin/develop y que la
+# declaracion no habia seguido, del 913f5ea al d94684e. La punta de develop, que
+# es la regla que esta cabecera fijo para no decidir commit a commit si un cambio
+# es "suficientemente real".
+#
+# QUE NO LLEVA, a proposito. El pulido de dependencias y la guarda de
+# tokenizacion dorada escritos hoy NO entran aqui: van en PROTEA#962 y esta
+# declaracion no los nombra. Se hizo asi para que el sha declarado sea uno que ya
+# esta en origin y que el nodo puede encontrar en su clon. Declarar un commit
+# local lo habria dejado ABAJO por ausente -- el fallo seguro, y tambien el
+# invisible desde el servidor.
+#
+# UNA DIVERGENCIA CONOCIDA mientras #962 no entre: el venv de este servidor tiene
+# python-multipart 0.0.32 y el poetry.lock de d94684e nombra 0.0.22. Es
+# deliberado y no se revierte: esa version acumula doce avisos, dos HIGH, los dos
+# de denegacion de servicio en la ruta de subida, y la API esta publicada por
+# ngrok. Se resuelve sola al entrar #962.
+
+coordinator d94684ee1b3278f598adc3398ac4799e589fb62a
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
