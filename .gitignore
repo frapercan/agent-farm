@@ -58,3 +58,4 @@ state/coord-machine
 state/coord-capabilities
 state/coord-keeper/
 state/thesis_pdf_published.sha
+farm.env
