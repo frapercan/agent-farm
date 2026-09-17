@@ -35,6 +35,9 @@ venv/
 # Logs
 *.log
 
+# GOA campaign cache (multi-GB GAF files, downloaded at runtime)
+plans/clean-campaign/gaf_cache/
+
 # Terraform
 infra/terraform/github/.terraform/
 infra/terraform/github/terraform.tfstate
