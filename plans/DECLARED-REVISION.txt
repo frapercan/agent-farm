@@ -344,7 +344,7 @@
 # POR QUE AHORA. En 24 horas el reaper cancelo 21 cargas de GOA que no tenian
 # nada de malo. Un job encolado y todavia sin consumir le parecia huerfano, asi
 # que lo cancelaba; el patron se repitio tres noches seguidas y cada vez costo
-# volver a encolar a mano. Quedan 13 releases (218-230) y sin este salto se
+# volver a encolar a mano. Quedan 18 releases (218-235) y sin este salto se
 # cancelan igual. El arreglo no es pelearse con el proceso -- deshabilitar la
 # unidad de systemd no basta, porque scripts/manage.sh arranca su propio reaper
 # con ruta relativa y eso systemd no lo cubre -- sino que el reaper deje de
