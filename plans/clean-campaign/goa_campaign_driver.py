@@ -252,6 +252,37 @@ def drain_in_flight(api: Api) -> None:
 MAX_IN_FLIGHT = 2  # one GAF load per worker node (laptop + sobremesa)
 
 
+def sweep_cache(done: set[int]) -> None:
+    """Drop the cached GAF of every release already loaded.
+
+    The reaper at the bottom of the loop deletes a GAF when it sees its job
+    finish, which covers the steady state and nothing else. A driver that is
+    killed with loads in flight loses those ``in_flight`` entries, and their
+    GAFs are then orphaned for good: on 2026-09-23 releases 213 and 216 were
+    still holding 35 GB days after both had loaded, across several restarts.
+
+    Startup is the only moment that sees the whole picture, because ``done``
+    is read from the jobs that actually succeeded. Each file is ~18 GB and the
+    campaign has 71 of them, so a leak of one per restart is not a rounding
+    error on any disk.
+    """
+    freed = 0
+    for release in sorted(done):
+        path = cache_path(release)
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            continue
+        try:
+            os.remove(path)
+        except OSError as exc:
+            log(f"cache sweep: could not drop {path} ({exc})")
+            continue
+        freed += size
+    if freed:
+        log(f"cache sweep: {freed / 1e9:.1f} GB of GAFs for releases already loaded")
+
+
 def main() -> int:
     key = open(KEY_FILE, encoding="utf-8").read().strip()
     api = Api(API, key)
@@ -265,6 +296,7 @@ def main() -> int:
     done = loaded_releases(api)
     if done:
         log(f"already loaded (skipped): {sorted(done)}")
+    sweep_cache(done)
 
     base = serve_base()
     ensure_cache_server()
