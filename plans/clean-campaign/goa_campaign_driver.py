@@ -358,6 +358,28 @@ def main() -> int:
             )
             ont_pending[release] = (str(job["id"]), obo_url)
             log(f"goa {release}: ontology snapshot {snap_date} (job {str(job['id'])[:8]})")
+            # One prefetch per pass, so that step 1 gets to run in between.
+            #
+            # ensure_cached blocks this whole loop for as long as a GAF takes,
+            # which is hours. Popping a second release here means starting that
+            # block BEFORE step 1 has seen the ontology job of the first one
+            # finish -- and the ontology job takes about three seconds, so it
+            # almost always has. The GAF then sits fully downloaded and idle
+            # for the length of the next download.
+            #
+            # Measured on 2026-09-23: release 218 finished downloading at
+            # 17:27:44, its ontology job succeeded 2,6 s later, and the loop had
+            # already moved on to prefetching 219, so its load could not be
+            # enqueued for another five hours. And it does not recover by
+            # itself: at the next boundary ont_pending holds two releases,
+            # step 2 refuses to prefetch, and downloads and loads stop
+            # overlapping altogether -- about 1,25 h of idle per release.
+            #
+            # Breaking here yields to step 1, which enqueues the load, and only
+            # then does the next pass start the following download. That is the
+            # behaviour the log shows for releases 216 and 217, which overlapped
+            # correctly.
+            break
 
         # 3. reap finished GAF loads
         for release, (job_id, _gaf_url) in list(in_flight.items()):
