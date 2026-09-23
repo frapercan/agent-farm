@@ -336,5 +336,37 @@
 # AMBOS ESTAN EN origin/develop, a diferencia del salto anterior: 0de335d es un
 # sha que el nodo puede encontrar en su clon.
 
-coordinator 0de335dc5e68263382748eec66535e686b31b78b
+# 2026-09-23, tercer salto: 0de335d -> 9b6e9e4. Puerta del servidor corrida
+# justo antes de la edicion: 0 jobs en QUEUED o RUNNING, 0 prediction sets,
+# protea.jobs con 0 mensajes y sin consumidor. Ninguna migracion se mueve, y ni
+# pyproject ni poetry.lock cambian: el salto es codigo puro.
+#
+# POR QUE AHORA. En 24 horas el reaper cancelo 21 cargas de GOA que no tenian
+# nada de malo. Un job encolado y todavia sin consumir le parecia huerfano, asi
+# que lo cancelaba; el patron se repitio tres noches seguidas y cada vez costo
+# volver a encolar a mano. Quedan 13 releases (218-230) y sin este salto se
+# cancelan igual. El arreglo no es pelearse con el proceso -- deshabilitar la
+# unidad de systemd no basta, porque scripts/manage.sh arranca su propio reaper
+# con ruta relativa y eso systemd no lo cubre -- sino que el reaper deje de
+# estar roto.
+#
+# QUE LLEVA.
+#   PROTEA#964: el sello de procedencia estaba en OperationConsumer, que sirve
+#     colas por lotes sin fila de job. Pasa a BaseWorker, que es donde hay un
+#     job que sellar. Las 53 releases ya cargadas no lo llevan.
+#   PROTEA#965: fetch_header devolvia "" cuando no podia leer la cabecera del
+#     GAF, y "no he podido preguntar" quedaba indistinguible de "no declara
+#     version". Ahora reintenta y levanta HeaderUnreadableError, que el load
+#     convierte en RetryLaterError.
+#   PROTEA#966: un reintento creaba un annotation_set nuevo en lugar de reusar
+#     el que ya existia para (source, source_version, ontology_snapshot_id).
+#     La release 184 tiene hoy dos sets por esto, y es la unica.
+#   PROTEA#967: el reaper pregunta al broker cuantos mensajes quedan en la cola
+#     antes de llamar huerfano a un job en QUEUED. Si el broker no contesta, no
+#     cancela.
+#
+# Los cuatro estan en origin/develop, y 9b6e9e4 es un sha que el nodo encuentra
+# en su clon.
+
+coordinator 9b6e9e41c8cc9fc2780527ef088530043fec9f06
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
