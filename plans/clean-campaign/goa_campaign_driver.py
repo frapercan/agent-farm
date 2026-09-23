@@ -103,15 +103,12 @@ def ensure_cached(release: int) -> None:
 
     Relies on ``goa_cache.fetch`` publishing the file atomically (rename onto
     the final path only once complete), so ``os.path.exists`` is a reliable
-    "already cached" signal. A leftover ``.part`` from an interrupted fetch is
-    removed before retrying.
+    "already cached" signal. A leftover ``.part`` is *kept*: ``fetch`` resumes
+    from its sparse holes instead of re-downloading what is already on disk.
     """
     dest = cache_path(release)
     if os.path.exists(dest):
         return
-    part = dest + ".part"
-    if os.path.exists(part):
-        os.remove(part)
     os.makedirs(CACHE_DIR, exist_ok=True)
     url = GAF_URL.format(release=release)
     t0 = time.time()
@@ -199,27 +196,27 @@ def snapshot_id_for(api: Api, obo_url: str) -> str:
 
 
 def loaded_releases(api: Api) -> set[int]:
-    """Releases whose annotation set exists AND whose load job succeeded.
+    """Releases with a succeeded load_goa_annotations job.
 
-    A set created by a job that later failed holds partial data and must be
-    re-run, so set presence alone is not enough.
+    Read straight from the DB: the /v1/annotations/sets endpoint is cached
+    5 minutes (stale reads caused duplicate loads) and annotation_set rows
+    carry no job_id to verify against. A succeeded job implies a complete
+    set; a failed/cancelled job implies partial data that must be re-run.
     """
-    jobs = items(api.call("GET", "/v1/jobs?limit=300"))
-    ok = {str(j.get("id")): (j.get("status") or "").lower() for j in jobs}
-    found: set[int] = set()
-    for s in items(api.call("GET", "/v1/annotations/sets")):
-        job_id = str(s.get("job_id") or "")
-        if job_id and ok.get(job_id) != "succeeded":
-            continue
-        sv = str(s.get("source_version") or "").strip()
-        if sv.isdigit():
-            found.add(int(sv))
-            continue
-        name = s.get("name") or ""
-        m = re.search(r"(?<!\d)(\d{3})(?!\d)", name)
-        if m:
-            found.add(int(m.group(1)))
-    return found
+    out = subprocess.run(
+        [
+            "docker", "exec", "protea-postgres-1", "psql", "-U", "protea", "-d", "protea",
+            "-t", "-A", "-c",
+            "SELECT DISTINCT payload->>'source_version' FROM job "
+            "WHERE operation='load_goa_annotations' AND status='SUCCEEDED';",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if out.returncode != 0:
+        raise RuntimeError(f"loaded_releases psql failed: {out.stderr[:300]}")
+    return {int(line) for line in out.stdout.split() if line.strip().isdigit()}
 
 
 def drain_in_flight(api: Api) -> None:

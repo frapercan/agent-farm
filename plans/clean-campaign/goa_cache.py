@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib import request
 
@@ -43,56 +44,132 @@ def _fetch_range(url: str, dest: str, start: int, end: int, timeout: int = 300) 
     return written
 
 
-def fetch(url: str, dest: str, connections: int = 24) -> None:
-    """Download ``url`` to ``dest`` atomically.
+def _find_holes(path: str, size: int) -> list[tuple[int, int]]:
+    """Return the unwritten byte ranges of a sparse ``.part`` file.
 
-    Writes to ``dest + ".part"`` and renames onto ``dest`` only after every
-    range has been written in full. The pre-truncated ``.part`` is sparse, so
-    a hole reads back as zeros: publishing it under ``dest`` while it is still
-    downloading makes a gzip reader see a valid prefix followed by zeros and
-    fail mid-stream ("Error -3 ... invalid block type / CRC check failed").
-    The atomic rename guarantees ``dest`` exists only once it is complete.
+    ``fetch`` pre-truncates the destination to its full size and writes ranges
+    in place, so an unwritten region is a sparse hole. ``SEEK_DATA`` /
+    ``SEEK_HOLE`` recover those holes straight from the filesystem allocation,
+    which is what lets a retried fetch resume from the bytes it already has
+    instead of starting over.
+    """
+    holes: list[tuple[int, int]] = []
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        pos = 0
+        while pos < size:
+            try:
+                data = os.lseek(fd, pos, os.SEEK_DATA)
+            except OSError:
+                holes.append((pos, size - 1))
+                break
+            if data > pos:
+                holes.append((pos, data - 1))
+            try:
+                pos = os.lseek(fd, data, os.SEEK_HOLE)
+            except OSError:
+                break
+    finally:
+        os.close(fd)
+    return holes
+
+
+def _range_resume_start(rs: int, re: int, holes: list[tuple[int, int]]) -> int | None:
+    """First unwritten byte in ``[rs, re]``, or ``None`` if it is fully written."""
+    for hs, he in holes:
+        if he < rs:
+            continue
+        if hs > re:
+            return None
+        return max(rs, hs)
+    return None
+
+
+def fetch(url: str, dest: str, connections: int = 24) -> None:
+    """Download ``url`` to ``dest`` atomically, resumable and throttled.
+
+    The file is split into fixed ranges and written to ``dest + ".part"``;
+    ``dest`` only appears once every range is complete, so a partial download
+    is never served. A retried fetch re-detects the sparse holes already on
+    disk, skips the ranges that are fully written and resumes the rest from the
+    first unwritten byte — bytes already on disk are never thrown away.
+
+    ``connections`` bounds concurrent HTTP requests (default 24). EBI throttles
+    each connection to roughly 0.1 MB/s regardless of how many are open, so
+    throughput is set by this number and not by the link: measured on 2026-09-23,
+    one connection gave 0.09 MB/s and two gave 0.14, while release 217 pulled
+    2.9 MB/s over 24. Twenty-four sits under this machine's 4.66 MB/s link with
+    room to spare. Each range retries with exponential backoff (5s doubling to
+    80s), and every retry resumes from where the previous attempt stopped, so a
+    connection lost to the concurrency costs its own last chunk and nothing more.
     """
     head = request.Request(url, method="HEAD")
     with request.urlopen(head, timeout=60) as resp:
         size = int(resp.headers["Content-Length"])
     part = dest + ".part"
-    with open(part, "wb") as fh:
-        fh.truncate(size)
-    bounds = [(i * size // connections, (i + 1) * size // connections - 1) for i in range(connections)]
+    if os.path.exists(part):
+        if os.path.getsize(part) != size:
+            os.remove(part)  # stale .part from a different file version
+    if not os.path.exists(part):
+        with open(part, "wb") as fh:
+            fh.truncate(size)
+
+    n_ranges = max(1, connections * 4)
+    ranges = [
+        (i * size // n_ranges, (i + 1) * size // n_ranges - 1)
+        for i in range(n_ranges)
+    ]
+    holes = _find_holes(part, size)
+    if not holes:
+        os.rename(part, dest)
+        return
+
+    todo: list[tuple[int, int]] = []
+    for rs, re in ranges:
+        s = _range_resume_start(rs, re, holes)
+        if s is not None:
+            todo.append((s, re))
+
+    sem = threading.Semaphore(connections)
     errors: list[str] = []
     lock = threading.Lock()
 
-    def worker(start: int, end: int) -> None:
-        expected = end - start + 1
+    def worker(hstart: int, hend: int) -> None:
+        backoff = 5.0
+        pos = hstart
         last = "no data read"
-        for attempt in (1, 2, 3):
-            try:
-                got = _fetch_range(url, part, start, end)
-            except Exception as exc:  # noqa: BLE001 - retried per range
-                last = f"error: {exc}"
-                continue
-            if got >= expected:
+        for attempt in range(6):
+            with sem:
+                try:
+                    got = _fetch_range(url, part, pos, hend)
+                except Exception as exc:  # noqa: BLE001 - retried with backoff
+                    got = -1
+                    last = f"error: {exc}"
+                else:
+                    last = f"short read {got}/{hend - pos + 1}"
+            if got >= hend - pos + 1:
                 return
-            last = f"short read {got}/{expected}"
-        # Fell through all three attempts without a full range: a short read
-        # is a hole, and a hole is a corrupt file, so record it as an error
-        # instead of silently accepting it (the old code only reported the
-        # raised exceptions and let short reads pass).
+            pos += max(got, 0)
+            if pos > hend:
+                return
+            if attempt < 5:
+                time.sleep(backoff)
+                backoff *= 2.0
         with lock:
-            errors.append(f"{start}-{end}: {last}")
+            errors.append(f"{hstart}-{hend}: incomplete at {pos} ({last})")
 
-    threads = [threading.Thread(target=worker, args=b, daemon=True) for b in bounds]
+    threads = [threading.Thread(target=worker, args=r, daemon=True) for r in todo]
     for t in threads:
         t.start()
+        time.sleep(1.0)  # space out requests
     for t in threads:
         t.join()
+
     if errors:
-        try:
-            os.remove(part)
-        except OSError:
-            pass
-        raise RuntimeError(f"{len(errors)} ranges failed: {errors[0]}")
+        # Keep the .part: the next attempt resumes from the remaining holes.
+        raise RuntimeError(f"{len(errors)}/{len(todo)} ranges failed: {errors[0]}")
+    if _find_holes(part, size):
+        raise RuntimeError("holes remain after fetch; refusing to rename")
     os.rename(part, dest)
 
 
@@ -155,7 +232,7 @@ def serve(directory: str, port: int, host: str = "127.0.0.1") -> None:
 
 if __name__ == "__main__":
     if sys.argv[1] == "fetch":
-        fetch(sys.argv[2], sys.argv[3], int(sys.argv[4]) if len(sys.argv) > 4 else 24)
+        fetch(sys.argv[2], sys.argv[3], int(sys.argv[4]) if len(sys.argv) > 4 else 2)
     elif sys.argv[1] == "serve":
         serve(sys.argv[2], int(sys.argv[3]), sys.argv[4] if len(sys.argv) > 4 else "127.0.0.1")
     else:
