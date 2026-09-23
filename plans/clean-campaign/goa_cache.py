@@ -17,6 +17,7 @@ slow connection never blocks the others and retries are per-range.
 from __future__ import annotations
 
 import os
+import queue
 import re
 import sys
 import threading
@@ -27,14 +28,59 @@ from urllib import request
 CHUNK = 1 << 20  # report progress per MiB
 
 
+RANGES_PER_CONNECTION = 32
+"""How finely the file is cut, per connection.
+
+This number only decides the SHAPE OF THE TAIL. While there are more ranges
+left than connections every connection has something to do; from the moment
+fewer remain, connections start finishing with nothing to pick up, and
+throughput falls off towards the rate of the single slowest range. So the
+degraded stretch is the last ``connections x range_size`` bytes, and this
+constant is what makes that stretch small.
+
+Measured on release 218 (18,06 GB) with the previous value of 4: the bulk of
+the file pulled 1,52 MB/s, and the last 3% pulled 0,44 MB/s with ten ranges
+left and fourteen connections idle. At 4 the degraded stretch is 24 x 188 MB =
+4,5 GB; at 32 it is 24 x 23 MB = 564 MB, eight times shorter.
+
+The cost is HTTP requests: 768 instead of 96 for an 18 GB file, about one every
+sixteen seconds over a three-hour download. EBI shapes per connection and not
+per request, so that is not what it charges for.
+"""
+
+class RangeIgnoredError(RuntimeError):
+    """The server answered a Range request with the whole entity.
+
+    Only 206 means the bytes in the body are the bytes that were asked for. A
+    200 means the server ignored the header and is sending the file from zero,
+    and writing that body at ``start`` lays the beginning of the file over the
+    middle of the destination.
+
+    Nothing downstream would catch it. The caller compares bytes written
+    against the range size, and a full body is always larger, so the range
+    "succeeds"; ``_find_holes`` then finds no holes, and the .part is renamed
+    onto the final path. The cache ends up holding a file that is the right
+    length, has no holes, and is garbage -- and the symptom is the gzip
+    "Error -3 / CRC check failed" at load time, which is the same symptom the
+    sparse .part used to produce. That one was fixed by the atomic rename; this
+    is a second, independent route to it, and it was unguarded.
+    """
+
+
 def _fetch_range(url: str, dest: str, start: int, end: int, timeout: int = 300) -> int:
     req = request.Request(url, headers={"Range": f"bytes={start}-{end}"})
     written = 0
+    want = end - start + 1
     with request.urlopen(req, timeout=timeout) as resp:
+        if resp.status != 206:
+            raise RangeIgnoredError(
+                f"{url} answered {resp.status} to bytes={start}-{end}; only 206 "
+                "means the body is the range that was asked for"
+            )
         fd = os.open(dest, os.O_WRONLY)
         try:
-            while True:
-                block = resp.read(1 << 18)
+            while written < want:
+                block = resp.read(min(1 << 18, want - written))
                 if not block:
                     break
                 os.pwrite(fd, block, start + written)
@@ -102,6 +148,12 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
     room to spare. Each range retries with exponential backoff (5s doubling to
     80s), and every retry resumes from where the previous attempt stopped, so a
     connection lost to the concurrency costs its own last chunk and nothing more.
+
+    The ranges are handed to a pool of ``connections`` threads that pull from a
+    queue, not one thread per range. A thread per range meant 96 threads for 24
+    connections, 96 seconds of staggered startup before the last one began, and
+    a tail in which most of them had already finished and could not help with
+    what was left. See :data:`RANGES_PER_CONNECTION` for what that tail cost.
     """
     head = request.Request(url, method="HEAD")
     with request.urlopen(head, timeout=60) as resp:
@@ -114,7 +166,7 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
         with open(part, "wb") as fh:
             fh.truncate(size)
 
-    n_ranges = max(1, connections * 4)
+    n_ranges = max(1, connections * RANGES_PER_CONNECTION)
     ranges = [
         (i * size // n_ranges, (i + 1) * size // n_ranges - 1)
         for i in range(n_ranges)
@@ -130,23 +182,36 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
         if s is not None:
             todo.append((s, re))
 
-    sem = threading.Semaphore(connections)
     errors: list[str] = []
     lock = threading.Lock()
+    work: queue.Queue[tuple[int, int]] = queue.Queue()
+    for item in todo:
+        work.put(item)
 
-    def worker(hstart: int, hend: int) -> None:
+    def one_range(hstart: int, hend: int) -> None:
+        """Pull [hstart, hend], retrying what a retry can fix.
+
+        A short read or a dropped connection is transient and the backoff is
+        the right answer. A server answering 200 to a Range request is not: it
+        will answer 200 again, so the six attempts would spend 155 seconds per
+        range proving something the first response already said. That one is
+        recorded and abandoned immediately.
+        """
         backoff = 5.0
         pos = hstart
         last = "no data read"
         for attempt in range(6):
-            with sem:
-                try:
-                    got = _fetch_range(url, part, pos, hend)
-                except Exception as exc:  # noqa: BLE001 - retried with backoff
-                    got = -1
-                    last = f"error: {exc}"
-                else:
-                    last = f"short read {got}/{hend - pos + 1}"
+            try:
+                got = _fetch_range(url, part, pos, hend)
+            except RangeIgnoredError as exc:
+                with lock:
+                    errors.append(f"{hstart}-{hend}: {exc}")
+                return
+            except Exception as exc:  # noqa: BLE001 - retried with backoff
+                got = -1
+                last = f"error: {exc}"
+            else:
+                last = f"short read {got}/{hend - pos + 1}"
             if got >= hend - pos + 1:
                 return
             pos += max(got, 0)
@@ -158,10 +223,24 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
         with lock:
             errors.append(f"{hstart}-{hend}: incomplete at {pos} ({last})")
 
-    threads = [threading.Thread(target=worker, args=r, daemon=True) for r in todo]
+    def puller(stagger: float) -> None:
+        time.sleep(stagger)
+        while True:
+            try:
+                hstart, hend = work.get_nowait()
+            except queue.Empty:
+                return
+            try:
+                one_range(hstart, hend)
+            finally:
+                work.task_done()
+
+    threads = [
+        threading.Thread(target=puller, args=(i * 1.0,), daemon=True)
+        for i in range(min(connections, len(todo)))
+    ]
     for t in threads:
         t.start()
-        time.sleep(1.0)  # space out requests
     for t in threads:
         t.join()
 
