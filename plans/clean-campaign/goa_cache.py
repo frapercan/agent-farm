@@ -98,7 +98,32 @@ def _find_holes(path: str, size: int) -> list[tuple[int, int]]:
     ``SEEK_HOLE`` recover those holes straight from the filesystem allocation,
     which is what lets a retried fetch resume from the bytes it already has
     instead of starting over.
+
+    ALLOCATION IS NOT CONTENT, AND THE UNIT IS A BLOCK. The kernel answers
+    SEEK_HOLE at filesystem-block granularity, so a block that was written in
+    part reads back as written in full, and the bytes after the last real write
+    inside it are indistinguishable from data. That happens on every
+    interruption: ``_fetch_range`` writes at ``start + written`` and the retry
+    resumes at ``pos += got``, an offset with no reason to be block-aligned.
+
+    Measured on 2026-09-29 on this cache's own filesystem: written cleanly up to
+    byte 3.146.962, the first hole reported was 3.149.824 -- the next block
+    boundary -- leaving **2.862 bytes** that were never written and that a
+    resume would have skipped. Up to one block of zeros per interruption,
+    injected into the middle of a gzip stream.
+
+    It was not theoretical. GOA 219's first cached copy died with "Error -3
+    while decompressing data: invalid stored block lengths", and GOA 218's
+    decoded into a stretch with no newline in it, so the loader's per-line
+    iteration accumulated one string of gigabytes and the worker was OOM-killed
+    at 25 GB, twice, at the same page. Both files had been assembled across
+    interruptions.
+
+    So each hole is widened backwards to the start of its block, which re-fetches
+    at most one block per hole and makes the partial write moot. Nothing is
+    trusted that the filesystem cannot report exactly.
     """
+    bloque = _block_size(path)
     holes: list[tuple[int, int]] = []
     fd = os.open(path, os.O_RDONLY)
     try:
@@ -117,7 +142,15 @@ def _find_holes(path: str, size: int) -> list[tuple[int, int]]:
                 break
     finally:
         os.close(fd)
-    return holes
+    return [(max(0, (hs // bloque - 1) * bloque), he) for hs, he in holes]
+
+
+def _block_size(path: str) -> int:
+    """The filesystem block SEEK_HOLE answers in, or a safe 4 KiB default."""
+    try:
+        return max(os.statvfs(path).f_bsize, 512)
+    except OSError:
+        return 4096
 
 
 def _range_resume_start(rs: int, re: int, holes: list[tuple[int, int]]) -> int | None:
