@@ -16,6 +16,7 @@ slow connection never blocks the others and retries are per-range.
 
 from __future__ import annotations
 
+import gzip
 import os
 import queue
 import re
@@ -164,6 +165,62 @@ def _range_resume_start(rs: int, re: int, holes: list[tuple[int, int]]) -> int |
     return None
 
 
+MAX_LINEA = 1 << 20
+"""Longitud maxima admisible de una linea de GAF, en bytes.
+
+Medido sobre este corpus: una linea son ~187 bytes y la mas larga vista en 16
+millones fueron 1.278. Un MiB deja ochocientas veces de margen, asi que no
+rechaza nada legitimo, y aun asi cae de inmediato en el caso que importa.
+"""
+
+
+def verify(path: str, max_linea: int = MAX_LINEA) -> None:
+    """Recorre el .gz entero y levanta si no sirve para cargar.
+
+    Comprueba DOS cosas en una pasada, porque las dos han fallado en esta
+    campana y la segunda no la caza la primera:
+
+    1. Integridad gzip. La primera copia cacheada de GOA 219 murio en el
+       worker con "Error -3 while decompressing data: invalid stored block
+       lengths", por ceros metidos en el stream.
+
+    2. Longitud de linea. GOA 218 era gzip VALIDO: los ceros decodificaron a un
+       tramo sin un solo salto de linea. El plugin del cargador itera por
+       lineas y con ``errors="replace"`` los bytes invalidos pasan como texto,
+       asi que una sola "linea" crecio a gigabytes y el kernel mato al worker a
+       25 GB, dos veces, en la misma pagina. Un fichero puede estar
+       perfectamente bien formado y seguir siendo una bomba.
+
+    PRECIO. Medido en esta maquina, 337 MB/s descomprimiendo: unos doce minutos
+    para un GAF de 20 GB comprimidos. Frente a dos horas de descarga y tres de
+    carga, es un 7% por no volver a servir basura. Y lo paga quien descarga una
+    vez, no el worker en cada lectura.
+
+    POR QUE AQUI Y NO EN EL CARGADOR. El cargador vive en otro paquete
+    (``protea_sources``) y no acota la linea; mientras siga asi, cualquier
+    fichero mal formado lo tumba. Esta funcion es la unica puerta por la que un
+    GAF entra al cache, asi que es donde la comprobacion sirve de algo.
+    """
+    salida = 0
+    linea_n = 0
+    try:
+        with gzip.open(path, "rb") as fh:
+            for linea in fh:
+                salida += len(linea)
+                linea_n += 1
+                if len(linea) > max_linea:
+                    raise ValueError(
+                        f"linea {linea_n} mide {len(linea)} bytes (maximo {max_linea}); "
+                        "un GAF legitimo no las tiene asi, el fichero esta corrupto"
+                    )
+    except ValueError:
+        raise
+    except Exception as exc:  # cualquier fallo de gzip invalida el fichero
+        raise ValueError(
+            f"gzip ilegible tras {salida / 1e9:.2f} GB y {linea_n:,} lineas: {exc}"
+        ) from exc
+
+
 def fetch(url: str, dest: str, connections: int = 24) -> None:
     """Download ``url`` to ``dest`` atomically, resumable and throttled.
 
@@ -282,6 +339,14 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
         raise RuntimeError(f"{len(errors)}/{len(todo)} ranges failed: {errors[0]}")
     if _find_holes(part, size):
         raise RuntimeError("holes remain after fetch; refusing to rename")
+    try:
+        verify(part)
+    except ValueError as exc:
+        # No se conserva el .part: la verificacion dice que lo que hay en disco
+        # no sirve, y no se sabe DONDE empieza a no servir, asi que reanudar
+        # sobre el heredaria el dano. Se empieza de cero.
+        os.remove(part)
+        raise RuntimeError(f"{url}: descargado pero no verificable, descartado -> {exc}") from exc
     os.rename(part, dest)
 
 
