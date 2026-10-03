@@ -221,6 +221,29 @@ def verify(path: str, max_linea: int = MAX_LINEA) -> None:
         ) from exc
 
 
+def _publicar(part: str, dest: str, url: str) -> None:
+    """Unica puerta por la que un .part pasa a ser un GAF servible.
+
+    Existe porque habia DOS renames y la verificacion de #321 solo cubria uno.
+    El otro es el atajo de "ya no quedan huecos", que se toma justo cuando un
+    intento anterior escribio todos los rangos y murio antes de publicar -- es
+    decir, exactamente el caso en el que lo que hay en disco es sospechoso.
+    Publicarlo sin leerlo era el agujero.
+
+    Con dos renames, la proxima comprobacion que alguien anada volvera a cubrir
+    uno solo. Con uno, no hay donde equivocarse.
+
+    Si no verifica, el .part se borra: no se sabe DONDE empieza a no servir, asi
+    que reanudar sobre el heredaria el dano. Se empieza de cero.
+    """
+    try:
+        verify(part)
+    except ValueError as exc:
+        os.remove(part)
+        raise RuntimeError(f"{url}: descargado pero no verificable, descartado -> {exc}") from exc
+    os.rename(part, dest)
+
+
 def fetch(url: str, dest: str, connections: int = 24) -> None:
     """Download ``url`` to ``dest`` atomically, resumable and throttled.
 
@@ -263,7 +286,7 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
     ]
     holes = _find_holes(part, size)
     if not holes:
-        os.rename(part, dest)
+        _publicar(part, dest, url)
         return
 
     todo: list[tuple[int, int]] = []
@@ -339,15 +362,7 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
         raise RuntimeError(f"{len(errors)}/{len(todo)} ranges failed: {errors[0]}")
     if _find_holes(part, size):
         raise RuntimeError("holes remain after fetch; refusing to rename")
-    try:
-        verify(part)
-    except ValueError as exc:
-        # No se conserva el .part: la verificacion dice que lo que hay en disco
-        # no sirve, y no se sabe DONDE empieza a no servir, asi que reanudar
-        # sobre el heredaria el dano. Se empieza de cero.
-        os.remove(part)
-        raise RuntimeError(f"{url}: descargado pero no verificable, descartado -> {exc}") from exc
-    os.rename(part, dest)
+    _publicar(part, dest, url)
 
 
 class _Handler(BaseHTTPRequestHandler):
