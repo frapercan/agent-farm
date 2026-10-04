@@ -420,5 +420,34 @@
 # recorrido. Acumular cinco millones de filas para escribirlas al final es el
 # patron que tumbo al worker en septiembre.
 
-coordinator 51fe3d372a58f9989bab2ff56cbc341efd61cfc6
+# 2026-10-04, sexto salto: 51fe3d3 -> 9d98b6d. Puerta corrida justo antes:
+# 0 jobs en QUEUED o RUNNING, 0 prediction sets. Ni migraciones ni dependencias,
+# asi que schema-applied no se mueve.
+#
+# QUE LLEVA. PROTEA#974, los puertos de los datos acotados a loopback. Postgres,
+# RabbitMQ, MinIO y la API se publicaban en 0.0.0.0 con pg_hba aceptando
+# `host all all all scram-sha-256`, asi que el 5432 de la tesis contestaba en
+# cualquier red a la que se conectase el portatil. Y MinIO dejo de estar vacio
+# hoy: desde la migracion de artefactos guarda los 79 objetos de evaluacion.
+#
+# NO SE LIGA A LA IP DE TAILSCALE, y la razon es de arranque, no de gusto.
+# docker.service no declara dependencia de tailscaled.service y las dos estan
+# habilitadas al boot, asi que un `ports: "100.124.245.1:5432:5432"` es una
+# carrera: si docker gana, tailscale0 no tiene direccion todavia, el bind falla y
+# el contenedor no arranca. En esta maquina eso es el servidor que posee TODO el
+# estado quedandose sin base de datos, en silencio, tras un reinicio. Loopback
+# esta siempre disponible y el reenvio lo hace tailscale serve, cuya config
+# persiste y se aplica cuando el demonio arranca: con tailscaled caido el nodo
+# pierde acceso, no el servidor su base.
+#
+# LA SUPERFICIE PUBLICA NO CAMBIA. ngrok tuneliza el FRONTEND en el 3000, no la
+# API, y el frontend reescribe /v1/ por localhost. El 3000 se deja en 0.0.0.0 a
+# proposito.
+#
+# LO QUE NO ARREGLA: las lecturas de la API siguen sin credencial dentro de la
+# tailnet. GET /v1/jobs devuelve 200 sin clave y sirve el registro con sus
+# payloads. Cerrarlo es crear usuarios y decidir si el frontend se autentica,
+# que es D37 (FEAT-AUTH).
+
+coordinator 9d98b6d98ca7e2685b490df7c9d522d53fca1676
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
