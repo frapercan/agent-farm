@@ -117,6 +117,15 @@ def ensure_cached(release: int) -> None:
         [sys.executable, CACHE_SCRIPT, "fetch", url, dest, "24"],
         check=True,
     )
+    # A fetch killed mid-range can leave a .part whose written prefix fools
+    # the hole-based resume into skipping an incomplete range, producing a
+    # corrupt gzip that fails mid-load hours later. Verify before use.
+    test = subprocess.run(
+        ["gzip", "-t", dest], capture_output=True, text=True, check=False
+    )
+    if test.returncode != 0:
+        os.remove(dest)
+        raise RuntimeError(f"gzip integrity check failed: {test.stderr.strip()[:200]}")
     mb = os.path.getsize(dest) / 1e6
     log(f"goa {release}: prefetched {mb:.0f} MB in {time.time() - t0:.0f}s")
 
