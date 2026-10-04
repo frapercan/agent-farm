@@ -404,5 +404,21 @@
 #
 # Los cinco estan en origin/develop.
 
-coordinator 576122df55d7cb18a168dfd3149b5f6c1eab19e7
+# 2026-10-04, quinto salto: 576122d -> 51fe3d3. Puerta corrida justo antes:
+# 0 jobs en QUEUED o RUNNING, 0 prediction sets. Ni migraciones ni dependencias.
+#
+# QUE LLEVA. PROTEA#973, el detalle proteina a proteina y delta a delta de la
+# evolucion del corpus: una fila por (transicion, proteina, aspecto, termino,
+# evento). Los agregados del salto anterior dicen cuanto se movio; esto dice
+# que se movio y a quien, que es el material sobre el que se puede trabajar.
+#
+# Dimensionado sobre lo que el job a48adc26 ya midio: 1.076.870 filas al nivel
+# de (proteina, aspecto, transicion, evento) y 5.148.173 bajando al termino,
+# con mediana de 54.350 por transicion y un maximo de 375.372.
+#
+# Se recorre con yield_per y se escribe en streaming, hasheando en el mismo
+# recorrido. Acumular cinco millones de filas para escribirlas al final es el
+# patron que tumbo al worker en septiembre.
+
+coordinator 51fe3d372a58f9989bab2ff56cbc341efd61cfc6
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
