@@ -368,5 +368,41 @@
 # Los cuatro estan en origin/develop, y 9b6e9e4 es un sha que el nodo encuentra
 # en su clon.
 
-coordinator 9b6e9e41c8cc9fc2780527ef088530043fec9f06
+# 2026-10-04, cuarto salto: 9b6e9e4 -> 576122d. Puerta del servidor corrida
+# justo antes de la edicion: 0 jobs en QUEUED o RUNNING, 0 prediction sets,
+# protea.jobs vacia con un consumidor. Ninguna migracion se mueve.
+#
+# POR QUE AHORA. El salto lleva la operacion que mide la evolucion del corpus,
+# y la campana acaba de cerrarse: 71 de 71 releases, 379.462.116 anotaciones,
+# cero duplicados. Medir esa serie con un script en bin/ dejaba las cifras sin
+# job, sin revision, sin versiones de libreria y sin sha; con la operacion
+# dentro, cada ejecucion queda atribuible como cualquier otra.
+#
+# QUE LLEVA.
+#   PROTEA#968: annotation_set.job_id, que estaba NULL en los 71. La columna
+#     nombra al job que ABRIO el set, y meta["job_ids"] lleva la cadena de
+#     intentos, porque desde #966 la carga reanuda y las filas bajo un mismo id
+#     pueden venir de varios jobs.
+#   PROTEA#969: una sesion envenenada por un flush fallido se tragaba el error
+#     que la envenono. Los dos manejadores de fallo empezaban TOCANDO la
+#     sesion, asi que levantaban PendingRollbackError antes de escribir nada y
+#     el job perdia su causa real. Le paso a la evaluacion 214->215.
+#   PROTEA#970: el panel de proteinas hacia un count(DISTINCT) sin filtro sobre
+#     379 millones de filas: 446 s medidos, con una cache de 300. Tardaba mas
+#     que su propia cache, asi que la base la recalculaba de forma permanente.
+#     El semijoin equivalente tarda 21,9 s.
+#   PROTEA#971: y la densidad por proteina sumaba las 71 releases. El panel
+#     informaba 193,68 terminos de CCO por proteina cuando el valor de una
+#     release es 2,27, con maximo 7.228 frente a 61. Los percentiles mezclaban
+#     cuantos terminos tiene una proteina con cuantas releases ha sobrevivido.
+#   PROTEA#972: la operacion analyze_annotation_evolution.
+#
+# LOS DOS DE PANEL IMPORTAN PARA LO QUE VIENE. Esas dos consultas son las que
+# hacian que agregar una release del analisis pasara de 116 a 282 segundos. Sin
+# ellas la ejecucion de la operacion baja de unas cinco horas y media a menos
+# de una.
+#
+# Los cinco estan en origin/develop.
+
+coordinator 576122df55d7cb18a168dfd3149b5f6c1eab19e7
 schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
