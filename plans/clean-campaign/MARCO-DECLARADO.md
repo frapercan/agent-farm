@@ -23,6 +23,13 @@ sale bajo este marco o no se compara con los demás.
 | papel | `valid` |
 | conjunto de IA | `b5f134b1-8c38-4894-9243-300284703ad9` |
 
+> **Los UUID de esta tabla son pre-borrado y ya no existen.** La campaña se borró
+> el 2026-09-14 y se recargó; los seis identificadores de esta sección y de las dos
+> siguientes apuntan a filas que no están. Lo que *declaran* — pivote t0, nativo del
+> viejo corregido, nativo del nuevo propio de 227, papel `valid` — sigue vigente y es
+> lo que se ha vuelto a construir. Los identificadores vivos están en
+> «La ventana reconstruida (2026-10-04)», al final.
+
 ### Por qué el pivote es el de t0
 
 El pivote fija el universo de términos en el que se compara. Un término que no
@@ -640,3 +647,51 @@ tener las dos**, y hasta ahora el marco no obligaba a elegir.
 Ese campo —el estadístico de decisión— entra en el sello, junto a los seis que ya
 estaban. Dos números no son comparables si difieren en él, igual que si difieren
 en el pivote o en la ventana.
+
+---
+
+## La ventana reconstruida (2026-10-04)
+
+El borrado del 2026-09-14 se llevó las dos variantes. Reconstruidas por la
+plataforma (`POST /v1/jobs`, `generate_evaluation_set`), con la declaración de
+arriba intacta y los identificadores de la campaña limpia:
+
+| campo | valor vivo |
+|---|---|
+| conjunto viejo | `ba9f57f7-daaf-4ade-9966-0c7b95bb9c2d` — GOA 220 |
+| conjunto nuevo | `b16ce3db-39c3-4b81-99dd-560a0f337ba6` — GOA 227 |
+| pivote y nativo del viejo | `ac200ce9-21dd-4aab-92ec-f2309785161a` — `releases/2024-03-28` |
+| nativo del nuevo (A) | `66a3dec2-bdd3-4dff-b20b-0ecc61e725ec` — `releases/2025-07-22` |
+| conjunto de IA | `4346e676-0010-45a7-b994-d5f15ac156c0` |
+| variante A | `fd0314d8` — job `49bddc8c` |
+| variante B | `43b6b9e7` — job `11b084d8` |
+
+**Los dos enlaces de ontología salieron ya correctos de la recarga**: 220 apunta a
+`releases/2024-03-28` y 227 a `releases/2025-07-22`. La corrección del phantom gap no
+hubo que repetirla.
+
+### Reproduce el marco
+
+| | declarado | reconstruido | diferencia |
+|---|---|---|---|
+| **A** proteínas NK / LK / PK | 2.413 / 2.585 / 19.836 | 2.415 / 2.585 / 19.837 | +2 / 0 / +1 |
+| **A** delta proteínas | 23.736 | 23.739 | +3 |
+| **A** retiradas | 426.385 | 426.443 | +58 |
+| **B** proteínas NK / LK / PK | 2.404 / 2.564 / 9.768 | 2.406 / 2.564 / 9.768 | +2 / 0 / 0 |
+| **B** delta proteínas | 13.753 | 13.755 | +2 |
+| **B** retiradas | 115.436 | 115.443 | +7 |
+| conocido en t0 (las dos) | 3.847.723 | 3.848.104 | +381 |
+
+Las diferencias son de partes por diez mil y van todas en el mismo sentido: la
+recarga trajo unas pocas filas más (el corpus 220 tiene ahora 5.317.938 anotaciones
+frente a las 5.317.051 que registraba el marco). El invariante que el marco predecía
+—`conocido en t0` **idéntico entre las dos variantes**— se cumple exactamente.
+
+Las dos salen en modo `reconciled`. El defecto del primer intento de B, que guardó un
+conjunto vacío con modo `same_snapshot` y sin error, no ha reaparecido.
+
+### Qué sigue sin construirse
+
+La ventana de competición `227 -> 230` continúa sin construir, por la misma razón de
+antes: se construye cuando haya una decisión que defender, con el waiver declarado, y
+una sola vez.
