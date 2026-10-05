@@ -525,5 +525,56 @@
 # fase 1 no puede empezar hasta que las dos filas de api_key vuelvan a existir
 # en protea. Es una decision del investigador, no un problema de codigo.
 
-coordinator e259c085cbd54e4af6e3360758c942bf3f2a3235
-schema-applied 1709242ac897bad1638d610f8b2da6b5e506a790
+# 2026-10-05, noveno salto: e259c08 -> fd71843. Puerta corrida justo antes:
+# 0 jobs en QUEUED o RUNNING y 0 prediction sets.
+#
+# SEGUNDO SALTO QUE MUEVE schema-applied, y aqui si tiene que moverse. Lleva la
+# migracion d1fc5b3c53f7, y protea-node-sync.sh:142-148 refuse arrancar el nodo
+# si el salto toca alembic/versions/* y `schema-applied` no es IGUAL al
+# coordinador nuevo. Aplicada en el servidor antes de escribir esta linea, y
+# comprobada:
+#
+#     alembic_version                      d1fc5b3c53f7
+#     uq_pga_annotation_identity           existe
+#     uq_pga_set_protein_term_evidence     retirada
+#
+# QUE LLEVA, 1 de 3. PROTEA#980: el universo sigue las fusiones. El endpoint
+# /uniprotkb/accessions casa SOLO accesiones primarias, asi que una fusionada no
+# se devuelve y UniProt la cuenta igual en X-Total-Results: la respuesta dice
+# "7 resultados" con el cuerpo vacio. Sobre GOA 156, de 10.791 accesiones fiables
+# no devueltas, una muestra de 600 resolvio el 18,2% como fusiones. Importa mas
+# por la identidad que por la cobertura: si GOA usaba P30456 en 2016 y P04439 hoy,
+# una serie sobre accesiones ve una desaparicion y una aparicion donde hay UNA
+# proteina. Se guardan dos filas que comparten sequence_id, y como los embeddings
+# se indexan por Sequence y no por Protein, eso da UN embedding y UN vecino.
+# Lleva tambien el filtro por DB Object Type (la columna 11 del GAF) en lugar de
+# la regex de accesion, y el registro en artefacto de lo que no se resuelve.
+#
+# QUE LLEVA, 2 de 3. PROTEA#982: la identidad de una anotacion conserva el
+# qualifier y la referencia. La restriccion anterior colapsaba el 29,2% de las
+# filas fiables de GOA 156, y con ello 358 pares que perdian el NOT del todo. Es
+# un INDICE sobre coalesce y no una UniqueConstraint mas ancha porque en Postgres
+# NULL no entra en conflicto con NULL, y el qualifier esta vacio en el 99,5% de
+# las filas: una restriccion habria dejado de deduplicar justo ahi y cada
+# reintento habria duplicado el corpus. Comprobado sobre una base de prueba con la
+# estructura de produccion: tres filas que antes colapsaban en una entran como
+# tres, y el reintento devuelve INSERT 0 0.
+#
+# QUE LLEVA, 3 de 3. PROTEA#981: borrar un conjunto no vaciaba la lista cacheada
+# cinco minutos, que es la superficie con la que se vigila una campana de 75
+# cargas.
+#
+# LO QUE EL SOBREMESA DEBE SABER. Esta migracion no toca ninguna tabla que el
+# nodo escriba: el nodo calcula embeddings y publica, y protein_go_annotation la
+# escribe el coordinador. Aun asi el nodo tiene que seguir el salto, porque el
+# catalogo de operaciones cambia. En esa maquina el torch SI es el de CUDA: la
+# instalacion va con pip --no-deps y nunca con poetry install.
+#
+# EL ESTADO DEL CORPUS AL DECLARAR ESTO. protein_go_annotation a 0 filas, que es
+# por lo que la migracion no necesito backfill. protein con 106.345 de la primera
+# pasada de la 156, que se esta relanzando sobre este codigo para que recoja las
+# fusiones: una release cargada antes de d1fc5b3c53f7 quedaria colapsada y no
+# seria comparable con una cargada despues.
+
+coordinator fd718437bc8f9116627a0525d768c5d2d6c864a3
+schema-applied fd718437bc8f9116627a0525d768c5d2d6c864a3
