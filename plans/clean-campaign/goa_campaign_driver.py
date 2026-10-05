@@ -358,7 +358,19 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
                 "operation": "ensure_goa_universe",
                 "queue_name": "protea.jobs",
                 "description": f"fase 1, release {release}",
-                "payload": {"gaf_url": gaf_url, "dry_run": False, "timeout_seconds": 3600},
+                "payload": {
+                    "gaf_url": gaf_url,
+                    "dry_run": False,
+                    "timeout_seconds": 3600,
+                    # Declarado aqui aunque sea el valor por defecto de la
+                    # operacion. El defecto que obligo a tirar la campana
+                    # anterior fue un criterio que viajaba en el codigo y no
+                    # en el payload: la fila del job decia "reviewed:true" en
+                    # ningun sitio, y no se podia reconstruir con que universo
+                    # se habia medido. Escribirlo hace que cada una de las 75
+                    # filas lleve el criterio consigo.
+                    "evidence_scope": "curated",
+                },
             },
         )
         job_id = str(job["id"])
