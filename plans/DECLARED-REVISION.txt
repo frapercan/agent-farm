@@ -490,5 +490,40 @@
 # los conjuntos de evaluacion existentes dejan de reproducir sus cuentas. Las
 # dos variantes de la ventana de validacion hay que rehacerlas.
 
-coordinator 1709242ac897bad1638d610f8b2da6b5e506a790
+# 2026-10-05, octavo salto: 1709242 -> e259c08. Puerta corrida justo antes:
+# 0 jobs en QUEUED o RUNNING -- de hecho la tabla job esta a 0 entera -- y 0
+# prediction sets. No toca alembic/versions/*, asi que `schema-applied` NO se
+# mueve y se queda en 1709242: la migracion aplicada sigue siendo 3cd5f76d282f.
+#
+# QUE LLEVA, 1 de 2. PROTEA#978: el universo sale del GAF. El corpus de toda la
+# campana limpia era reviewed-only por un "search_criteria": "reviewed:true" en
+# un payload de insert_proteins del 2026-09-15, que no estaba declarado en
+# ningun sitio. Medido contra UniProtKB con los trece codigos de lafa: 93.526
+# reviewed contra 149.774 en total, asi que unas 56.000 proteinas con etiquetas
+# experimentales curadas nunca entraron. ensure_goa_universe las trae leyendo
+# cada GAF, y las 75 pasadas de universo van ANTES de la primera carga de
+# anotaciones: intercalar por release truncaria la historia de toda proteina
+# admitida tarde. Lleva tambien el lock de protea-sources a cb4f2053, por el
+# filtro de linea cruda del plugin (protea-sources#35): la prueba de evidencia
+# corre sobre la columna cruda antes de construir el registro, y son 11,5
+# minutos por release contra 4,4.
+#
+# QUE LLEVA, 2 de 2. PROTEA#979: la API se reabria a toda la red al reiniciarse.
+# El #974 la movio a loopback en deploy/systemd/protea-api.service, pero en este
+# servidor NO hay unit de systemd instalada: la arranca scripts/manage.sh, y sus
+# dos sitios de lanzamiento seguian en --host 0.0.0.0. Medía limpio solo porque
+# nada la habia reiniciado desde el cambio.
+#
+# LO QUE EL SOBREMESA DEBE SABER DE ESTE SALTO. El plugin cambia de rev, asi que
+# el nodo tiene que reinstalarlo. En esa maquina el torch SI es el de CUDA, asi
+# que la instalacion va con pip --no-deps y nunca con poetry install. Aqui el
+# torch es 2.12.0+cpu y no habia nada que proteger.
+#
+# LO QUE ESTE SALTO NO DESBLOQUEA. La base de produccion tiene 0 claves de API
+# (protea_old tiene las dos). Las rutas con require_role(ROLE_OPERATOR) --entre
+# ellas POST /v1/jobs y el borrado de conjuntos-- responden 401, asi que la
+# fase 1 no puede empezar hasta que las dos filas de api_key vuelvan a existir
+# en protea. Es una decision del investigador, no un problema de codigo.
+
+coordinator e259c085cbd54e4af6e3360758c942bf3f2a3235
 schema-applied 1709242ac897bad1638d610f8b2da6b5e506a790
