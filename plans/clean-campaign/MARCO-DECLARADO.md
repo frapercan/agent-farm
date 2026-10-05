@@ -857,6 +857,67 @@ se mueve no fija los bytes. La release leída es **2026_03**.
 Lo trae `insert_proteins` con `release_fasta_urls` (PROTEA#986,
 protea-sources#36).
 
+### La serie son 802 GB, no 247, y eso decide el cache (2026-10-05)
+
+La fase 1 guardaba los 75 GAF para que la fase 2 los reusara, apoyándose en una
+cifra escrita en el driver: «the whole series is 247 GB against 654 GB free».
+**Esa cifra está mal por 3,2x.** Medido con `HEAD` sobre las 75 releases:
+
+| | |
+|---|---|
+| serie completa | **802 GB** |
+| release más pequeña | 156, con 3,3 GB |
+| release más grande | 226, con 22,7 GB |
+| libre en el disco | 618 GB |
+| ya en caché | 41 GB |
+| faltaba bajar | 761 GB |
+
+El disco se habría llenado bajando la release **182, la 49ª de las 75**, matando
+la fase 1 a dos tercios. Así que cada GAF se borra tras su pasada, igual que hace
+la fase 2, y el pico de disco pasa a ser **una** release.
+
+Consecuencia aceptada: cada release se baja **dos veces** a lo largo de las dos
+fases, unas 22 h de descarga por fase. Es el suelo del diseño de dos fases, no un
+desperdicio que se pueda optimizar, y conviene saber por qué.
+
+#### Por qué un caché filtrado no sirve, medido
+
+La idea obvia es guardar un filtrado en vez del bruto. **No funciona**, y queda
+medido para que no se reintente.
+
+La fase 2 guarda **toda** fila cuyo accession esté en el universo y cuyo GO esté
+en el snapshot. Son sus dos únicos filtros: no filtra por código de evidencia, así
+que el `IEA` entra. Y el universo no se conoce hasta que la fase 1 termina, de
+modo que un filtro aplicado durante la fase 1 sólo puede usar lo curado de esa
+release.
+
+Medido sobre la 156 contra un universo de 1.084.103 miembros:
+
+| | filas |
+|---|---|
+| del universo en la 156 | 7.997.773 |
+| de ellas curadas (no IEA) | 1.167.668 |
+| de ellas IEA | 6.830.105 |
+
+| | accesiones |
+|---|---|
+| con filas en la 156 | 648.048 |
+| con alguna curada **en** la 156 | 131.157 |
+| **sin** ninguna curada en la 156 | 516.891 |
+
+Un filtro «curado en esta release» tiraría **5.387.271 filas que la fase 2
+necesita: el 67,4%**. Dos tercios del corpus.
+
+El filtro **seguro** —accession en el universo completo— sí deja algo pequeño:
+esas 7.997.773 filas son el 2,85% de los 280.922.746 renglones de la 156, unos
+23 GB para la serie entera. Pero sólo se puede calcular **después** de la fase 1,
+y volver a leer cada bruto para aplicarlo ya es la segunda descarga: no ahorra
+nada frente a borrar.
+
+Y como la fase 1 desciende, el universo es más pequeño en las primeras pasadas,
+que son justo la ventana de evaluación 220→227. La pérdida se concentraría donde
+más duele.
+
 ## Qué lleva de verdad la base nueva
 
 La campaña anterior se guardó como `protea_old` (120 GB) y se puso una `protea`

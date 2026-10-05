@@ -297,10 +297,17 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     snapshot, so the load_ontology_snapshot step and the whole ``ont_pending``
     dance do not apply.
 
-    The GAF is KEPT. Phase 2 reads the same files, and the whole series is
-    247 GB against 654 GB free, so it is downloaded once and reused. The phase 2
-    loop removes each GAF after loading it, which is correct there and would
-    force 75 re-downloads here.
+    The GAF is REMOVED after its pass, like phase 2 does. An earlier version
+    kept all 75 so phase 2 could reuse them, on the premise that "the whole
+    series is 247 GB against 654 GB free". That premise was wrong by 3.2x:
+    measured with HEAD over all 75 releases, the series is 802 GB (the largest
+    single release is 226 at 22.7 GB), against 618 GB free. Keeping them filled
+    the disk at release 182, the 49th of the queue, and killed the run two
+    thirds through.
+
+    So each release is downloaded twice across the two phases, and that is the
+    floor, not a waste to optimise away. Phase 1 cannot leave behind a filtered
+    file that phase 2 could use instead: see the comment at the removal.
 
     Sequential, not MAX_IN_FLIGHT. Two universe passes at once would both ask
     UniProt for accessions, and the batch endpoint is the slow part: release 156
@@ -387,6 +394,43 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
             log(f"universe {release}: FAILURE ({status}) err={finished.get('error_message')}")
             continue
         log(f"universe {release}: ok {json.dumps(job_result(api, job_id), ensure_ascii=False)}")
+        # Borrado tras la pasada. La version anterior guardaba los 75 GAF para
+        # que la fase 2 los reusara, apoyandose en "the whole series is 247 GB
+        # against 654 GB free". Esa cifra esta mal por 3,2x: medida con HEAD
+        # sobre las 75, la serie son 802 GB, y quedaban 618 GB libres. El disco
+        # se llenaba bajando la release 182, la 49a de la cola, y la fase 1
+        # moria a dos tercios con el disco a cero.
+        #
+        # Guardar un filtrado en vez del bruto NO resuelve esto, y queda escrito
+        # con su medicion para que no se reintente. La fase 2 guarda TODA fila
+        # cuyo accession este en el universo y cuyo GO este en el snapshot, sin
+        # filtrar por codigo de evidencia: el IEA entra. Y el universo no se
+        # conoce hasta que la fase 1 termina, asi que un filtro aplicado durante
+        # la fase 1 solo puede usar lo curado de esa release.
+        #
+        # MEDIDO sobre la 156 contra un universo de 1.084.103 miembros:
+        #   filas del universo en la 156      7.997.773
+        #     curadas (no IEA)                1.167.668
+        #     IEA                             6.830.105
+        #   accesiones con filas en la 156      648.048
+        #     con alguna curada EN la 156       131.157
+        #     sin ninguna curada en la 156      516.891
+        #   un filtro "curado en esta release" tiraria 5.387.271 filas que la
+        #   fase 2 necesita, el 67,4%. Dos tercios del corpus.
+        #
+        # El filtro SEGURO -- accession en el universo completo -- si deja algo
+        # pequeno: esas 7.997.773 filas son el 2,85% de los 280.922.746 lineas
+        # de la 156, o sea unos 23 GB para la serie entera. Pero solo se puede
+        # calcular DESPUES de la fase 1, y leer cada bruto otra vez para
+        # aplicarlo ya es la segunda descarga. No ahorra nada frente a borrar.
+        #
+        # Ademas la fase 1 desciende, asi que el universo es mas pequeno en las
+        # primeras pasadas, que son justo la ventana de evaluacion 220-227: la
+        # perdida se concentraria donde mas duele.
+        try:
+            os.remove(cache_path(release))
+        except OSError:
+            pass
 
     log(f"phase 1 finished: {len(pending) - failures} ok, {failures} failed")
     return 1 if failures else 0
