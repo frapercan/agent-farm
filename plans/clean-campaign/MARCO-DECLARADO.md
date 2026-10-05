@@ -775,9 +775,31 @@ nueva en producción con el mismo nombre. **No es una base vacía.** Medido:
 | `job` | **0** | nada de lo anterior tiene job detrás |
 
 El md5 del conjunto de accesiones de `protein` es **idéntico** al de
-`protea_old`, y su `created_at` es el del `insert_proteins` del 2026-09-15. Que
-el universo arranque con las reviewed es lo declarado arriba; que no haya job que
-lo diga, no.
+`protea_old`, y su `created_at` es el del `insert_proteins` del 2026-09-15.
+
+**Esas filas se vacían, y la razón es la regla de esta sección.** La redacción
+anterior de este párrafo decía que arrancar con las reviewed «es lo declarado
+arriba». Era un error de lectura: la declaración describe la **composición** del
+universo, y eso no es permiso para heredar filas que casualmente coinciden. La
+procedencia forma parte de la declaración. Con 617.103 filas copiadas y sin job,
+la pregunta «¿cuál era el corpus en la release 156?» no tiene respuesta —no se
+puede decir cuándo entró cada proteína— y entonces ningún número se puede leer
+frente a los leakages.
+
+Así que el orden es:
+
+1. `protein` y `sequence` vacías. Sus dependientes
+   (`protein_go_annotation`, `interpro_annotation`, `sequence_embedding`,
+   `query_set_entry`) están todos a cero, de modo que el borrado no arrastra nada.
+2. Las 75 pasadas de `ensure_goa_universe` construyen el universo desde los GAF.
+   **Cada proteína entra con un job que dice qué release la admitió**, y eso es lo
+   que hace legible cualquier corte temporal posterior.
+3. Las reviewed actuales, si se quieren, son **un paso declarado aparte y
+   posterior**, con su propio job. No una herencia.
+
+Consecuencia inmediata para las cifras del dry run de la 156: `already_present`
+pasa de 72.445 a 0 y `missing` de 44.691 a 117.136, que es el conjunto fiable
+completo de esa release.
 
 **Y el denominador queda resuelto**: 617.103 total = 575.748 canónicas + 41.355
 isoformas. Son las dos cifras que se venían usando sin distinguir, y el informe
