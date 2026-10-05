@@ -743,11 +743,16 @@ declarar — y lo declarado queda aquí, no en un payload.
 
 ## El universo, ahora declarado
 
-**Todas las fiables de cualquier taxonomía, más las reviewed actuales.**
+**Todo lo curado de cualquier taxonomía, más las reviewed actuales.**
 
-- "Fiables" son los trece códigos de lafa: los once experimentales de GO más
-  `IC` y `TAS`. No los ocho del CAFA clásico, que omiten los cinco de alto
-  rendimiento.
+- "Curado" es **toda anotación cuyo código no es `IEA`**. `IEA` es el único
+  código automático de GO, así que el complemento es exactamente lo que ha
+  pasado por manos de un curador, por el mecanismo que sea.
+- Esto **no** es el régimen de evidencia de la verdad, que sigue siendo `lafa`
+  (los trece códigos). La tabla de constantes de campaña de arriba no cambia.
+  Son dos criterios distintos porque cumplen dos papeles distintos, y
+  confundirlos fue el defecto que hizo falta corregir: ver
+  «El criterio pasó de fiable a curado (2026-10-05)» más abajo.
 - Las filas `NOT` cuentan. Un NOT es conocimiento curado y escaso, y
   `_reconcile_not_side` ya lo propaga y lo resta. Una proteína cuya única
   anotación fiable es un NOT pertenece al universo.
@@ -758,6 +763,99 @@ declarar — y lo declarado queda aquí, no en un payload.
 Lo construye `ensure_goa_universe` (PROTEA#978). **Las 75 pasadas de universo van
 antes de la primera carga de anotaciones**: intercalar por release truncaría la
 historia de toda proteína admitida tarde.
+
+### El criterio pasó de fiable a curado (2026-10-05)
+
+La declaración anterior admitía al universo sólo las proteínas con alguna de las
+trece evidencias de lafa. Eso mezclaba dos papeles que quieren criterios
+opuestos:
+
+- **Los objetivos** de evaluación quieren el criterio estricto. Una proteína se
+  puntúa contra su verdad, y la verdad es `lafa`. Eso no se toca.
+- **El banco** de donantes quiere el criterio amplio. Un donante no se puntúa:
+  aporta vecindad. Excluirlo por tener «sólo» una evidencia curada de otro tipo
+  no protege ninguna medición, nada más empobrece el banco.
+
+La salida no es elegir uno. Es **admitir ancho y guardar `evidence_code` en cada
+fila**, de modo que el nivel se escoge al analizar y no al cargar. Una proteína
+admitida con `ISS` puede ser donante sin ser nunca objetivo, y la consulta que
+construye los objetivos sigue filtrando por los trece.
+
+Lo que cuesta, medido sobre la release 156 cacheada:
+
+| criterio | proteínas en la 156 | unión con las reviewed de hoy |
+|---|---|---|
+| fiable (los 13) | 117.136 | 620.439 |
+| curado (no IEA) | 554.328 | **1.002.048** |
+
+El cambio de criterio añade **381.609 proteínas a la unión, sólo con la 156**.
+Desglose de qué aporta cada código, contado en proteínas que no cubren ya los
+trece:
+
+| código | filas en la 156 | proteínas nuevas |
+|---|---|---|
+| `IBA` | 1.258.697 | 304.066 |
+| `ND` | 229.481 | 93.835 |
+| `ISS` | 267.549 | 36.035 |
+| `ISM` | 27.267 | 11.509 |
+| `ISO` | 93.721 | 5.117 |
+| `ISA` | 13.181 | 4.330 |
+| `RCA` | 6.254 | 3.347 |
+| `NAS` | 27.196 | 1.746 |
+| resto (`IGC`, `IKR`, `IRD`) | 845 | 279 |
+
+Esa columna **no suma** el total: cada código se contó por separado frente a los
+trece, así que una proteína que tiene `IBA` e `ISS` y nada más aparece en las dos
+filas. Suma 460.264 contra las 437.192 reales de diferencia en la 156; el exceso
+de 23.072 es el solape entre códigos. Las cifras que se comparan son las de la
+tabla anterior, no las de esta.
+
+**`IBA` entra, y es una decisión consciente**, no un descuido. Es el 80% de lo
+que añade el cambio, y es el caso más débil: viene de PAINT, donde la curación
+está en un nodo ancestral del árbol y la propagación al descendiente es
+mecánica. Recomendé excluirlo. El investigador decidió admitirlo el 2026-10-05
+(«está bien que dupliquemos el corpus»), y la razón que lo sostiene es la de
+arriba: un donante no se puntúa, así que una evidencia propagada que resulte
+pobre degrada la vecindad pero no contamina ninguna verdad. El coste real cae en
+los embeddings, que se calculan por secuencia y se multiplican por las ocho
+configuraciones de la etapa 1.
+
+Queda **declarado y medible**: como `evidence_code` está en cada fila, la
+pregunta «¿cambia algo si se quita `IBA`?» se responde después con una consulta,
+sin recargar nada. Si alguna vez se responde, el resultado va aquí.
+
+El campo que lo fija es `evidence_scope` de `ensure_goa_universe`, con dos
+niveles: `curated` (el declarado) y `reliable` (los trece). **Por defecto vale
+`curated`**, así que el valor declarado es el que sale sin pedirlo.
+
+### De dónde salen las reviewed, y cómo quedan fijadas (2026-10-05)
+
+El paso de las reviewed actuales dejó de ser un recorrido por cursor contra la
+API de UniProt. Lo es ahora una lectura de los ficheros planos del directorio de
+release, y el motivo es que el recorrido no terminaba: UniProt lo estrangula de
+forma creciente. Medido sobre el job que corría, 66 registros/s en las primeras
+50 páginas, 17 en las 30 siguientes y unos 4 hacia la página 80, lo que dejaba el
+recorrido completo entre 10 y 44 horas. Se canceló por la plataforma.
+
+Los dos ficheros son la misma consulta materializada, y eso está **comprobado,
+no supuesto**: `uniprot_sprot.fasta.gz` trae 575.748 entradas canónicas, que es
+exactamente el recuento de `reviewed:true` medido por separado contra la API.
+Con su compañero `_varsplic` son 617.103 registros (575.748 canónicas más 41.355
+isoformas) en 22,5 segundos y dos peticiones HTTP.
+
+| fichero | registros | md5 |
+|---|---|---|
+| `uniprot_sprot.fasta.gz` | 575.748 | `bc9d398533e6df582b563c6c03093bd0` |
+| `uniprot_sprot_varsplic.fasta.gz` | 41.355 | `89523edbab859c132949bb25dd91b4eb` |
+
+Los dos md5 coinciden con los publicados en el `RELEASE.metalink` del
+directorio, y **van al log del job**. Hacen falta ahí porque
+`previous_releases` no publica la release vigente (comprobado: 404 para
+`release-2026_03`), así que hoy `current_release` es la única ruta y una URL que
+se mueve no fija los bytes. La release leída es **2026_03**.
+
+Lo trae `insert_proteins` con `release_fasta_urls` (PROTEA#986,
+protea-sources#36).
 
 ## Qué lleva de verdad la base nueva
 
@@ -824,7 +922,7 @@ Hay además una razón independiente para rehacer las dos variantes: PROTEA#976
 cambió la verdad de MFO (la regla del binding), así que las cuentas de las
 variantes de antes ya no reproducían de todos modos.
 
-## Lo que sigue bloqueado, y no por código
+## Lo que estuvo bloqueado por las claves, y ya no (resuelto 2026-10-05)
 
 La base nueva tiene **0 claves de API**; `protea_old` tiene las dos. Las rutas
 con `require_role(ROLE_OPERATOR)` —entre ellas `POST /v1/annotations/sets/load-goa`
@@ -832,3 +930,7 @@ y el borrado de conjuntos— responden 401. Hasta que las dos claves vuelvan a
 existir en `protea`, la plataforma no puede despachar nada, y por tanto la fase 1
 no puede empezar. Las dos plantillas siguen en `~/.secrets/`, así que restaurar
 las filas conserva también la clave que ya tiene el sobremesa.
+
+**Resuelto el 2026-10-05**: las dos filas de `api_key` se restauraron desde
+`protea_old` y la plataforma despacha. La clave del sobremesa se conservó, así
+que el nodo sigue uniéndose a la cola sin tocarlo.
