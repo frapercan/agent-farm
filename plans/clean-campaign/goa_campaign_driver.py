@@ -305,15 +305,38 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     Sequential, not MAX_IN_FLIGHT. Two universe passes at once would both ask
     UniProt for accessions, and the batch endpoint is the slow part: release 156
     scanned in 4,3 min and then spent longer than that fetching 117.136
-    accessions in batches of a thousand. Overlapping the next DOWNLOAD with the
-    current pass is what pipelines here, and ensure_cached already does that by
-    blocking only on its own release.
+    accessions in batches of a thousand. NOTE that ``ensure_cached`` BLOCKS, so
+    download and pass do not overlap: the measured cycle is 423 s of prefetch plus
+    375 s of pass, and the releases grow from 3,4 GB at the old end to 19 GB at the
+    new one.
+
+    DESCENDING, newest first. The universe is a union, so the final set is the
+    same either way, but the order buys two things.
+
+    A partial run is useful. The evaluation window is GOA 220 -> 227, both at the
+    new end, so descending covers it within the first fifteen passes. Ascending
+    leaves 2016 done and the window untouched, which validates nothing.
+
+    It separates recoverable from unrecoverable. Measured by sampling each
+    release's reliable accessions against today's UniProt: release 235 has 0,00%
+    unavailable, 194 has 7,75% and 160 has 7,95%. So the newest pass fetches the
+    bulk with no loss, and every older release adds mostly what cannot be fetched
+    at all -- which concentrates the unrecoverable tail in the late passes instead
+    of smearing it across all 75.
+
+    WHAT DESCENDING BREAKS, and why it does not matter here: "the release whose
+    pass admitted this protein" stops meaning "the release it first appeared in" --
+    it would be 235 for nearly everything. That is why ``protein`` stores
+    ``date_created`` from UniProt instead of a ``first_release`` column: the
+    temporal question is answered from the source's own date, not from the order we
+    happened to run in.
     """
     done = universe_done(api)
     if done:
         log(f"universe already done (skipped): {sorted(done)}")
-    pending = [r for r, _ in plan if r not in done]
-    log(f"phase 1: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
+    # Descendiente: ver el docstring. `plan` llega ascendente de parse_plan.
+    pending = [r for r, _ in reversed(plan) if r not in done]
+    log(f"phase 1 descending: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
 
     base = serve_base()
     ensure_cache_server()
