@@ -525,7 +525,7 @@
 # fase 1 no puede empezar hasta que las dos filas de api_key vuelvan a existir
 # en protea. Es una decision del investigador, no un problema de codigo.
 
-# 2026-10-05, noveno salto: e259c08 -> fd71843. Puerta corrida justo antes:
+# 2026-10-05, noveno salto: e259c08 -> 6c3c9bd. Puerta corrida justo antes:
 # 0 jobs en QUEUED o RUNNING y 0 prediction sets.
 #
 # SEGUNDO SALTO QUE MUEVE schema-applied, y aqui si tiene que moverse. Lleva la
@@ -560,9 +560,24 @@
 # estructura de produccion: tres filas que antes colapsaban en una entran como
 # tres, y el reintento devuelve INSERT 0 0.
 #
-# QUE LLEVA, 3 de 3. PROTEA#981: borrar un conjunto no vaciaba la lista cacheada
+# QUE LLEVA, 3 de 4. PROTEA#981: borrar un conjunto no vaciaba la lista cacheada
 # cinco minutos, que es la superficie con la que se vigila una campana de 75
 # cargas.
+#
+# QUE LLEVA, 4 de 4. PROTEA#983: un demerge no tiene una identidad. `C8VQ65` es
+# Inactive con mergeDemergeTo [P9WEV8, P9WEV9] -- una accesion PARTIDA en dos
+# entradas-- y tumbo la pasada de la 156 con duplicate key tras 317 fusiones
+# correctas. El choque de claves era el sintoma; el fondo es que una accesion
+# partida no apunta a UNA proteina, y la secuencia que heredaria seria la de una
+# de dos distintas elegida por el orden de la respuesta. Los demerges se registran
+# con sus destinos y se dejan sin resolver.
+#
+# LA PASADA DE LA 156, CERRADA CON ESTE CODIGO. 280.922.738 filas, 117.136
+# accesiones fiables, malformed_skipped 0 --las 5.731 de antes son ahora
+# complex 3.291 y rna 2.440 contados por tipo--, 10.474 ausentes de las que el
+# endpoint de lote devolvio 0, 1.496 resueltas como fusion, 60 demerges y 8.978
+# irrecuperables, estas ultimas con sus nombres en un artefacto. La base queda con
+# 108.532 proteinas, 1.813 alias de fusion y 33.900 no reviewed.
 #
 # LO QUE EL SOBREMESA DEBE SABER. Esta migracion no toca ninguna tabla que el
 # nodo escriba: el nodo calcula embeddings y publica, y protein_go_annotation la
@@ -576,5 +591,5 @@
 # fusiones: una release cargada antes de d1fc5b3c53f7 quedaria colapsada y no
 # seria comparable con una cargada despues.
 
-coordinator fd718437bc8f9116627a0525d768c5d2d6c864a3
-schema-applied fd718437bc8f9116627a0525d768c5d2d6c864a3
+coordinator 6c3c9bd12c8ae486fb30c9c806e0f8f18cc5c74d
+schema-applied 6c3c9bd12c8ae486fb30c9c806e0f8f18cc5c74d
