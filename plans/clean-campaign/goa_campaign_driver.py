@@ -266,6 +266,28 @@ def universe_done(api: Api) -> set[int]:
     return found
 
 
+def job_result(api: Api, job_id: str) -> dict:
+    """The operation's result dict, which lives ONLY in the job.succeeded event.
+
+    There is no ``result`` column on ``job`` and the API's job detail does not
+    expose one; the phase 2 loop logs ``findings``, which ``ensure_goa_universe``
+    leaves NULL. Reading ``job["result"]`` therefore logs ``null`` for a pass that
+    worked, which is the exact shape of silence this campaign keeps paying for:
+    the numbers that justify the run would not be in the log.
+    """
+    try:
+        events = api.call("GET", f"/v1/jobs/{job_id}/events")
+    except Exception:  # noqa: BLE001 - logging must not fail the release
+        return {}
+    for ev in items(events):
+        if ev.get("event") == "ensure_goa_universe.done":
+            return ev.get("fields") or {}
+    for ev in items(events):
+        if ev.get("event") == "job.succeeded":
+            return (ev.get("fields") or {}).get("result") or {}
+    return {}
+
+
 def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     """Phase 1: grow the protein universe from every GAF, before any load.
 
@@ -329,7 +351,7 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
             failures += 1
             log(f"universe {release}: FAILURE ({status}) err={finished.get('error_message')}")
             continue
-        log(f"universe {release}: ok {json.dumps(finished.get('result'), ensure_ascii=False)}")
+        log(f"universe {release}: ok {json.dumps(job_result(api, job_id), ensure_ascii=False)}")
 
     log(f"phase 1 finished: {len(pending) - failures} ok, {failures} failed")
     return 1 if failures else 0

@@ -94,3 +94,44 @@ class TestUnDryRunNoCuentaComoHecho:
 
         with patch.object(d.subprocess, "run", lambda *a, **k: _Out()):
             assert d.universe_done(object()) == {156, 235}
+
+
+class TestElResultadoSeRegistra:
+    """La tabla job NO tiene columna result y la API no la expone; el resultado
+    vive solo en el evento. Leer job['result'] registra null para una pasada que
+    funciono, y entonces las cifras que justifican la corrida no estan en el log.
+    """
+
+    def test_lo_saca_del_evento_done(self):
+        d = _driver()
+
+        class _Api:
+            def call(self, verb, path, body=None):
+                return [
+                    {"event": "job.started", "fields": {}},
+                    {"event": "ensure_goa_universe.done",
+                     "fields": {"proteins_inserted": 106345, "not_retrievable": 10791}},
+                ]
+
+        got = d.job_result(_Api(), "abc")
+        assert got["proteins_inserted"] == 106345
+        assert got["not_retrievable"] == 10791
+
+    def test_cae_al_job_succeeded_si_no_hay_done(self):
+        d = _driver()
+
+        class _Api:
+            def call(self, verb, path, body=None):
+                return [{"event": "job.succeeded", "fields": {"result": {"proteins_inserted": 7}}}]
+
+        assert d.job_result(_Api(), "abc") == {"proteins_inserted": 7}
+
+    def test_un_fallo_al_leer_eventos_no_tumba_la_release(self):
+        """El log es log: si los eventos no se pueden leer, la release sigue."""
+        d = _driver()
+
+        class _Api:
+            def call(self, verb, path, body=None):
+                raise RuntimeError("red caida")
+
+        assert d.job_result(_Api(), "abc") == {}
