@@ -695,3 +695,118 @@ conjunto vacío con modo `same_snapshot` y sin error, no ha reaparecido.
 La ventana de competición `227 -> 230` continúa sin construir, por la misma razón de
 antes: se construye cuando haya una decisión que defender, con el waiver declarado, y
 una sola vez.
+
+---
+
+# El tercer reinicio, y la regla que lo evita la próxima vez (2026-10-05)
+
+## La regla
+
+**Los conjuntos se declaran después de extraer y comprobar, nunca antes.**
+
+Esta campaña ha reiniciado tres veces. Las dos primeras por datos corruptos. La
+tercera por algo peor: el corpus estaba bien cargado y era el **alcance** lo que
+estaba mal, y lo estaba desde el primer día sin que nada lo dijera.
+
+## Qué pasó
+
+El universo de proteínas de toda la campaña limpia salió de un
+`"search_criteria": "reviewed:true"` dentro de un payload de `insert_proteins`
+del 2026-09-15. Eso no es una declaración: es un campo de un payload. No estaba
+en este fichero, ni en un ADR, ni en el informe.
+
+`load_goa_annotations` guarda una anotación solo si su accesión ya está en
+`protein` —`protein_go_annotation.protein_accession` es una FOREIGN KEY— y
+descarta el resto en silencio. Así que ese campo, sin discutirse, decidió el
+alcance de todo.
+
+Medido el 2026-10-05 contra UniProtKB con los trece códigos de lafa:
+
+    reviewed    93.526
+    total      149.774
+
+Unas **56.000 proteínas con etiquetas experimentales curadas** fuera del corpus.
+Salió a la luz al comparar con la tabla publicada de FANTASIA: 127.546 donde
+nosotros decíamos 88.205.
+
+## Por qué la regla es ésta y no "revisar mejor los payloads"
+
+Porque el defecto no fue un descuido al escribir el payload. Fue **declarar el
+conjunto antes de haber mirado los datos**. En septiembre no sabíamos que la
+serie tiene 75 ficheros y no 71, ni que empieza en la 156 y no en la 160, ni que
+la unión de accesiones fiables sobre tres releases ya supera en 46.390 a la
+consulta de hoy. Ninguna de esas tres cosas se puede saber sin leer los GAF.
+
+Un conjunto declarado antes de la extracción es una hipótesis disfrazada de
+constante. El orden correcto es: extraer todo, comprobar todo, y entonces
+declarar — y lo declarado queda aquí, no en un payload.
+
+## El universo, ahora declarado
+
+**Todas las fiables de cualquier taxonomía, más las reviewed actuales.**
+
+- "Fiables" son los trece códigos de lafa: los once experimentales de GO más
+  `IC` y `TAS`. No los ocho del CAFA clásico, que omiten los cinco de alto
+  rendimiento.
+- Las filas `NOT` cuentan. Un NOT es conocimiento curado y escaso, y
+  `_reconcile_not_side` ya lo propaga y lo resta. Una proteína cuya única
+  anotación fiable es un NOT pertenece al universo.
+- Las isoformas no se colapsan.
+- El universo sale **de cada GAF**, no de una consulta a UniProt. Una consulta
+  describe hoy; la campaña va de 2016 a 2026.
+
+Lo construye `ensure_goa_universe` (PROTEA#978). **Las 75 pasadas de universo van
+antes de la primera carga de anotaciones**: intercalar por release truncaría la
+historia de toda proteína admitida tarde.
+
+## Qué lleva de verdad la base nueva
+
+La campaña anterior se guardó como `protea_old` (120 GB) y se puso una `protea`
+nueva en producción con el mismo nombre. **No es una base vacía.** Medido:
+
+| tabla | filas | qué es |
+|---|---|---|
+| `go_term` | 3.029.397 | de los 64 snapshots, reales y reaprovechables |
+| `protein` | 617.103 | el universo reviewed, **copiado** de `protea_old` |
+| `sequence` | 528.600 | sus secuencias |
+| `annotation_set` | 71 | **cascarones vacíos**, releases 160–235 |
+| `ontology_snapshot` | 64 | reales |
+| `embedding_config` | 8 | las ocho de la etapa 1 |
+| `job` | **0** | nada de lo anterior tiene job detrás |
+
+El md5 del conjunto de accesiones de `protein` es **idéntico** al de
+`protea_old`, y su `created_at` es el del `insert_proteins` del 2026-09-15. Que
+el universo arranque con las reviewed es lo declarado arriba; que no haya job que
+lo diga, no.
+
+**Y el denominador queda resuelto**: 617.103 total = 575.748 canónicas + 41.355
+isoformas. Son las dos cifras que se venían usando sin distinguir, y el informe
+publicado usa la primera donde debía usar la segunda.
+
+## La ventana reconstruida el 2026-10-04 también está muerta
+
+Se reconstruyó un día antes del reinicio. De sus identificadores:
+
+| objeto | estado |
+|---|---|
+| snapshots `ac200ce9`, `66a3dec2` | **vivos**, mismos ids, con sus términos |
+| conjuntos de anotación `ba9f57f7` (220), `b16ce3db` (227) | **cascarones**, 0 filas |
+| conjunto de IA `4346e676` | **no está** |
+| variantes `fd0314d8` (A) y `43b6b9e7` (B) | **no están** |
+
+Así que la tabla «La ventana reconstruida (2026-10-04)» de más arriba describe
+objetos que ya no existen, igual que le pasó a la tabla de la ventana original.
+Lo que esas tablas **declaran** sigue vigente; sus identificadores, no.
+
+Hay además una razón independiente para rehacer las dos variantes: PROTEA#976
+cambió la verdad de MFO (la regla del binding), así que las cuentas de las
+variantes de antes ya no reproducían de todos modos.
+
+## Lo que sigue bloqueado, y no por código
+
+La base nueva tiene **0 claves de API**; `protea_old` tiene las dos. Las rutas
+con `require_role(ROLE_OPERATOR)` —entre ellas `POST /v1/annotations/sets/load-goa`
+y el borrado de conjuntos— responden 401. Hasta que las dos claves vuelvan a
+existir en `protea`, la plataforma no puede despachar nada, y por tanto la fase 1
+no puede empezar. Las dos plantillas siguen en `~/.secrets/`, así que restaurar
+las filas conserva también la clave que ya tiene el sobremesa.
