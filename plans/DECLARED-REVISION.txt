@@ -591,5 +591,49 @@
 # fusiones: una release cargada antes de d1fc5b3c53f7 quedaria colapsada y no
 # seria comparable con una cargada despues.
 
-coordinator 6c3c9bd12c8ae486fb30c9c806e0f8f18cc5c74d
-schema-applied 6c3c9bd12c8ae486fb30c9c806e0f8f18cc5c74d
+# ---------------------------------------------------------------------------
+# DECIMO SALTO, 2026-10-05. a2d80e15696e49804ac200e17f26e6213c6165f3.
+#
+# ESTE SALTO CUBRE TRES MERGES, NO UNO, y eso es un defecto que hay que decir:
+# la declaracion se habia quedado en 6c3c9bd (#983) mientras el arbol servido
+# avanzaba a #984, #985 y #986. Tres merges desplegados sin declarar. Es
+# exactamente la deriva que este fichero existe para impedir. Queda al dia aqui.
+#
+# QUE TRAEN LOS TRES.
+#   #984  La puerta de load_goa_annotations miraba canonical_accession mientras
+#         la clave ajena nombra accession, asi que las isoformas y los alias de
+#         fusion nunca eran admisibles. La afirmacion central de #980, ya
+#         mergeada y declarada entonces, era falsa.
+#   #985  El universo admite lo curado (evidence_scope, por defecto "curated") y
+#         cada proteina trae date_created, date_sequence_modified y
+#         sequence_version de UniProt. Migracion e4b7a19c0f83.
+#   #986  Las reviewed salen de los ficheros planos de la release y no de un
+#         recorrido por cursor. insert_proteins acepta release_fasta_urls.
+#
+# EL ESQUEMA. Cabeza de alembic del arbol declarado: e4b7a19c0f83. La base esta
+# en e4b7a19c0f83 (head). Entre 6c3c9bd y a2d80e1 hay una sola migracion nueva,
+# la de #985, y ya esta aplicada. No hay backfill pendiente porque protein
+# estaba a 0 filas al aplicarla.
+#
+# EL CRITERIO DEL CORPUS, DECLARADO. El universo admite TODO LO NO-IEA, no los
+# trece de lafa. El regimen de evidencia de la VERDAD sigue siendo lafa: son dos
+# criterios porque son dos papeles. Medido sobre la 156, la union con las
+# reviewed pasa de 620.439 a 1.002.048. IBA entra a sabiendas y es el 80% de esa
+# diferencia. El driver de la fase 1 escribe evidence_scope en el payload aunque
+# sea el valor por defecto, para que cada una de las 75 filas lleve el criterio.
+#
+# LO QUE EL SOBREMESA DEBE SABER. Nada de esto toca una tabla que el nodo
+# escriba: el nodo calcula embeddings y publica. Pero el catalogo de operaciones
+# cambia y protea-sources sube a 73af41987f797414ab74aa4d083844a690687b80, que
+# trae stream_release_fasta. En esa maquina el torch SI es el de CUDA: la
+# instalacion va con pip --no-deps y NUNCA con poetry install.
+#
+# UNA ADVERTENCIA MEDIDA HOY. POST /v1/jobs NO valida el payload al enviar; la
+# validacion ocurre dentro de execute(). Un payload malo no da 422, da un job que
+# acaba FAILED. Comprobado enviando dos payloads invalidos a proposito, que
+# fueron aceptados y hubo que cancelar. Cualquier guarda que dependa de un 422 al
+# enviar no es una guarda.
+# ---------------------------------------------------------------------------
+
+coordinator a2d80e15696e49804ac200e17f26e6213c6165f3
+schema-applied a2d80e15696e49804ac200e17f26e6213c6165f3
