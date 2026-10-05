@@ -857,6 +857,106 @@ se mueve no fija los bytes. La release leída es **2026_03**.
 Lo trae `insert_proteins` con `release_fasta_urls` (PROTEA#986,
 protea-sources#36).
 
+### La serie son 802 GB, no 247, y eso decide el cache (2026-10-05)
+
+La fase 1 guardaba los 75 GAF para que la fase 2 los reusara, apoyándose en una
+cifra escrita en el driver: «the whole series is 247 GB against 654 GB free».
+**Esa cifra está mal por 3,2x.** Medido con `HEAD` sobre las 75 releases:
+
+| | |
+|---|---|
+| serie completa | **802,1 GB** |
+| release más pequeña | 156, con 3,3 GB |
+| release más grande | **202, con 24,28 GB** |
+| libre en el disco | **661,9 GB** |
+| ya en caché | 40,8 GB |
+| disponible contando el caché liberable | 702,7 GB |
+| **faltan** | **99,4 GB** |
+
+Guardándolas todas, el disco se llena **bajando la release 182, la pasada 49 de
+las 75**, unas **2,6 días** después de arrancar al ritmo medido de 9,6 MB/s. Y no
+es una parada limpia: Postgres vive en el mismo sistema de ficheros, así que
+llegar a cero es un PANIC de WAL en la base de la propia campaña.
+
+Así que cada GAF se borra tras su pasada, igual que hace la fase 2. El pico de
+disco de la fase 1 pasa a ser **una** release; el de la fase 2 es **44,8 GB**,
+porque allí `MAX_IN_FLIGHT = 2` y el peor par adyacente es 225+226.
+
+Consecuencia aceptada: cada release se baja **dos veces** entre las dos fases. Es
+el suelo del diseño de dos fases, no un desperdicio.
+
+#### El crecimiento de la base no es la restricción, medido
+
+El cálculo original de disco ignoró la base de datos entera. Se midió contra
+`protea_old`, que tiene las anotaciones de la campaña anterior: **379.462.116
+filas en 120,1 GB = 316,6 B/fila** (147,2 de tabla, 169,3 de índices, TOAST
+vacío). La clave única nueva de seis columnas es ~30 B/fila más ancha y además
+deja sobrevivir más filas, así que 316,6 es cota baja.
+
+Y una premisa del cálculo era falsa: **las filas por release no crecen con el
+tamaño del fichero.** Medido en la campaña anterior, entre 4,74 M y 6,15 M por
+release (media 5,34 M) mientras el GAF pasaba de 3,7 a 11,7 GB. El GAF crece por
+especies que no están en el universo.
+
+Proyección para `protein_go_annotation`: entre **180 GB** (600 M filas) y
+**399 GB** (1.050 M filas). Es mucho, pero con el GAF borrándose sobra margen:
+**+219 GB en el caso alto**. No hace falta soltar `protea_old`; soltarlo tampoco
+permitiría guardar la serie entera, porque 802 + 180 + el resto se va de los
+1.005,9 GB del disco.
+
+#### Por qué un caché filtrado no sirve, medido
+
+La idea obvia es guardar un filtrado en vez del bruto. No funciona, y queda
+medido para que no se reintente.
+
+El filtro a evaluar es el **útil**, no el ingenuo: el reviewed se conoce antes de
+arrancar, así que durante la pasada se puede aplicar
+`F = reviewed ∪ {curadas en esta release}`. Medido sobre la 156 con dos pasadas
+por el fichero, contra un universo de 1.639.103 miembros:
+
+| | filas |
+|---|---|
+| del universo en la 156 | 10.411.162 |
+| cubiertas por el reviewed | 7.442.575 (71,5%) |
+| cubiertas por las curadas de la 156 | 1.146.797 (11,0%) |
+| **perdidas** | **1.821.790 (17,5%)**, en 305.949 accesiones |
+
+El fichero filtrado serían 11.443.265 filas, el **4,07%** del original.
+
+Así que la pérdida es **17,5%**, no los dos tercios que dijo una primera medición
+mal planteada —ésa evaluó «curado en esta release» a secas, olvidando que el
+reviewed ya se conoce—. Pero 17,5% no es 0, y aquí hace falta 0.
+
+La razón de que haga falta 0: **la fase 2 no filtra por evidencia.** El predicado
+`accept` del plugin sólo se pasa en la fase 1 (`ensure_goa_universe.py:434`),
+nunca en `load_goa_annotations.py:648`. Los únicos filtros de la fase 2 son que
+el accession esté en `protein` y que el GO esté en el snapshot. Así que toda fila
+IEA de un miembro del universo se guarda, y el filtro las tiraría.
+
+Y el 17,5% es un **suelo**: se midió con una sola release procesada, y a medias.
+El universo es una unión sobre las 75 y sólo crece, así que cada accession que
+entre después añade filas perdidas. Como la fase 1 desciende, las primeras
+pasadas son las que se filtrarían con el universo más vacío, y son justo la
+ventana 220→227.
+
+El filtro **seguro** —accession en el universo completo— sí deja poco, unos 23 GB
+para la serie entera. Pero sólo se conoce cuando la fase 1 termina, y releer cada
+bruto para aplicarlo ya es la segunda descarga: no ahorra nada frente a borrar.
+
+#### Lo que queda sobre la mesa, y a propósito sin hacer
+
+La fase 1 desciende (235→156) y la fase 2 asciende (156→235, `pending` conserva
+el orden de `parse_plan`). O sea que **la fase 1 termina justo en los ficheros
+con los que la fase 2 empieza.** Conservar los más viejos en vez de borrarlos le
+daría a la fase 2 un arranque gratis, y es seguro porque los viejos son los
+pequeños (3,3 GB la 156) y a esas alturas el disco de la fase 1 está vacío.
+
+Se deja fuera a propósito: el ahorro es una fracción de la descarga de la fase 2,
+el umbral hay que calcularlo contra los 180–400 GB que se llevará
+`protein_go_annotation`, y equivocarse en esa aritmética llena el disco, que es
+justo el fallo que se está arreglando. Se añade con su propia medición antes de
+que empiece la fase 2, no de propina.
+
 ## Qué lleva de verdad la base nueva
 
 La campaña anterior se guardó como `protea_old` (120 GB) y se puso una `protea`

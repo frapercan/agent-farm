@@ -297,10 +297,32 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     snapshot, so the load_ontology_snapshot step and the whole ``ont_pending``
     dance do not apply.
 
-    The GAF is KEPT. Phase 2 reads the same files, and the whole series is
-    247 GB against 654 GB free, so it is downloaded once and reused. The phase 2
-    loop removes each GAF after loading it, which is correct there and would
-    force 75 re-downloads here.
+    The GAF is REMOVED after its pass, like phase 2 does. An earlier version
+    kept all 75 so phase 2 could reuse them, on the premise that "the whole
+    series is 247 GB against 654 GB free". That premise was wrong by 3.2x.
+    Measured with HEAD over all 75 releases: the series is 802.1 GB, the largest
+    single release is 202 at 24.28 GB, and the free space is 661.9 GB (the 618
+    figure that first replaced 247 was GiB read as GB -- the same unit slip in
+    the other direction). Keeping all 75 fills the disk while downloading
+    release 182, the 49th pass of 75, about 2.6 days in at the measured
+    9.6 MB/s. Postgres lives on the same filesystem, so that is not a clean
+    stop: it is a WAL PANIC in the campaign's own database.
+
+    So each release is downloaded twice across the two phases, and that is the
+    floor, not a waste to optimise away. Phase 1 cannot leave behind a filtered
+    file that phase 2 could use instead: see the comment at the removal.
+
+    WHAT IS STILL ON THE TABLE, and deliberately not done here. Phase 1
+    descends (235 -> 156) while phase 2 ascends (156 -> 235, ``pending`` at the
+    bottom of :func:`main` keeps ``parse_plan`` order), so phase 1 FINISHES on
+    exactly the files phase 2 STARTS with. Keeping the oldest few instead of
+    deleting them would give phase 2 a free start, and it is safe because the
+    oldest releases are the smallest (3.3 GB at 156) and phase 1's disk is
+    otherwise empty by then. It is left out on purpose: the saving is a fraction
+    of phase 2's download, the threshold has to be computed against the
+    180-400 GB that ``protein_go_annotation`` will take, and getting that
+    arithmetic wrong fills the disk -- which is the failure being fixed here.
+    Add it with its own measurement before phase 2 starts, not as a rider.
 
     Sequential, not MAX_IN_FLIGHT. Two universe passes at once would both ask
     UniProt for accessions, and the batch endpoint is the slow part: release 156
@@ -387,6 +409,54 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
             log(f"universe {release}: FAILURE ({status}) err={finished.get('error_message')}")
             continue
         log(f"universe {release}: ok {json.dumps(job_result(api, job_id), ensure_ascii=False)}")
+        # Borrado tras la pasada. La version anterior guardaba los 75 GAF para
+        # que la fase 2 los reusara, apoyandose en "the whole series is 247 GB
+        # against 654 GB free". Esa cifra esta mal por 3,2x: medida con HEAD
+        # sobre las 75, la serie son 802 GB, y quedaban 618 GB libres. El disco
+        # se llenaba bajando la release 182, la 49a de la cola, y la fase 1
+        # moria a dos tercios con el disco a cero.
+        #
+        # Guardar un filtrado en vez del bruto NO resuelve esto, y queda escrito
+        # con su medicion para que no se reintente. La fase 2 guarda TODA fila
+        # cuyo accession este en el universo y cuyo GO este en el snapshot, sin
+        # filtrar por codigo de evidencia: el IEA entra. Y el universo no se
+        # conoce hasta que la fase 1 termina, asi que un filtro aplicado durante
+        # la fase 1 solo puede usar lo curado de esa release.
+        #
+        # El filtro a evaluar es el UTIL, no el ingenuo. El reviewed se conoce
+        # antes de arrancar (insert_proteins lo mete), asi que el filtro que se
+        # puede aplicar durante la pasada es
+        #     F = reviewed  UNION  {curadas en ESTA release}
+        # y no solo el segundo termino. MEDIDO sobre la 156, con dos pasadas por
+        # el fichero y contra un universo de 1.639.103 miembros:
+        #   filas del universo en la 156                 10.411.162
+        #     cubiertas por el reviewed                   7.442.575  (71,5%)
+        #     cubiertas por las curadas de la 156         1.146.797  (11,0%)
+        #   |F| = 1.043.403 accesiones
+        #   PERDIDA = 1.821.790 filas en 305.949 accesiones = 17,5%
+        # El fichero filtrado serian 11.443.265 filas, el 4,07% del fichero.
+        #
+        # Asi que el filtro util pierde el 17,5%, no los dos tercios que dijo
+        # una medicion anterior mal planteada. Pero 17,5% no es 0, y lo que hace
+        # falta es 0: la fase 2 no filtra por evidencia -- el accept del plugin
+        # solo se pasa en la fase 1, ensure_goa_universe.py:434, nunca en
+        # load_goa_annotations.py:648 -- asi que toda fila IEA de un miembro del
+        # universo se guarda, y el filtro las tiraria.
+        #
+        # Y el 17,5% es un SUELO, no un techo: se midio con una sola release
+        # procesada y a medias. El universo es una union sobre las 75, solo
+        # crece, y cada accession que entre despues anade filas perdidas. Como
+        # la fase 1 desciende, las primeras pasadas son las que se filtrarian
+        # con el universo mas vacio, y son justo la ventana 220-227.
+        #
+        # El filtro SEGURO -- accession en el universo COMPLETO -- si deja algo
+        # pequeno: unos 23 GB para la serie entera. Pero solo se conoce cuando
+        # la fase 1 termina, y releer cada bruto para aplicarlo ya es la segunda
+        # descarga. No ahorra nada frente a borrar.
+        try:
+            os.remove(cache_path(release))
+        except OSError:
+            pass
 
     log(f"phase 1 finished: {len(pending) - failures} ok, {failures} failed")
     return 1 if failures else 0
