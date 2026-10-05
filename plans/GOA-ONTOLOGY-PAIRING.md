@@ -55,8 +55,60 @@ El orden de las columnas no es libre: `goa_campaign_driver.parse_plan` lee la
 tercera fecha de cada fila como el directorio y exige un `N d` detras. `grafo`
 y `deriva` van despues por eso.
 
+## Que significa cada columna, medido y no supuesto (2026-10-05)
+
+`declara` es el **`!GO-version` del propio GAF**, no su `!Generated`. Comprobado
+leyendo los headers por rango: GOA 160 tiene `Generated 2016-10-31` y
+`GO-version releases/2016-10-29`, y la fila dice `2016-10-29`. GOA 161 tiene
+`Generated 2016-11-28`, `GO-version 2016-11-26`, y la fila dice `2016-11-26`.
+
+`directorio` es la etiqueta de la carpeta del archivo de GO; `grafo` es el
+`data-version` del `go-basic.obo` que esa carpeta sirve. Los dos no coinciden
+nunca, y de ahi `deriva`. Medido para 2016, que es mensual:
+
+    directorio   grafo que sirve
+    2016-05-01   2016-04-30
+    2016-06-01   2016-05-31
+    2016-07-01   2016-06-29
+    2016-08-01   2016-07-29
+    2016-09-01   2016-08-31
+    2016-10-01   2016-09-30
+    2016-11-01   2016-10-29
+    2016-12-01   2016-11-29
+
+## Las filas marcadas (*): el grafo declarado SI esta archivado y no se usa
+
+La regla con la que se construyo esta tabla elige la ultima carpeta cuya
+**etiqueta** es anterior a `declara`. Eso compara la etiqueta de la carpeta con
+la fecha del grafo, que son dos cantidades distintas -- el defecto contra el que
+avisa el parrafo de arriba.
+
+Medido sobre las 71 filas previas comparando contra el grafo mas nuevo con fecha
+`<= declara` (nunca posterior: un grafo del futuro traeria terminos que el GAF no
+pudo usar), **dos filas usan un grafo mas viejo del disponible**:
+
+    GOA 160  usa 2016-09-30  y su 2016-10-29 esta en la carpeta 2016-11-01   29 d
+    GOA 234  usa 2026-05-19  y su 2026-06-15 esta en la carpeta 2026-06-19   27 d
+
+Y al medir las cuatro filas nuevas aparece una tercera: **GOA 157** declara
+`2016-06-29`, que la carpeta `2016-07-01` sirve exacto.
+
+En las otras 69 el grafo declarado no esta publicado, asi que el "mas antiguo
+disponible" es la unica opcion y la tabla acierta.
+
+**Las tres filas marcadas se dejan como estan, a proposito.** Cambiarlas mueve
+los numeros de esas releases, y cual de las dos reglas gobierna es una decision
+declarada que no se toma de pasada. La marca existe para que la decision sea
+visible cuando se tome, no para insinuar que la tabla esta mal en 69 filas.
+
+Nada de esto afecta a la fase 1: `ensure_goa_universe` no lee ontologia.
+
     GOA   declara      directorio   desfase  grafo        deriva
-    160   2016-10-29   2016-10-01     29 d  2016-09-30   +1 d
+    156   2016-06-05   2016-06-01      4 d  2016-05-31   +1 d
+    157   2016-06-29   2016-06-01     28 d  2016-05-31   +1 d  (*)
+    158   2016-09-13   2016-09-01     12 d  2016-08-31   +1 d
+    159   2016-10-01   2016-10-01      0 d  2016-09-30   +1 d
+    160   2016-10-29   2016-10-01     29 d  2016-09-30   +1 d  (*)
     161   2016-11-26   2016-11-01     28 d  2016-10-29   +3 d
     162   2017-01-14   2017-01-01     21 d  2016-12-24   +8 d
     163   2017-02-11   2017-02-01     11 d  2017-01-31   +1 d

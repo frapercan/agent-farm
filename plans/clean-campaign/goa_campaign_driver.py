@@ -48,7 +48,10 @@ ONTOLOGY_JOB_TIMEOUT_S = 30 * 60
 GOA_JOB_TIMEOUT_S = 8 * 3600
 POLL_S = 20
 
-EXPECTED_RELEASES = 71
+# 75 ficheros, releases 156..235. Eran 71 (160..235) mientras se creyo que la
+# serie empezaba en la 160; el archivo de EBI tiene cuatro mas antes. Las 206..210
+# no existen, y por eso 235-156+1 = 80 no es 75.
+EXPECTED_RELEASES = 75
 
 
 def serve_base() -> str:
@@ -228,6 +231,132 @@ def loaded_releases(api: Api) -> set[int]:
     return {int(line) for line in out.stdout.split() if line.strip().isdigit()}
 
 
+def universe_done(api: Api) -> set[int]:
+    """Releases with a succeeded, NON-DRY-RUN ensure_goa_universe job.
+
+    Read straight from the DB for the same reason as :func:`loaded_releases`:
+    there is no annotation_set to look at in phase 1, so the job row is the only
+    record that a release has been through.
+
+    The ``dry_run`` filter is not decoration: a dry run succeeds having written
+    nothing, so counting it would skip a release whose universe pass never ran.
+    One such job existed for release 156 on 2026-10-05 and would have done
+    exactly that; the clean-slate truncate then removed it, which is luck, not a
+    reason to drop the filter.
+    """
+    out = subprocess.run(
+        [
+            "docker", "exec", "protea-postgres-1", "psql", "-U", "protea", "-d", "protea",
+            "-t", "-A", "-c",
+            "SELECT DISTINCT payload->>'gaf_url' FROM job "
+            "WHERE operation='ensure_goa_universe' AND status='SUCCEEDED' "
+            "AND coalesce((payload->>'dry_run')::boolean, false) = false;",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if out.returncode != 0:
+        raise RuntimeError(f"universe_done psql failed: {out.stderr[:300]}")
+    found: set[int] = set()
+    for line in out.stdout.split():
+        m = re.search(r"goa_uniprot_all\.gaf\.(\d+)\.gz", line)
+        if m:
+            found.add(int(m.group(1)))
+    return found
+
+
+def job_result(api: Api, job_id: str) -> dict:
+    """The operation's result dict, which lives ONLY in the job.succeeded event.
+
+    There is no ``result`` column on ``job`` and the API's job detail does not
+    expose one; the phase 2 loop logs ``findings``, which ``ensure_goa_universe``
+    leaves NULL. Reading ``job["result"]`` therefore logs ``null`` for a pass that
+    worked, which is the exact shape of silence this campaign keeps paying for:
+    the numbers that justify the run would not be in the log.
+    """
+    try:
+        events = api.call("GET", f"/v1/jobs/{job_id}/events")
+    except Exception:  # noqa: BLE001 - logging must not fail the release
+        return {}
+    for ev in items(events):
+        if ev.get("event") == "ensure_goa_universe.done":
+            return ev.get("fields") or {}
+    for ev in items(events):
+        if ev.get("event") == "job.succeeded":
+            return (ev.get("fields") or {}).get("result") or {}
+    return {}
+
+
+def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
+    """Phase 1: grow the protein universe from every GAF, before any load.
+
+    Three things make this a different loop and not a flag on the other one.
+
+    No ontology. ``ensure_goa_universe`` reads the GAF and UniProt, never a
+    snapshot, so the load_ontology_snapshot step and the whole ``ont_pending``
+    dance do not apply.
+
+    The GAF is KEPT. Phase 2 reads the same files, and the whole series is
+    247 GB against 654 GB free, so it is downloaded once and reused. The phase 2
+    loop removes each GAF after loading it, which is correct there and would
+    force 75 re-downloads here.
+
+    Sequential, not MAX_IN_FLIGHT. Two universe passes at once would both ask
+    UniProt for accessions, and the batch endpoint is the slow part: release 156
+    scanned in 4,3 min and then spent longer than that fetching 117.136
+    accessions in batches of a thousand. Overlapping the next DOWNLOAD with the
+    current pass is what pipelines here, and ensure_cached already does that by
+    blocking only on its own release.
+    """
+    done = universe_done(api)
+    if done:
+        log(f"universe already done (skipped): {sorted(done)}")
+    pending = [r for r, _ in plan if r not in done]
+    log(f"phase 1: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
+
+    base = serve_base()
+    ensure_cache_server()
+    log(f"cache: serving {CACHE_DIR} at {base}")
+
+    failures = 0
+    for release in pending:
+        try:
+            ensure_cached(release)
+        except Exception as exc:  # noqa: BLE001 - one release must not end the run
+            log(f"universe {release}: prefetch FAILED ({exc}); skipped")
+            failures += 1
+            continue
+        gaf_url = f"{base}/goa_uniprot_all.gaf.{release}.gz"
+        job = api.call(
+            "POST",
+            "/v1/jobs",
+            {
+                "operation": "ensure_goa_universe",
+                "queue_name": "protea.jobs",
+                "description": f"fase 1, release {release}",
+                "payload": {"gaf_url": gaf_url, "dry_run": False, "timeout_seconds": 3600},
+            },
+        )
+        job_id = str(job["id"])
+        log(f"universe {release}: job {job_id[:8]} submitted")
+        try:
+            finished = api.wait_job(job_id, GOA_JOB_TIMEOUT_S)
+        except TimeoutError as exc:
+            log(f"universe {release}: {exc}")
+            failures += 1
+            continue
+        status = (finished.get("status") or "").lower()
+        if status != "succeeded":
+            failures += 1
+            log(f"universe {release}: FAILURE ({status}) err={finished.get('error_message')}")
+            continue
+        log(f"universe {release}: ok {json.dumps(job_result(api, job_id), ensure_ascii=False)}")
+
+    log(f"phase 1 finished: {len(pending) - failures} ok, {failures} failed")
+    return 1 if failures else 0
+
+
 def drain_in_flight(api: Api) -> None:
     while True:
         running = []
@@ -293,9 +422,19 @@ def sweep_cache(done: set[int]) -> None:
 
 
 def main() -> int:
+    phase = 2
+    if "--phase" in sys.argv:
+        phase = int(sys.argv[sys.argv.index("--phase") + 1])
+    if phase not in (1, 2):
+        raise SystemExit(f"--phase must be 1 or 2, got {phase}")
+
     key = open(KEY_FILE, encoding="utf-8").read().strip()
     api = Api(API, key)
     plan = parse_plan(PLAN)
+
+    if phase == 1:
+        return run_phase1(api, plan)
+
     log(
         f"driver start: {len(plan)} releases, {plan[0][0]}..{plan[-1][0]}, "
         f"api={API}, max_in_flight={MAX_IN_FLIGHT}"
