@@ -449,5 +449,46 @@
 # payloads. Cerrarlo es crear usuarios y decidir si el frontend se autentica,
 # que es D37 (FEAT-AUTH).
 
-coordinator 9d98b6d98ca7e2685b490df7c9d522d53fca1676
-schema-applied 5674c9331ce079a8abd275c9078b49befbfa2670
+# 2026-10-05, septimo salto: 9d98b6d -> 1709242. Puerta corrida justo antes:
+# 0 jobs en QUEUED o RUNNING, 0 prediction sets, 0 embeddings, 0 configs
+# derivadas. Esa ventana de FK a cero era la condicion: las tres claves ajenas
+# que apuntan a embedding_config son RESTRICT, asi que retirar las ocho semillas
+# de rung-1 solo se podia hacer antes del primer embedding.
+#
+# PRIMER SALTO QUE MUEVE schema-applied, y hay que entender por que. Lleva la
+# migracion 3cd5f76d282f, y protea-node-sync.sh:142-148 refuse arrancar el nodo
+# si el salto toca alembic/versions/* y `schema-applied` no es IGUAL al
+# coordinador nuevo. La linea es una AFIRMACION DEL SERVIDOR: dice "he aplicado
+# la migracion". Aplicada aqui antes de escribir esto, y comprobada:
+#
+#     alembic current          f3a05d81c6e2 -> 3cd5f76d282f (head)
+#     configs totales          8
+#     con max_length=1022      8
+#     ids de rung-1 restantes  0
+#     protst                   0  (fuera de los ocho, a proposito)
+#
+# QUE LLEVA, 1 de 3. PROTEA#977: codecov-action@v4 se rompe bajo Node 24, y
+# como el paso declara `fail_ci_if_error: false`, un paso no bloqueante estaba
+# tumbando todas las PRs del repositorio. Relanzar no servia; eran cuatro
+# corridas de dos ramas con los tests en verde al 87,8% y el fallo siempre
+# despues, en la subida. Bump a v5.
+#
+# QUE LLEVA, 2 de 3. PROTEA#975: las ocho configs de la etapa 1, a 1022 y
+# pooling mean, sustituyendo las de rung-1 en una transaccion. param_count
+# queda a NULL y lo rellena count_backend_parameters despues, porque los
+# valores publicados no son los que se ejecutan.
+#
+# QUE LLEVA, 3 de 3. PROTEA#976: la regla del binding. El 43,1% de nuestros
+# pares MFO experimentales en GOA 220 eran GO:0005515 o descendientes, y 18.824
+# de las 60.343 proteinas con MFO no tenian nada mas, asi que LAFA les quita el
+# aspecto entero. Sin la regla, un tercio de las dianas de MFO premiaba predecir
+# "interactua con algo". Se aplica sobre las anotaciones DIRECTAS: despues de
+# propagar no disparia nunca, porque los ancestros del termino de binding no son
+# descendientes suyos.
+#
+# CONSECUENCIA PARA LO YA CONSTRUIDO: la 976 cambia la verdad de MFO, asi que
+# los conjuntos de evaluacion existentes dejan de reproducir sus cuentas. Las
+# dos variantes de la ventana de validacion hay que rehacerlas.
+
+coordinator 1709242ac897bad1638d610f8b2da6b5e506a790
+schema-applied 1709242ac897bad1638d610f8b2da6b5e506a790
