@@ -17,18 +17,18 @@ PLAN = REPO / "plans" / "GOA-ONTOLOGY-PAIRING.md"
 
 
 def _driver():
-    """El modulo del driver, con ``log`` NEUTRALIZADO.
+    """The driver module, with ``log`` NEUTRALISED.
 
-    ``log`` escribe en ``goa-campaign.log`` junto al script, que en esta maquina
-    es el log VIVO de la campana. Sin este parcheo cada ``pytest`` le metia nueve
-    lineas inventadas -- "phase 3: job abc submitted", "FAILURE (failed) err=502
-    de UniProt" -- y cuatro ejecuciones dejaron 36. No es ruido: es el registro
-    del que se leen las cifras de la corrida, y una linea de test ahi es
-    indistinguible de un fallo real ocurrido a esa hora.
+    ``log`` appends to ``goa-campaign.log`` next to the script, which on this
+    machine is the LIVE campaign log. Without this patch every ``pytest`` run
+    wrote nine invented lines into it -- "phase 3: job abc submitted", "FAILURE
+    (failed) err=502 de UniProt" -- and four runs left 36. That is not noise: it
+    is the record the run's figures are read from, and a test line there is
+    indistinguishable from a real failure at that hour.
 
-    Se parchea en la factoria y no en cada test, porque el defecto aparecio al
-    anadir el PRIMER test que llamaba a una funcion que registra, y el siguiente
-    que lo haga no tiene por que acordarse.
+    Patched in the factory rather than per test, because the defect appeared with
+    the FIRST test that called a function that logs, and the next one to do so has
+    no reason to remember.
     """
     spec = importlib.util.spec_from_file_location("goa_driver", DRIVER)
     mod = importlib.util.module_from_spec(spec)
@@ -260,30 +260,30 @@ class TestLaFase3PreguntaALaBase:
                 raise AssertionError("un --phase 4 tiene que abortar")
 
 
-class TestLosTestsNoEscribenEnElLogDeLaCampana:
-    """La regresion que deja este fichero, fijada para que no vuelva.
+class TestTheSuiteDoesNotWriteToTheCampaignLog:
+    """The regression this file left behind, pinned so it cannot return.
 
-    Cualquier test que llame a una funcion del driver que registre escribiria en
-    el log vivo si ``_driver`` dejara de neutralizar ``log``.
+    Any test calling a driver function that logs would write into the live log if
+    ``_driver`` ever stopped neutralising ``log``.
     """
 
-    def test_la_factoria_neutraliza_el_log(self):
+    def test_the_factory_neutralises_the_log(self):
         d = _driver()
-        assert d.log("esto no debe aparecer en ningun fichero") is None
+        assert d.log("this must not reach any file") is None
 
-    def test_llamar_a_una_fase_no_toca_el_fichero(self):
+    def test_running_a_phase_does_not_touch_the_file(self):
         d = _driver()
         log_path = pathlib.Path(d.LOG)
-        antes = log_path.stat().st_mtime_ns if log_path.exists() else None
-        tamano = log_path.stat().st_size if log_path.exists() else None
+        before = log_path.stat().st_mtime_ns if log_path.exists() else None
+        size = log_path.stat().st_size if log_path.exists() else None
 
         class _Api:
             def call(self, *a, **k):
-                raise AssertionError("no deberia encolar nada")
+                raise AssertionError("must not enqueue anything")
 
         with patch.object(d, "_sin_secuencia", lambda: 0):
             d.run_phase3(_Api())
 
-        if antes is not None:
-            assert log_path.stat().st_size == tamano, "el test ha escrito en el log vivo"
-            assert log_path.stat().st_mtime_ns == antes
+        if before is not None:
+            assert log_path.stat().st_size == size, "the test wrote into the live log"
+            assert log_path.stat().st_mtime_ns == before
