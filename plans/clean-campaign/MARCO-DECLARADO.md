@@ -1373,3 +1373,95 @@ día en que EBI vaya lento, pero no por el tiempo.
 **Dónde sí había horas:** la fase 1 bajaba y escaneaba EN SERIE, 423 s + 390 s por
 release cuando pueden solaparse. Son ~7,2 h sobre las 67 que quedan, y es el
 mismo ahorro que prometía la pasada única, sin tocar la completitud de nada.
+
+# El nivel Swiss-Prot sólo es derivable del GAF hasta la 178 (2026-10-06)
+
+Esto **enmienda el alcance** del tercer nivel declarado en «El criterio son cuatro
+niveles», y la enmienda la forzó un defecto, no una revisión.
+
+## Lo que pasó
+
+La release 179 estuvo **tres horas** en RUNNING cuando sus cuatro predecesoras
+tardaron once minutos, con el worker en **7,3 GB** de RSS. Su evento `scanned`:
+
+| | la 179 | las anteriores |
+|---|---|---|
+| filas leídas | 534.813.197 | ~280–300 M |
+| **accesiones admisibles** | **7.639.329** | **~600.000** |
+
+Doce veces de más. Llevaba 4 h 37 min en la fase de lectura y lo siguiente era
+insertarlas. **Se paró sin escribir nada**: 0 filas con
+`first_admitted_release=179`, 0 eventos de inserción.
+
+## La causa, que es de GOA y no nuestra
+
+GOA dejó de poner el nombre de entrada de UniProtKB primero en la columna DB
+Object Synonym a partir de la release 179, y puso el **símbolo del gen**. La misma
+fila, la misma proteína:
+
+```
+178:  A0A021WW32_DROME|vtd|80Fh|CG40222|DRAD21|...
+179:  vtd|vtd|80Fh|CG40222|DRAD21|...
+```
+
+Y `A0A021WW32_DROME` **no aparece en ninguna otra columna** de esa fila:
+desapareció del registro.
+
+**Medido** sobre las releases en caché, fracción de filas con nombre de entrada
+legible:
+
+| releases | con nombre |
+|---|---|
+| 164–178 | **100%** |
+| **179** | **0%** |
+| **180** | **0%** |
+| **231** | **5%** |
+
+Son **52 de las 75** releases de la serie, **incluida la ventana de evaluación
+220–227**.
+
+## Por qué no se vio antes, que es la parte que hay que aprender
+
+Dos cosas, y las dos son del mismo tipo:
+
+1. **La regla concluía de una ausencia.** `not (nombre.startswith(accesión) ...)`:
+   sin nombre de entrada, `'vtd'.startswith('A0A021WW32')` es falso y devolvía
+   True para toda fila. Una regla que infiere de una ausencia **falla abierto**, y
+   fallar abierto en el nivel que define el corpus es la peor dirección posible.
+2. **La medición que lo justificó se tomó sobre la release 156** — 527.149
+   revisadas, cero falsos positivos — que está en la mitad buena. La validación
+   del dry run antes de arrancar, también sobre la 156, la única que había en
+   caché. Se validó el camino feliz del extremo antiguo y se declaró general.
+
+## La decisión: A + B
+
+**A. Fallar cerrado donde el dato no existe.** `is_swissprot_entry` exige ahora
+evidencia **positiva**: un nombre de entrada de UniProtKB es
+`<MNEMÓNICO>_<ORGANISMO>`, lleva `_` y después del último va un código de
+organismo en mayúsculas de tres o más. `moeA5`, `vtd` y `GA0070216_102329` —un
+locus tag de la 231— no lo son. Si no tiene esa forma, la pregunta **no se puede
+contestar** desde esa fila y la respuesta es «no», dejando la fila a su código de
+evidencia.
+
+Y se **declara por release**: `rows_entry_name_unreadable` entra en el informe del
+job, y si pasa de la mitad de las filas la operación emite
+`extract_goa_universe.swissprot_tier_unavailable` en warning. Sin eso el único
+síntoma de una release sin nivel sería un recuento de admisibles más bajo de lo
+esperado, que es exactamente lo que nadie mira. PROTEA#994.
+
+**B. La Swiss-Prot actual como tercera fuente de admisión, declarada.** Para
+156–178 el nivel sigue saliendo del GAF, fechado. Para 179–235 el hueco se cubre
+sembrando la Swiss-Prot de hoy con `insert_proteins` sobre los ficheros planos de
+release (22,5 s medidos, ver «UniProt: ficheros de release, no cursor»).
+
+Lo que esto **no** es: un filtro de ventana. Sigue prohibido filtrar un corpus
+temporal por el `reviewed` de hoy. Aquí se usa sólo para **admitir** al corpus, y
+las anotaciones siguen fechadas por release, así que ninguna ventana se contamina.
+Lo que se pierde es que **la pertenencia deja de estar fechada** en esa mitad: una
+proteína sembrada por esta vía queda con `first_admitted_release` a NULL, que es
+precisamente lo que significa «admitida por la fuente del presente y por ninguna
+release».
+
+**Por qué B y no la Swiss-Prot histórica:** ya está medido que los conjuntos
+históricos aportan **cientos** sobre `reviewed de hoy ∪ la unión fiable`, a cambio
+de ~90 GB y cuatro horas. Ver «`reviewed` es una instantánea de 2026».
