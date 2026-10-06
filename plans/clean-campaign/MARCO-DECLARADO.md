@@ -1307,3 +1307,69 @@ criterio.
   anotación que se declare cuando la ventana esté construida. La IA es
   **invariante** a los niveles 2 y 3 justamente porque su `evidence_regime` es
   `lafa` por defecto.
+
+## El censo de los 75 tamaños, medido (2026-10-06)
+
+Hasta hoy estaban registrados el total y los dos extremos, pero no la tabla. Sin
+ella no se puede calcular ninguna decisión de caché sin volver a preguntar a EBI.
+Medido con `HEAD` sobre las 75, **75 de 75 sin un solo error**, y el total sale
+**802,1 GB**: clava la cifra del 2026-10-05 medida por separado, así que las dos
+mediciones se confirman entre ellas.
+
+GB por release, en grupos de cinco:
+
+| 156: 3.33 | 157: 3.42 | 158: 3.46 | 159: 3.53 | 160: 3.66 |
+| 161: 3.76 | 162: 3.88 | 163: 4.06 | 164: 4.24 | 165: 4.47 |
+| 166: 4.53 | 167: 4.65 | 168: 4.68 | 169: 4.80 | 170: 4.86 |
+| 171: 5.04 | 172: 5.34 | 173: 5.53 | 174: 5.81 | 175: 5.94 |
+| 176: 6.02 | 177: 6.16 | 178: 6.50 | 179: 6.34 | 180: 6.25 |
+| 181: 6.41 | 182: 6.53 | 183: 6.75 | 184: 6.99 | 185: 7.12 |
+| 186: 7.41 | 187: 7.26 | 188: 7.82 | 189: 7.94 | 190: 8.29 |
+| 191: 8.16 | 192: 8.85 | 193: 8.85 | 194: 8.88 | 195: 8.83 |
+| 196: 9.08 | 197: 9.08 | 198: 9.33 | 199: 9.99 | 200: 12.36 |
+| 201: 13.28 | 202: 24.28 | 203: 13.75 | 204: 14.56 | 205: 16.59 |
+| 211: 16.55 | 212: 16.66 | 213: 16.83 | 214: 17.39 | 215: 17.90 |
+| 216: 17.86 | 217: 17.72 | 218: 18.06 | 219: 21.99 | 220: 20.44 |
+| 221: 18.68 | 222: 20.27 | 223: 20.61 | 224: 20.96 | 225: 22.15 |
+| 226: 22.65 | 227: 15.66 | 228: 16.93 | 229: 17.72 | 230: 15.44 |
+| 231: 15.39 | 232: 10.83 | 233: 11.35 | 234: 11.66 | 235: 11.67 |
+
+Lo que la tabla permite decidir sin volver a medir: con el suelo de 230 GB y 632
+libres, la caché retiene ~435 GB, y **qué releases concretas se guarden es
+irrelevante para el total** — los bytes ahorrados son exactamente los bytes
+cacheados. Eso descarta cualquier política de evicción "más lista" (guardar las
+grandes en vez de las pequeñas no ahorra ni un byte más) y descartó también una
+run limpia desde la 156: simulada con estos tamaños, da 366 GB de re-descarga
+contra 368 de seguir como estábamos, dos GB de diferencia, y cuesta re-escanear
+ocho pasadas ya hechas.
+
+## Corrección: dos afirmaciones mías sobre el coste de las dos fases (2026-10-06)
+
+Las dejé escritas en el repositorio y las dos eran falsas.
+
+**«Intercalar perdería el sujeto del experimento.»** Falso, y lo contrario es
+demostrable. Bajo orden ascendente, si una proteína se admite en la release N es
+porque en 156..N−1 no tenía **ninguna** evidencia admisible: ni código de verdad,
+ni `curated_inference`, ni era Swiss-Prot. Si hubiera tenido un IDA en la 160 se
+habría admitido en la 160. Luego las filas que intercalar perdería son
+**exclusivamente IEA, IBA, IBD y ND**, y ni la evaluación (`_EXP_CODES` en
+`protea/core/evaluation.py`) ni la IA (régimen `lafa`) las leen.
+
+El argumento correcto para mantener las dos fases es otro, y es el que el
+investigador señaló: mi demostración dice que la **evaluación** está a salvo, no
+que el **corpus** esté completo, y el corpus es el activo. Intercalando,
+`annotation_set(156)` deja de ser «GOA 156 restringido al corpus» y pasa a ser
+«GOA 156 restringido al corpus conocido en 156»: un objeto distinto, incompleto
+por el lado antiguo, y **no reparable sin volver a bajar los 802 GB**, porque la
+información necesaria para filtrar la 156 correctamente no existe hasta haber
+leído la 235.
+
+**«Guardar los GAF ahorra 12,5 h.»** Falso. Ahorra 368 GB de tráfico y casi nada
+de reloj: la segunda descarga se esconde detrás de las cargas de la fase 2, que
+son 35 min por release contra 7 de descarga, y la fase 2 ya hace prefetch dentro
+de su bucle. Sigue valiendo la pena por el ancho de banda y porque nos cubre un
+día en que EBI vaya lento, pero no por el tiempo.
+
+**Dónde sí había horas:** la fase 1 bajaba y escaneaba EN SERIE, 423 s + 390 s por
+release cuando pueden solaparse. Son ~7,2 h sobre las 67 que quedan, y es el
+mismo ahorro que prometía la pasada única, sin tocar la completitud de nada.
