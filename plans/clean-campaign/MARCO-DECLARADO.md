@@ -743,16 +743,19 @@ declarar — y lo declarado queda aquí, no en un payload.
 
 ## El universo, ahora declarado
 
-**Todo lo curado de cualquier taxonomía, más las reviewed actuales.**
+**Todas las fiables de cualquier taxonomía, más las reviewed actuales.**
 
-- "Curado" es **toda anotación cuyo código no es `IEA`**. `IEA` es el único
-  código automático de GO, así que el complemento es exactamente lo que ha
-  pasado por manos de un curador, por el mecanismo que sea.
-- Esto **no** es el régimen de evidencia de la verdad, que sigue siendo `lafa`
-  (los trece códigos). La tabla de constantes de campaña de arriba no cambia.
-  Son dos criterios distintos porque cumplen dos papeles distintos, y
-  confundirlos fue el defecto que hizo falta corregir: ver
-  «El criterio pasó de fiable a curado (2026-10-05)» más abajo.
+- "Fiables" son los **trece códigos de lafa**: los once experimentales de GO más
+  `IC` y `TAS`. Es `evidence_scope: "reliable"`.
+- **El criterio de admisión y el de la verdad son el mismo, y eso es
+  deliberado.** El principio: se admite una proteína sólo por evidencia que sea
+  una medición sobre esa proteína. Un ancestro propagado no lo es, y un «no
+  encontré nada» tampoco.
+- Consecuencia que conviene que sea decisión y no efecto secundario: el banco de
+  donantes y el conjunto de objetivos salen del **mismo pozo**. `donor_policy`
+  podrá estrechar el banco en consulta, pero no ampliarlo más allá del corpus.
+- La ampliación a `curated` se probó entre el 2026-10-05 y el 2026-10-06 y se
+  **revirtió**: ver «La reversión de `curated` a `reliable` (2026-10-06)».
 - Las filas `NOT` cuentan. Un NOT es conocimiento curado y escaso, y
   `_reconcile_not_side` ya lo propaga y lo resta. Una proteína cuya única
   anotación fiable es un NOT pertenece al universo.
@@ -764,7 +767,12 @@ Lo construye `ensure_goa_universe` (PROTEA#978). **Las 75 pasadas de universo va
 antes de la primera carga de anotaciones**: intercalar por release truncaría la
 historia de toda proteína admitida tarde.
 
-### El criterio pasó de fiable a curado (2026-10-05)
+### RETIRADA. El criterio pasó de fiable a curado (2026-10-05), y volvió el 2026-10-06
+
+> Esta sección se conserva porque describe una decisión que se tomó, se ejecutó
+> sobre 13 releases y se revirtió. Lo que afirma sobre el reparto por código
+> sigue siendo medición válida; lo que propone como criterio, no. La reversión y
+> sus razones están justo debajo.
 
 La declaración anterior admitía al universo sólo las proteínas con alguna de las
 trece evidencias de lafa. Eso mezclaba dos papeles que quieren criterios
@@ -827,6 +835,129 @@ sin recargar nada. Si alguna vez se responde, el resultado va aquí.
 El campo que lo fija es `evidence_scope` de `ensure_goa_universe`, con dos
 niveles: `curated` (el declarado) y `reliable` (los trece). **Por defecto vale
 `curated`**, así que el valor declarado es el que sale sin pedirlo.
+
+### La reversión de `curated` a `reliable` (2026-10-06)
+
+El criterio vuelve a los **trece de lafa**. Lo que lo decidió no fue el coste:
+fue que `curated` admite proteínas que no deberían entrar.
+
+**El defecto del criterio.** `curated` admite por la **existencia** de una fila
+no-`IEA`, nunca por si esa fila lleva información. Y resultó que la mayoría no la
+lleva. Medido sobre la release 231, contra un universo de 2.055.075 proteínas:
+
+| por qué estaba en el corpus | proteínas | % |
+|---|---|---|
+| Swiss-Prot (reviewed) | 621.257 | 30% |
+| TrEMBL con evidencia curada real | ~157.889 | **8%** |
+| TrEMBL **sólo por `IBA`** | 1.192.444 | **58%** |
+| TrEMBL sólo por `ND` o `IBA`+`ND` | ~83.485 | 4% |
+
+**Sólo el 8% era aquello para lo que se amplió.** El `IBA` sale de PAINT, donde
+el curador anota un nodo ancestral y la anotación baja por el árbol
+mecánicamente; su cuota sobre lo curado pasó del 52% en la 156 al **83% en la
+231** en diez años.
+
+**El caso que cerró la discusión fue `ND`.** Lo encontró el investigador, mirando
+`A0A021WW64`: una proteína de *Drosophila* en el corpus con, literalmente,
+**ninguna anotación**. Sus tres únicas filas en la release 156:
+
+```
+A0A021WW64  GO:0003674  GO_REF:0000015  ND  F   <- raíz de MFO
+A0A021WW64  GO:0005575  GO_REF:0000015  ND  C   <- raíz de CCO
+A0A021WW64  GO:0008150  GO_REF:0000015  ND  P   <- raíz de BPO
+```
+
+`ND` es cómo GO registra la **ausencia** de conocimiento, y sus filas están sobre
+los tres términos **raíz**. La Information Accretion de una raíz es **cero por
+construcción** —IA(t) = −log P(t | padres), y para una raíz P = 1—, así que un
+donante sólo-`ND`:
+
+- no aporta nada a una métrica pesada por IA, ni al numerador ni al denominador;
+- pero **ocupa un hueco entre los k vecinos**.
+
+Eso no es inerte: es dañino. El `IBA` al menos transfiere una etiqueta real
+aunque redundante; el `ND` transfiere una tautología.
+
+**El error, y de quién fue.** La anchura se justificó en
+`_universe_sources.py` con esta frase:
+
+> *«`ND` records that a curator looked and found nothing. **Both are curated
+> information** and neither is a measurement on the protein in question, so they
+> qualify a protein for the retrieval bank but never as evaluation truth.»*
+
+«Both are curated information» es un **error de categoría**, y fue del asistente.
+`ND` no es información curada sobre la proteína: es el registro formal de su
+ausencia. Un curador la produjo, pero lo que produjo es un negativo.
+
+El mismo comentario remata con *«the tier is a choice made at analysis time»*. Eso
+es cierto para las **anotaciones** y para la composición del banco —
+`donor_policy.evidence_codes` acepta una lista arbitraria de códigos y filtra en
+la consulta — y **falso para el coste de los embeddings**: una secuencia admitida
+se embebe se use o no. La anchura se justificó con una recuperabilidad que sólo
+valía para la mitad de la cuestión.
+
+Y la fila `| ND | 229.481 | 93.835 |` estaba en la tabla por código de la sección
+retirada, o sea delante del investigador cuando aprobó `curated`. Pero se
+presentó con el foco en `IBA`, con una recomendación de excluir `IBA`, y **sin
+ningún aviso sobre `ND`** — ni que significa «sin conocimiento», ni que sus
+anotaciones son raíces, ni que la IA de una raíz es cero.
+
+**Lo que arrastra la vuelta a los trece**, además de `IBA` y `ND`. En la 156,
+proteínas que entraban sólo por cada código: `ISS` 36.035, `ISM` 11.509, `ISO`
+5.117, `ISA` 4.330, `RCA` 3.347, `NAS` 1.746, `IGC` 172, `IKR` 97, `IRD` 10 —
+**62.363 en total**. Caen por el mismo argumento de independencia: `ISS`, `ISO`,
+`ISA` e `ISM` *son* inferencias por similitud, así que transferirlas por
+similitud de embedding compone la misma señal consigo misma; `RCA` es análisis
+computacional y `NAS` una afirmación no trazable.
+
+**Lo que cuesta y lo que ahorra:**
+
+| | `curated` | `reliable` |
+|---|---|---|
+| unión en la 156 | 1.002.048 | 620.439 |
+| corpus final estimado | ~2,5 M secuencias | ~0,7-0,8 M |
+| embeddings | 13-23 días de GPU | **5-9 días** |
+
+**Y hubo que vaciar y rehacer.** Las 13 pasadas de 235 a 222 ya habían admitido
+1,43 M de proteínas bajo `curated`. Seguir con el criterio nuevo habría dejado
+235→222 definidas por una regla y 221→156 por otra, que es la forma exacta del
+defecto de «la comparación de un solo campo que no lo era»: el universo dejaría
+de estar definido por una regla. Así que `protein` y `sequence` se vaciaron y la
+fase 1 se rehizo desde cero. Las mediciones de esas 13 pasadas se conservan en
+`registro/pasadas-curated-2026-10-06.txt`, porque la curva de accesiones
+irrecuperables por release —de 0,00% en la 235 a 112.360 filas en la 222— es
+evidencia sobre GOA que sobrevive al cambio de criterio.
+
+### El orden pasa a ascendente (2026-10-06)
+
+La fase 1 recorre **156 → 235**, no al contrario.
+
+La unión es la misma en cualquier orden, así que esto no es sobre qué acaba en el
+corpus. Es sobre qué **significa** la pasada que admite. Ascendiendo, la pasada
+que admite una proteína es la **primera release de la serie en que tuvo evidencia
+fiable** — que es la cantidad de la que va el corpus, «las entradas que alguna
+vez tuvieron anotaciones fiables», y que `date_created` **no** puede dar, porque
+la fecha de creación de la entrada en UniProt no es cuándo se anotó. Descendiendo,
+esa pasada era 235 para casi todo y por tanto no decía nada.
+
+Y alinea el orden de construcción con la definición de verdad del proyecto, que
+es **primera aparición** y no diferencia por pares.
+
+**Lo que cuesta, declarado y no descubierto después.** Una ejecución parcial deja
+de ser útil: la ventana de evaluación es 220→227, en el extremo nuevo, así que un
+ascendente interrumpido deja 2016-2019 hecho y la ventana sin tocar. El
+descendente la cubría en sus primeras quince pasadas. Se acepta porque `reliable`
+abarata mucho una pasada —trae una fracción de las accesiones que traía
+`curated`— y se espera cerrar la fase 1 de una vez.
+
+También se pierde una alineación de caché: el descendente **terminaba** en los
+ficheros con los que la fase 2 **empieza**, lo que dejaba un arranque gratis sobre
+la mesa. Ahora las dos fases ascienden y no comparten frontera.
+
+**Y nota sobre `first_release`:** sigue sin ser columna. Bajo descendente su
+ausencia estaba justificada porque el valor habría sido inútil; esa justificación
+ya no existe, y el valor queda sólo implícito en `created_at` contra las ventanas
+de los jobs. Recuperable pero frágil. Añadir la columna es una decisión aparte.
 
 ### De dónde salen las reviewed, y cómo quedan fijadas (2026-10-05)
 

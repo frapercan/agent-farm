@@ -312,17 +312,10 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     floor, not a waste to optimise away. Phase 1 cannot leave behind a filtered
     file that phase 2 could use instead: see the comment at the removal.
 
-    WHAT IS STILL ON THE TABLE, and deliberately not done here. Phase 1
-    descends (235 -> 156) while phase 2 ascends (156 -> 235, ``pending`` at the
-    bottom of :func:`main` keeps ``parse_plan`` order), so phase 1 FINISHES on
-    exactly the files phase 2 STARTS with. Keeping the oldest few instead of
-    deleting them would give phase 2 a free start, and it is safe because the
-    oldest releases are the smallest (3.3 GB at 156) and phase 1's disk is
-    otherwise empty by then. It is left out on purpose: the saving is a fraction
-    of phase 2's download, the threshold has to be computed against the
-    180-400 GB that ``protein_go_annotation`` will take, and getting that
-    arithmetic wrong fills the disk -- which is the failure being fixed here.
-    Add it with its own measurement before phase 2 starts, not as a rider.
+    A cache alignment that USED to be on the table is now gone: while phase 1
+    descended it finished on exactly the files phase 2 starts with, so keeping
+    the oldest few would have given phase 2 a free start. Both phases now run
+    ascending, so they share no boundary and there is nothing to keep.
 
     Sequential, not MAX_IN_FLIGHT. Two universe passes at once would both ask
     UniProt for accessions, and the batch endpoint is the slow part: release 156
@@ -332,33 +325,50 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     375 s of pass, and the releases grow from 3,4 GB at the old end to 19 GB at the
     new one.
 
-    DESCENDING, newest first. The universe is a union, so the final set is the
-    same either way, but the order buys two things.
+    ASCENDING, oldest first, 156 -> 235. Reverted from descending on
+    2026-10-06, together with the evidence criterion.
 
-    A partial run is useful. The evaluation window is GOA 220 -> 227, both at the
-    new end, so descending covers it within the first fifteen passes. Ascending
-    leaves 2016 done and the window untouched, which validates nothing.
+    The union is the same in either order, so this is not about what ends up in
+    the corpus. It is about what the admitting pass MEANS. Ascending, the pass
+    that admits a protein is the earliest release in the series where it had
+    reliable evidence -- which is the quantity the corpus is actually about,
+    "the entries that at some point had reliable annotations", and one that
+    ``date_created`` cannot supply, because UniProt's entry-creation date is not
+    when the protein was annotated. Descending made that pass 235 for nearly
+    everything and therefore meaningless. Ascending also lines the build order up
+    with the project's definition of truth, which is first appearance and not a
+    pairwise difference.
 
-    It separates recoverable from unrecoverable. Measured by sampling each
-    release's reliable accessions against today's UniProt: release 235 has 0,00%
-    unavailable, 194 has 7,75% and 160 has 7,95%. So the newest pass fetches the
-    bulk with no loss, and every older release adds mostly what cannot be fetched
-    at all -- which concentrates the unrecoverable tail in the late passes instead
-    of smearing it across all 75.
+    NOTE that ``first_release`` is still not a column. Under descending its
+    absence was justified because the value would have been meaningless; that
+    justification is now gone, and the value is only implicit in ``created_at``
+    against the job windows. Recoverable but fragile. Adding the column is a
+    separate decision, not a rider on this one.
 
-    WHAT DESCENDING BREAKS, and why it does not matter here: "the release whose
-    pass admitted this protein" stops meaning "the release it first appeared in" --
-    it would be 235 for nearly everything. That is why ``protein`` stores
-    ``date_created`` from UniProt instead of a ``first_release`` column: the
-    temporal question is answered from the source's own date, not from the order we
-    happened to run in.
+    WHAT ASCENDING COSTS, declared rather than discovered later. A partial run
+    stops being useful: the evaluation window is GOA 220 -> 227, at the new end,
+    so an interrupted ascending run leaves 2016-2019 done and the window
+    untouched. Descending covered the window in its first fifteen passes. The
+    cost is accepted because ``reliable`` makes a pass far cheaper -- it fetches a
+    fraction of the accessions that ``curated`` did -- so the whole of phase 1 is
+    expected to finish in one stretch.
+
+    It also loses a cache alignment: descending FINISHED on the files phase 2
+    STARTS with, which left a free start on the table. Ascending ends at 235 and
+    phase 2 begins at 156, so that option disappears.
+
+    Measured, and unchanged by the order: an accession UniProt no longer serves
+    cannot be added by any pass, so the total unrecoverable is identical either
+    way. The order only decides when it surfaces. Release 235 has 0,00%
+    unavailable, 194 has 7,75% and 160 has 7,95%, so ascending meets the
+    unrecoverable tail FIRST instead of last.
     """
     done = universe_done(api)
     if done:
         log(f"universe already done (skipped): {sorted(done)}")
-    # Descendiente: ver el docstring. `plan` llega ascendente de parse_plan.
-    pending = [r for r, _ in reversed(plan) if r not in done]
-    log(f"phase 1 descending: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
+    # Ascendente: ver el docstring. `plan` ya llega ascendente de parse_plan.
+    pending = [r for r, _ in plan if r not in done]
+    log(f"phase 1 ascending: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
 
     base = serve_base()
     ensure_cache_server()
@@ -384,14 +394,29 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
                     "gaf_url": gaf_url,
                     "dry_run": False,
                     "timeout_seconds": 3600,
-                    # Declarado aqui aunque sea el valor por defecto de la
-                    # operacion. El defecto que obligo a tirar la campana
-                    # anterior fue un criterio que viajaba en el codigo y no
-                    # en el payload: la fila del job decia "reviewed:true" en
-                    # ningun sitio, y no se podia reconstruir con que universo
-                    # se habia medido. Escribirlo hace que cada una de las 75
-                    # filas lleve el criterio consigo.
-                    "evidence_scope": "curated",
+                    # Los TRECE de lafa, no "todo lo no-IEA". Declarado aqui
+                    # aunque la operacion tenga un defecto, porque el defecto
+                    # que obligo a tirar la campana anterior fue un criterio
+                    # que viajaba en el codigo y no en el payload.
+                    #
+                    # POR QUE SE REVIRTIO, el 2026-10-06. "curated" admite por
+                    # la EXISTENCIA de una fila no-IEA, nunca por si esa fila
+                    # lleva informacion, y resulta que la mayoria no la lleva:
+                    #   - 58% del universo entraba SOLO por IBA, propagado
+                    #     mecanicamente desde un nodo ancestral por PAINT;
+                    #   - y habia proteinas que entraban SOLO por ND, que es
+                    #     como GO registra que un curador miro y no encontro
+                    #     nada. Sus unicas filas estan sobre los tres terminos
+                    #     RAIZ, cuya Information Accretion es cero por
+                    #     construccion. Como donante de KNN no aporta nada y
+                    #     ocupa un hueco entre los k vecinos: no es inerte, es
+                    #     danino. Ejemplo medido: A0A021WW64, tres filas ND
+                    #     sobre GO:0003674, GO:0005575 y GO:0008150.
+                    #
+                    # El criterio de admision pasa a ser el de la VERDAD, y el
+                    # principio es: se admite una proteina solo por evidencia
+                    # que sea una medicion sobre esa proteina.
+                    "evidence_scope": "reliable",
                 },
             },
         )
