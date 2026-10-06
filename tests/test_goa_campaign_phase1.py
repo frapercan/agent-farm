@@ -17,9 +17,23 @@ PLAN = REPO / "plans" / "GOA-ONTOLOGY-PAIRING.md"
 
 
 def _driver():
+    """The driver module, with ``log`` NEUTRALISED.
+
+    ``log`` appends to ``goa-campaign.log`` next to the script, which on this
+    machine is the LIVE campaign log. Without this patch every ``pytest`` run
+    wrote nine invented lines into it -- "phase 3: job abc submitted", "FAILURE
+    (failed) err=502 de UniProt" -- and four runs left 36. That is not noise: it
+    is the record the run's figures are read from, and a test line there is
+    indistinguishable from a real failure at that hour.
+
+    Patched in the factory rather than per test, because the defect appeared with
+    the FIRST test that called a function that logs, and the next one to do so has
+    no reason to remember.
+    """
     spec = importlib.util.spec_from_file_location("goa_driver", DRIVER)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    mod.log = lambda _msg: None
     return mod
 
 
@@ -244,3 +258,32 @@ class TestLaFase3PreguntaALaBase:
                 assert "1, 2 or 3" in str(exc)
             else:
                 raise AssertionError("un --phase 4 tiene que abortar")
+
+
+class TestTheSuiteDoesNotWriteToTheCampaignLog:
+    """The regression this file left behind, pinned so it cannot return.
+
+    Any test calling a driver function that logs would write into the live log if
+    ``_driver`` ever stopped neutralising ``log``.
+    """
+
+    def test_the_factory_neutralises_the_log(self):
+        d = _driver()
+        assert d.log("this must not reach any file") is None
+
+    def test_running_a_phase_does_not_touch_the_file(self):
+        d = _driver()
+        log_path = pathlib.Path(d.LOG)
+        before = log_path.stat().st_mtime_ns if log_path.exists() else None
+        size = log_path.stat().st_size if log_path.exists() else None
+
+        class _Api:
+            def call(self, *a, **k):
+                raise AssertionError("must not enqueue anything")
+
+        with patch.object(d, "_sin_secuencia", lambda: 0):
+            d.run_phase3(_Api())
+
+        if before is not None:
+            assert log_path.stat().st_size == size, "the test wrote into the live log"
+            assert log_path.stat().st_mtime_ns == before
