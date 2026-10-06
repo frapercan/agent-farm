@@ -287,3 +287,67 @@ class TestTheSuiteDoesNotWriteToTheCampaignLog:
         if before is not None:
             assert log_path.stat().st_size == size, "the test wrote into the live log"
             assert log_path.stat().st_mtime_ns == before
+
+
+class TestTheGafIsKeptWhileTheDiskAllows:
+    """Downloading the 802 GB series twice costs 23 of the 47 hours the whole run
+    takes, measured at the real 9.6 MB/s. Both phases walk the series ascending, so
+    the prefix phase 1 sees first is the one phase 2 asks for first.
+
+    What must NOT happen is keeping files until the disk fills: Postgres lives on
+    the same filesystem, so that is not a clean stop, it is a WAL PANIC in the
+    campaign's own database.
+    """
+
+    def test_above_the_floor_the_file_is_kept(self):
+        d = _driver()
+        removed = []
+        with (
+            patch.object(d, "free_gb", lambda: d.DISK_FLOOR_GB_TO_KEEP + 1),
+            patch.object(d.os, "remove", lambda p: removed.append(p)),
+        ):
+            d._drop_or_keep(156)
+        assert removed == [], "it was kept, so phase 2 does not re-download it"
+
+    def test_below_the_floor_the_file_goes(self):
+        d = _driver()
+        removed = []
+        with (
+            patch.object(d, "free_gb", lambda: d.DISK_FLOOR_GB_TO_KEEP - 1),
+            patch.object(d.os, "remove", lambda p: removed.append(p)),
+        ):
+            d._drop_or_keep(156)
+        assert len(removed) == 1
+        assert removed[0].endswith("goa_uniprot_all.gaf.156.gz")
+
+    def test_exactly_at_the_floor_the_file_goes(self):
+        """The comparison is strict, so the floor is a floor and not a maybe."""
+        d = _driver()
+        removed = []
+        with (
+            patch.object(d, "free_gb", lambda: d.DISK_FLOOR_GB_TO_KEEP),
+            patch.object(d.os, "remove", lambda p: removed.append(p)),
+        ):
+            d._drop_or_keep(156)
+        assert len(removed) == 1
+
+    def test_the_floor_leaves_room_for_the_database(self):
+        """120 GB measured for the previous campaign's database over a corpus of
+        comparable size, plus the largest single release at 24 GB. A floor under
+        that would trade a download for a PANIC."""
+        d = _driver()
+        assert d.DISK_FLOOR_GB_TO_KEEP >= 120 + 24
+
+    def test_a_missing_file_is_not_an_error(self):
+        """A failed pass may have left nothing to remove, and that must not end the
+        run."""
+        d = _driver()
+
+        def boom(_p):
+            raise OSError("no such file")
+
+        with (
+            patch.object(d, "free_gb", lambda: 0),
+            patch.object(d.os, "remove", boom),
+        ):
+            d._drop_or_keep(156)
