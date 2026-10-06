@@ -812,6 +812,53 @@ def run_phase3(api: Api) -> int:
     return 0
 
 
+def stamp_release_dates(api: Api) -> int:
+    """Fill ``annotation_set.source_published_at`` for every set phase 2 created.
+
+    WHY THIS IS NOT OPTIONAL, and why it belongs at the end of phase 2 rather
+    than in somebody's head. The holdout guard (PROTEA#932) decides whether a
+    window may inform a decision by comparing the window's end against the
+    board's mark, and the thing it compares is that column. A set with no date
+    is PASSED, because refusing every undated window would take down the tune
+    windows to protect the holdout from a case that cannot be decided either
+    way.
+
+    Phase 2 creates 75 annotation sets and none of them has a date until this
+    runs. So without this call the guard's undecidable branch is not an edge
+    case, it is the ONLY case, and the protection the guard exists to provide is
+    absent while appearing to be present. The guard now emits
+    ``holdout_guard.undecidable`` when that happens, so the absence is visible,
+    but visible is not the same as closed.
+
+    Idempotent: the operation upserts by matching ``goa`` sets to the FTP index,
+    so running it twice writes the same dates.
+    """
+    log("stamping annotation_set.source_published_at from the EBI index")
+    job = api.call(
+        "POST",
+        "/v1/jobs",
+        {
+            "operation": "refresh_goa_release_dates",
+            "queue_name": "protea.jobs",
+            "description": "fechas de publicacion: sin ellas la guarda del holdout no decide",
+            "payload": {},
+        },
+    )
+    job_id = str(job["id"])
+    try:
+        finished = api.wait_job(job_id, ONTOLOGY_JOB_TIMEOUT_S)
+    except TimeoutError as exc:
+        log(f"release dates: {exc}")
+        return 1
+    status = (finished.get("status") or "").lower()
+    if status != "succeeded":
+        log(f"release dates: FAILURE ({status}) err={finished.get('error_message')}")
+        log("  the holdout guard cannot decide until this succeeds: rerun --phase 2")
+        return 1
+    log(f"release dates: ok {json.dumps(job_result(api, job_id, 'refresh_goa_release_dates.done'), ensure_ascii=False)}")
+    return 0
+
+
 def drain_in_flight(api: Api) -> None:
     while True:
         running = []
@@ -1010,6 +1057,9 @@ def main() -> int:
             time.sleep(POLL_S)
 
     log("driver finished: all releases processed")
+    # Las fechas, al final de la fase 2 y no antes: la operacion empareja los
+    # conjuntos `goa` contra el indice FTP, asi que necesita que existan todos.
+    failures += stamp_release_dates(api)
     return 1 if failures else 0
 
 
