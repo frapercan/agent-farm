@@ -51,6 +51,18 @@ POLL_S = 20
 # 75 ficheros, releases 156..235. Eran 71 (160..235) mientras se creyo que la
 # serie empezaba en la 160; el archivo de EBI tiene cuatro mas antes. Las 206..210
 # no existen, y por eso 235-156+1 = 80 no es 75.
+#: El criterio de admision del universo, en UN SOLO SITIO. Lo leen el payload
+#: del job y la comprobacion de reanudacion, porque la unica forma de que "ya
+#: esta hecha" signifique lo mismo que "se hizo" es que no haya dos copias.
+#:
+#: MEDIDO el 2026-10-06, y por eso existe esta constante: al cambiar el criterio
+#: de "curated" a "reliable" se vacio protein pero NO la tabla job, asi que
+#: universe_done siguio contando como hechas las 13 releases pasadas bajo
+#: "curated" cuyas proteinas ya no existian. El arranque dijo "62 releases to
+#: go" en vez de 75, y el universo habria salido SIN nada de lo que solo aportan
+#: las releases 222-235. No un criterio mezclado: un agujero.
+EVIDENCE_SCOPE = "reliable"
+
 EXPECTED_RELEASES = 75
 
 
@@ -231,8 +243,20 @@ def loaded_releases(api: Api) -> set[int]:
     return {int(line) for line in out.stdout.split() if line.strip().isdigit()}
 
 
+def _protein_count() -> int:
+    """Cuantas filas tiene ``protein``. Para la invariante de coherencia."""
+    out = subprocess.run(
+        ["docker", "exec", "protea-postgres-1", "psql", "-U", "protea", "-d", "protea",
+         "-t", "-A", "-c", "SELECT count(*) FROM protein;"],
+        capture_output=True, text=True, timeout=60,
+    )
+    if out.returncode != 0:
+        raise RuntimeError(f"protein count psql failed: {out.stderr[:300]}")
+    return int(out.stdout.strip())
+
+
 def universe_done(api: Api) -> set[int]:
-    """Releases with a succeeded, NON-DRY-RUN ensure_goa_universe job.
+    """Releases with a succeeded, NON-DRY-RUN pass UNDER THE CURRENT CRITERION.
 
     Read straight from the DB for the same reason as :func:`loaded_releases`:
     there is no annotation_set to look at in phase 1, so the job row is the only
@@ -243,6 +267,17 @@ def universe_done(api: Api) -> set[int]:
     One such job existed for release 156 on 2026-10-05 and would have done
     exactly that; the clean-slate truncate then removed it, which is luck, not a
     reason to drop the filter.
+
+    The ``evidence_scope`` filter is the same failure one step removed, and it
+    bit on 2026-10-06. A pass under a DIFFERENT criterion also wrote something
+    that is no longer there: the criterion changed, ``protein`` was truncated,
+    ``job`` was not, and this function went on counting 13 releases as done.
+    "Done" has to mean "done under the criterion we are about to use", so the
+    query matches :data:`EVIDENCE_SCOPE`.
+
+    Jobs predating the field carry no ``evidence_scope``; they ran under the
+    operation's default of the time, which was ``curated``, so that is what they
+    are counted as.
     """
     out = subprocess.run(
         [
@@ -250,7 +285,8 @@ def universe_done(api: Api) -> set[int]:
             "-t", "-A", "-c",
             "SELECT DISTINCT payload->>'gaf_url' FROM job "
             "WHERE operation='ensure_goa_universe' AND status='SUCCEEDED' "
-            "AND coalesce((payload->>'dry_run')::boolean, false) = false;",
+            "AND coalesce((payload->>'dry_run')::boolean, false) = false "
+            f"AND coalesce(payload->>'evidence_scope', 'curated') = '{EVIDENCE_SCOPE}';",
         ],
         capture_output=True,
         text=True,
@@ -364,8 +400,20 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     unrecoverable tail FIRST instead of last.
     """
     done = universe_done(api)
+    # La invariante que el defecto del 2026-10-06 violaba: si no hay ni una
+    # proteina pero hay pasadas contadas como hechas, el estado es incoherente y
+    # seguir produce un universo con un agujero silencioso. Cualquier causa vale
+    # -- un truncate, una restauracion, una base equivocada -- asi que se
+    # comprueba el hecho y no la causa.
+    if done and _protein_count() == 0:
+        raise SystemExit(
+            f"estado incoherente: protein esta a 0 pero {len(done)} releases "
+            f"cuentan como hechas bajo {EVIDENCE_SCOPE!r} ({sorted(done)}). "
+            "Seguir dejaria el universo sin lo que solo aportan esas releases. "
+            "O se restauran sus filas, o sus jobs no deben contar."
+        )
     if done:
-        log(f"universe already done (skipped): {sorted(done)}")
+        log(f"universe already done (skipped, scope={EVIDENCE_SCOPE}): {sorted(done)}")
     # Ascendente: ver el docstring. `plan` ya llega ascendente de parse_plan.
     pending = [r for r, _ in plan if r not in done]
     log(f"phase 1 ascending: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
@@ -416,7 +464,7 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
                     # El criterio de admision pasa a ser el de la VERDAD, y el
                     # principio es: se admite una proteina solo por evidencia
                     # que sea una medicion sobre esa proteina.
-                    "evidence_scope": "reliable",
+                    "evidence_scope": EVIDENCE_SCOPE,
                 },
             },
         )
