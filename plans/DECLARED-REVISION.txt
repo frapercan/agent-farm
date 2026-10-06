@@ -635,5 +635,70 @@
 # enviar no es una guarda.
 # ---------------------------------------------------------------------------
 
-coordinator a2d80e15696e49804ac200e17f26e6213c6165f3
-schema-applied a2d80e15696e49804ac200e17f26e6213c6165f3
+# ---------------------------------------------------------------------------
+# UNDECIMO SALTO, 2026-10-06. 064b281fdf260e58e6b9628e7aa638ea696afd55.
+#
+# OTRA VEZ TRES MERGES EN UN SALTO, y otra vez hay que decirlo: la declaracion
+# se quedo en a2d80e1 (#986) mientras el arbol avanzaba a #987, #988 y #989. Es
+# la misma deriva que el salto anterior documento y no se corrigio. Al dia aqui.
+#
+# QUE TRAEN LOS TRES.
+#   #987  Un 503 de UniProt no tira una pasada entera del universo: los
+#         reintentos cubren tambien la ruta de las secundarias.
+#   #988  El criterio son cuatro niveles y Swiss-Prot sale del GAF. Sustituye
+#         evidence_scope por admit, una lista de niveles, y lee la pertenencia a
+#         Swiss-Prot del nombre de entrada que el propio GAF trae.
+#   #989  El universo se construye en DOS operaciones. ensure_goa_universe deja
+#         de existir: extract_goa_universe lee un GAF y escribe filas de solo
+#         accesion, y resolve_protein_sequences pide las secuencias a UniProt UNA
+#         vez al final de la serie. Migracion f2a8c41d9e37.
+#
+# EL CATALOGO DE OPERACIONES CAMBIA DE NOMBRES, Y ESO IMPORTA AQUI. Desaparece
+# ensure_goa_universe y aparecen extract_goa_universe y
+# resolve_protein_sequences. Un worker con el codigo viejo no reconoce las dos
+# nuevas, y un driver con el nuevo pide una operacion que el worker viejo no
+# tiene: el job queda FAILED, no en cola. Las dos colas son protea.jobs, que el
+# sobremesa no consume, asi que el nodo no esta en esa ruta. Pero el API y los
+# workers de esta maquina SI, y hay que reiniciarlos: el codigo servido va por
+# detras del arbol y la pantalla no lo dice.
+#
+# EL ESQUEMA. Cabeza de alembic del arbol declarado: f2a8c41d9e37. La base esta
+# en f2a8c41d9e37, aplicada el 2026-10-06 con la puerta comprobada antes: cero
+# jobs QUEUED o RUNNING y cero prediction_set. Es aditiva, una columna nullable
+# mas su indice, asi que no hay backfill: las 108.532 filas quedan con
+# first_admitted_release a NULL, que es lo que significa "ninguna pasada la ha
+# admitido todavia".
+#
+# EL CRITERIO DEL CORPUS, DECLARADO. Tres niveles:
+# [truth, curated_inference, swissprot_of_release], enumerados y nunca un
+# complemento. Lo que las dos declaraciones anteriores dijeron queda RETIRADO:
+# "todo lo no-IEA" admitia IBA, propagado mecanicamente por PAINT, y ND, que
+# registra que un curador no encontro nada sobre terminos raiz cuya Information
+# Accretion es cero por construccion. El regimen de evidencia de la VERDAD sigue
+# siendo lafa, que es exactamente el nivel truth. El driver escribe admit en el
+# payload de cada una de las 75 filas, y su comprobacion de reanudacion compara
+# CONJUNTOS de niveles, porque la igualdad de arrays en JSONB esta ordenada.
+#
+# LO QUE EL SOBREMESA DEBE SABER. Nada de esto toca una tabla que el nodo
+# escriba: el nodo calcula embeddings y publica, y protein.first_admitted_release
+# la escribe una operacion de protea.jobs. protea-sources sube a
+# 946227ca3b8840eb0ea7223c8fc52b746027f9fe, que trae fetch_accessions_tsv y
+# search_secondary_accessions: las dos peticiones de un tiro que permitieron
+# borrar la copia interna de la logica de reintentos. En esa maquina el torch SI
+# es el de CUDA: la instalacion va con pip --no-deps y NUNCA con poetry install.
+#
+# QUE FALTA ANTES DE QUE LA FASE 1 PUEDA ARRANCAR, y no es codigo. protein tiene
+# 108.532 filas admitidas bajo el criterio viejo, que admitia IBA y ND: son un
+# superconjunto en la direccion equivocada y hay que truncar. El resume no se
+# deja enganar por ellas -- universe_done solo cuenta pasadas de
+# extract_goa_universe con el conjunto de niveles declarado, y ninguna vieja lo
+# es -- pero las FILAS si se quedarian.
+#
+# SIGUE VALIENDO LA ADVERTENCIA DEL SALTO ANTERIOR: POST /v1/jobs no valida el
+# payload al enviar, la validacion ocurre dentro de execute(). Un payload malo no
+# da 422, da un job que acaba FAILED. Cualquier guarda que dependa de un 422 al
+# enviar no es una guarda.
+# ---------------------------------------------------------------------------
+
+coordinator 064b281fdf260e58e6b9628e7aa638ea696afd55
+schema-applied 064b281fdf260e58e6b9628e7aa638ea696afd55
