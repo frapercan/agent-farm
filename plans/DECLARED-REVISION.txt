@@ -700,5 +700,58 @@
 # enviar no es una guarda.
 # ---------------------------------------------------------------------------
 
-coordinator 064b281fdf260e58e6b9628e7aa638ea696afd55
-schema-applied 064b281fdf260e58e6b9628e7aa638ea696afd55
+# ---------------------------------------------------------------------------
+# DUODECIMO SALTO, 2026-10-06. 652ec86f805f32e0c6e5fa4247b43f17126a72eb.
+#
+# ESTE SALTO NO ES RUTINA: cierra un defecto que habria metido 7,6 millones de
+# proteinas en el corpus en silencio, y el salto es la UNICA forma de que el
+# arreglo corra.
+#
+# QUE TRAE, sobre 064b281 (#989):
+#   #990  Codigo y tests del universo en ingles. Renombrado puro, las claves del
+#         dict de resultado intactas a proposito.
+#   #991  `skipped` de load_goa_annotations partido en tres. La unica de las tres
+#         razones que significa perdida del superset era invisible dentro de las
+#         ~270M filas de "esta proteina no es nuestra".
+#   #992  ADR-D50 (Proposed): la identidad de un termino GO entre releases.
+#   #993  El prewarm se afirmaba por reloj; el test esperaba tres ticks del bucle
+#         de eventos y fallaba una vez de cada tantas.
+#   #932  La guarda del holdout, reflotada de septiembre. `assert_may_inform`
+#         decia lo correcto y tenia CERO llamantes.
+#   #994  GOA quito el nombre de entrada en la release 179 y la regla de
+#         Swiss-Prot fallaba ABIERTO.
+#
+# LO QUE OBLIGO AL SALTO. La release 179 estuvo tres horas en RUNNING con el
+# worker en 7,3 GB y 7.639.329 accesiones admisibles contra unas 600.000 por
+# release. GOA dejo de publicar el nombre de entrada de UniProtKB en DB Object
+# Synonym a partir de la 179 y puso el simbolo del gen; la regla inferia
+# Swiss-Prot de la AUSENCIA del patron de TrEMBL, asi que sin nombre admitia
+# todo. Medido: 164..178 llevan el nombre en el 100% de las filas, 179 en el 0%,
+# 180 en el 0%, 231 en el 5%. Son 52 de las 75 releases, incluida la ventana
+# 220..227. Se paro antes de escribir: 0 filas con first_admitted_release=179.
+#
+# EL ORDEN, que importa y se siguio: arbol sincronizado, API y worker
+# REINICIADOS, y solo entonces este fichero. La declaracion dice que esta
+# CORRIENDO; subirla antes la deja mintiendo. Verificado tras el reinicio:
+# `revision=652ec86f...` en logs/worker-jobs.log, un solo consumidor en
+# protea.jobs.
+#
+# EL ESQUEMA no cambia: f2a8c41d9e37, igual que en el salto anterior. Ninguna de
+# las seis PR trae migracion.
+#
+# EL CRITERIO DEL CORPUS CAMBIA DE ALCANCE, no de definicion. Los tres niveles
+# siguen siendo [truth, curated_inference, swissprot_of_release], pero el tercero
+# solo es derivable del GAF en las releases 156..178. De la 179 al final la
+# operacion ya NO lo infiere y lo DICE: cuenta `rows_entry_name_unreadable` y
+# emite `extract_goa_universe.swissprot_tier_unavailable` en warning. El hueco se
+# cubre con la Swiss-Prot ACTUAL como fuente de admision declarada, que es una
+# decision aparte y queda en MARCO-DECLARADO.md.
+#
+# LO QUE EL SOBREMESA DEBE SABER. Nada de esto toca una tabla que el nodo
+# escriba. protea-sources no se mueve: sigue en
+# 946227ca3b8840eb0ea7223c8fc52b746027f9fe. En esa maquina el torch SI es el de
+# CUDA: la instalacion va con pip --no-deps y NUNCA con poetry install.
+# ---------------------------------------------------------------------------
+
+coordinator 652ec86f805f32e0c6e5fa4247b43f17126a72eb
+schema-applied 652ec86f805f32e0c6e5fa4247b43f17126a72eb
