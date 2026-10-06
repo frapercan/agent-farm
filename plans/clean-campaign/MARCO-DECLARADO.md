@@ -743,29 +743,34 @@ declarar — y lo declarado queda aquí, no en un payload.
 
 ## El universo, ahora declarado
 
-**Todas las fiables de cualquier taxonomía, más las reviewed actuales.**
+**Tres niveles de admisión sobre la serie entera, de cualquier taxonomía.**
+Enumerados, nunca un complemento. La versión vigente es la de abajo, «El
+criterio son cuatro niveles (2026-10-06)», que es también ADR-D49 en PROTEA;
+aquí queda lo que no cambia con el nivel:
 
-- "Fiables" son los **trece códigos de lafa**: los once experimentales de GO más
-  `IC` y `TAS`. Es `evidence_scope: "reliable"`.
-- **El criterio de admisión y el de la verdad son el mismo, y eso es
-  deliberado.** El principio: se admite una proteína sólo por evidencia que sea
-  una medición sobre esa proteína. Un ancestro propagado no lo es, y un «no
-  encontré nada» tampoco.
-- Consecuencia que conviene que sea decisión y no efecto secundario: el banco de
-  donantes y el conjunto de objetivos salen del **mismo pozo**. `donor_policy`
-  podrá estrechar el banco en consulta, pero no ampliarlo más allá del corpus.
-- La ampliación a `curated` se probó entre el 2026-10-05 y el 2026-10-06 y se
-  **revirtió**: ver «La reversión de `curated` a `reliable` (2026-10-06)».
+- **El criterio de la VERDAD es uno solo y no se toca**: los trece códigos de
+  lafa, el nivel `truth`. Una proteína se puntúa contra su verdad.
+- **El principio que ordena los niveles**: se admite una proteína por evidencia
+  que sea una medición sobre esa proteína, o porque una base curada diga que
+  revisó la entrada. Todo lo excluido falla las dos cosas.
+- El banco de donantes **no queda fijado por esto**:
+  `donor_policy.evidence_codes` es una lista arbitraria que se filtra en la
+  consulta del banco, así que el nivel se elige al analizar. El **coste de
+  embedding no es recuperable así**: toda proteína admitida con secuencia se
+  embebe una vez.
 - Las filas `NOT` cuentan. Un NOT es conocimiento curado y escaso, y
   `_reconcile_not_side` ya lo propaga y lo resta. Una proteína cuya única
   anotación fiable es un NOT pertenece al universo.
 - Las isoformas no se colapsan.
 - El universo sale **de cada GAF**, no de una consulta a UniProt. Una consulta
-  describe hoy; la campaña va de 2016 a 2026.
+  describe hoy; la campaña va de 2016 a 2026. Medido sobre tres releases (160,
+  194, 235): la unión son **196.164** accesiones, **46.390 más** que la consulta
+  de hoy, y la curva seguía subiendo.
 
-Lo construye `ensure_goa_universe` (PROTEA#978). **Las 75 pasadas de universo van
-antes de la primera carga de anotaciones**: intercalar por release truncaría la
-historia de toda proteína admitida tarde.
+Lo construye `extract_goa_universe` (PROTEA#989; antes `ensure_goa_universe`,
+PROTEA#978). **Las 75 pasadas de universo van antes de la primera carga de
+anotaciones**: intercalar por release truncaría la historia de toda proteína
+admitida tarde.
 
 ### RETIRADA. El criterio pasó de fiable a curado (2026-10-05), y volvió el 2026-10-06
 
@@ -1165,3 +1170,140 @@ las filas conserva también la clave que ya tiene el sobremesa.
 **Resuelto el 2026-10-05**: las dos filas de `api_key` se restauraron desde
 `protea_old` y la plataforma despacha. La clave del sobremesa se conservó, así
 que el nodo sigue uniéndose a la cola sin tocarlo.
+
+# El criterio son cuatro niveles, y las secuencias llegan al final (2026-10-06)
+
+Esto **sustituye** a `evidence_scope: "reliable"` y a la reversión que lo
+instauró ese mismo día. El registro de decisión es **ADR-D49** en PROTEA
+(`docs/source/adr/D49-corpus-is-four-tiers-of-the-gaf-series.rst`), que lleva
+todas las mediciones; aquí queda lo que el driver declara y lo que hay que hacer
+antes de arrancar.
+
+## Por qué `reliable` no bastaba, aunque fuera más estrecho que `curated`
+
+`reliable` era **un complemento**: todo lo que no es IEA. Un complemento admite
+lo que GO invente después sin que nadie lo decida, y ya había admitido dos
+familias que nadie eligió:
+
+- **`IBA` / `IBD`** vienen de PAINT: un curador anota un nodo ancestral y la
+  anotación se propaga mecánicamente. Hay persona, pero no mirando a esta
+  proteína, y la etiqueta es por construcción el consenso de su familia. **58%**
+  del universo entraba sólo por `IBA`, y su parte de la anotación curada subió
+  del 52% en la GOA 156 al 83% en la 231. Es justo la cantidad contra la que un
+  método de vecinos debería evaluarse, no de la que debería aprender.
+- **`ND`** es cómo GO registra que un curador miró y no encontró nada. Sus filas
+  están sobre los tres términos **raíz**, y IA(v) = −log2 P(v | padres(v)) hace
+  que la Information Accretion de una raíz sea **cero por construcción**. Medido
+  sobre la 156: **83.950** accesiones llevan sólo `ND`, y 83.949 de ellas tienen
+  todas sus filas no-IEA sobre un término raíz. Como donante no aporta nada y
+  ocupa un hueco entre los k vecinos: no es inerte, es dañino.
+
+## Los niveles
+
+| nivel | códigos | qué admite | medido en la GOA 156 |
+|---|---|---|---|
+| `truth` | los trece de lafa | una medición sobre ESTA proteína; el único nivel que la hace objetivo | **117.136** accesiones (69.927 Swiss-Prot, 47.209 TrEMBL) |
+| `curated_inference` | `ISS ISO ISA ISM IGC RCA NAS IKR IRD` | el juicio de un curador sobre ESTA proteína, nunca verdad | **62.363** proteínas entran por éstos y por nada más |
+| `swissprot_of_release` | ninguno; se lee del nombre de entrada | la entrada estaba revisada EN ESA RELEASE | **527.149** accesiones |
+| *excluidos* | `IEA`, `IBA`, `IBD`, `ND` | cada uno por su razón, y no son intercambiables | |
+
+La partición es **exacta**: 13 + 9 + 4 = 26, que son todos los códigos que conoce
+el mapeo ECO. Así que un código desconocido es un código que GO añadió después de
+escribir esto: se **cuenta y se rechaza**, y aparece en el resultado del job bajo
+`codigos_desconocidos`.
+
+**La familia `ISS` entra**, y no por engordar el corpus. Son inferencias de
+ALINEAMIENTO revisadas por un curador, así que comparar una predicción por
+vecindad de embeddings contra ellas prueba si una vecindad de embeddings captura
+lo que captura el alineamiento curado, sin tocar la verdad que se puntúa.
+
+## Swiss-Prot por release sale del propio GAF
+
+UniProt nombra una entrada de TrEMBL `<accesión>_<ORGANISMO>` y una de Swiss-Prot
+`<mnemónico>_<ORGANISMO>`, y la columna DB Object Synonym del GAF lleva el nombre
+de entrada **de su propia release**. Así que `P12345_HUMAN` es TrEMBL y
+`HLA_A_HUMAN` está revisada, y las dos formas son disjuntas por construcción.
+
+Medido sobre la 156 (2016-11-01): la regla nombra **527.149** accesiones como
+revisadas, contra **551.705** entradas en el tarball de Swiss-Prot 2016_07, un
+déficit de 24.556 (**−4,45%**) que son entradas sin ninguna fila de anotación en
+esa release. El déficit va en la dirección segura: la pertenencia no se inventa.
+
+Esto elimina una descarga de 40 GB por release y el problema de emparejar
+releases, para una columna que el fichero ya traía.
+
+**Y mata el filtro por `reviewed` de hoy**: de la Swiss-Prot actual, **24.854
+entradas (4,3%)** no estaban en Swiss-Prot en 2016. Filtrar una ventana temporal
+por el estado de revisión de hoy las inyecta en el pasado.
+
+## Las secuencias llegan al final, y por eso hay tres fases
+
+Las anotaciones son **históricas** y hay que cargarlas release a release. Una
+secuencia es una **propiedad de la proteína** y sólo la tiene el UniProt de hoy.
+`protein.sequence_id` es nullable, así que una accesión puede ser miembro del
+corpus antes de tener cadena, y `load_goa_annotations` filtra con
+`select(Protein.accession)` a secas: no necesita ni una secuencia.
+
+| fase | operación | qué hace |
+|---|---|---|
+| `--phase 1` | `extract_goa_universe` | 75 pasadas ascendentes, filas de sólo accesión, ninguna red más que el fichero |
+| `--phase 2` | `load_goa_annotations` | las anotaciones de cada release contra su snapshot |
+| `--phase 3` | `resolve_protein_sequences` | **un** job: secuencias, fechas de auditoría y fusiones, sobre toda fila sin secuencia |
+
+Hacerlo por release le preguntaba a UniProt lo mismo hasta 75 veces y preguntaba
+una y otra vez por accesiones que no sirve en absoluto: **34% de las peticiones**
+en las diez pasadas que corrieron así.
+
+Las anotaciones de una proteína cuya secuencia nunca llega **se quedan**: la
+proteína participó en los deltas. Las consultas que necesitan cadena filtran por
+`sequence_id IS NOT NULL`. Y lo que no se puede rescatar es ahora una **lista de
+nombres** (`sin_resolver.txt` en el almacén de artefactos) y no un número: de 25
+muestreadas, 25 son `entryType: "Inactive"` sin secuencia.
+
+## La columna que el orden ascendente hace posible
+
+`protein.first_admitted_release` (migración `f2a8c41d9e37`) guarda la release más
+baja que admitió la accesión. **No** es el `first_release` que la migración
+`e4b7a19c0f83` rechazó un día antes: aquél significaba *la release más antigua
+que existía una vez existía la entrada*, es derivable de `date_created` contra
+`annotation_set.source_published_at`, y sigue sin almacenarse.
+
+Éste es el evento de **ganancia de conocimiento**, que es lo que mide la campaña.
+Una proteína puede existir en UniProt desde 1998 y haber conseguido su primera
+anotación experimental en 2019; `date_created` dice 1998 y no puede decir 2019. Y
+para una proteína admitida **sólo** como entrada revisada de su release no es
+derivable de nada: recuperarla costaría releer los 802 GB.
+
+Se escribe como **mínimo** (`IS NULL OR > N`), así que el valor es la release más
+temprana de verdad aunque la serie se procese desordenada, y una pasada repetida
+no lo sube.
+
+## Lo que hay que hacer ANTES de arrancar la fase 1
+
+**Truncar `protein` y `sequence`.** Las 108.532 proteínas que hay ahora entraron
+con una pasada de la release 156 bajo `reliable`, que admitía `IBA` y `ND`. Son un
+superconjunto en la dirección equivocada: si se deja, el criterio declarado y el
+corpus no coinciden, y la diferencia no la señala nada.
+
+El resume de la fase 1 **no** se deja engañar por eso: `universe_done` sólo cuenta
+pasadas de `extract_goa_universe` cuyo conjunto de niveles sea exactamente el
+declarado, y ninguna pasada vieja lo es. La comparación es de **conjuntos** y se
+hace en Python a propósito, porque `payload->'admit' = '[...]'::jsonb` es igualdad
+ordenada de arrays y diría que los mismos tres niveles en otro orden son otro
+criterio.
+
+## Lo que esto no resuelve
+
+- **La guarda del holdout.** Cargar las 75 releases disuelve la protección física
+  que daba «la GOA 230 no está en la base». Los roles de ventana de ADR-D40 son la
+  protección lógica; una guarda que se niegue a leer un conjunto de anotación del
+  lado TEST no existe todavía.
+- **`RELEASES` en `split_registry.py`** no lista estas releases, así que TRAIN no
+  se puede nombrar hasta que las liste.
+- **`embedding_config` está vacía** tras el reinicio: las ocho recetas de ADR-D48
+  hay que volver a declararlas antes de calcular un solo embedding.
+- **Los metadatos y la IA.** `fetch_uniprot_metadata` una vez, y
+  `compute_information_accretion` con régimen `lafa` sobre el conjunto de
+  anotación que se declare cuando la ventana esté construida. La IA es
+  **invariante** a los niveles 2 y 3 justamente porque su `evidence_regime` es
+  `lafa` por defecto.

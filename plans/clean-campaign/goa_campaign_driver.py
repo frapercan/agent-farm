@@ -1,18 +1,41 @@
 #!/usr/bin/env python3
-"""GOA campaign driver: sequential ascending loads, GOA 160..235.
+"""GOA campaign driver: three phases over GOA 156..235, ascending.
 
 Single source of truth for (release -> ontology snapshot date) is
 agent-farm/plans/GOA-ONTOLOGY-PAIRING.md; this script parses that table at
-startup and refuses to run if it does not find exactly 71 rows.
+startup and refuses to run if it does not find exactly 75 rows.
+
+THE THREE PHASES, and the order is the argument.
+
+``--phase 1`` grows the protein universe from every GAF, ascending, one file at
+a time, through ``extract_goa_universe``. Accession-only rows: no sequence, no
+metadata, no network beyond the file. 75 passes.
+
+``--phase 2`` loads the annotations of every release, ascending, each against
+its own ontology snapshot. It gates on ``select(Protein.accession)``, so phase 1
+is what stops it from dropping rows in silence, and it needs no sequence.
+
+``--phase 3`` fetches the sequences, the audit dates and the merged-accession
+links from today's UniProt, in ONE job, through
+``resolve_protein_sequences``. Once, over the union of the 75 releases.
+
+Why the sequences come last, and not in phase 1: annotations are HISTORICAL and
+belong to their release, a sequence is a PROPERTY OF THE PROTEIN and only
+today's UniProt has it. Fetching per release asked the same question up to 75
+times and asked repeatedly about accessions UniProt does not serve at all, which
+measured 34% of the requests over the ten passes that worked that way.
 
 Properties:
-  * ascending order (160 -> 235), one GAF at a time;
+  * ascending order (156 -> 235), one GAF at a time, in both file phases;
   * ontology snapshot per release (operation is idempotent on obo_version,
-    so the 64 distinct snapshots shared by 71 releases are loaded once);
+    so the distinct snapshots shared by the 75 releases are loaded once);
   * startup drain: waits for any in-flight load_goa_annotations /
     load_ontology_snapshot job to finish before enqueueing, so a driver
     restart never duplicates a running load;
-  * skip releases whose annotation set already exists (re-run safe);
+  * every phase is resume-safe, and each asks the DATABASE what is done rather
+    than remembering: phase 1 by its job rows under the declared tiers, phase 2
+    by the annotation sets that exist, phase 3 by the rows still missing a
+    sequence;
   * hard stop on first failure with the job id in the log;
   * every step appended to goa-campaign.log next to this file.
 
@@ -46,6 +69,11 @@ OBO_URL = "https://release.geneontology.org/{date}/ontology/go-basic.obo"
 
 ONTOLOGY_JOB_TIMEOUT_S = 30 * 60
 GOA_JOB_TIMEOUT_S = 8 * 3600
+#: La fase 3 es UN job sobre unas 700.000 accesiones en lotes de mil, con los
+#: reintentos del plugin dentro. Medido a 0,2-0,9 s por lote en la ruta rapida,
+#: son horas, no minutos, y el techo generoso evita que un driver impaciente
+#: declare fallida una pasada que esta funcionando.
+RESOLVE_JOB_TIMEOUT_S = 24 * 3600
 POLL_S = 20
 
 # 75 ficheros, releases 156..235. Eran 71 (160..235) mientras se creyo que la
@@ -61,7 +89,18 @@ POLL_S = 20
 #: "curated" cuyas proteinas ya no existian. El arranque dijo "62 releases to
 #: go" en vez de 75, y el universo habria salido SIN nada de lo que solo aportan
 #: las releases 222-235. No un criterio mezclado: un agujero.
-EVIDENCE_SCOPE = "reliable"
+#:
+#: Son NIVELES y no una palabra desde PROTEA#989 (ADR-D49). "reliable" era un
+#: complemento -- todo lo que no es IEA -- y un complemento admite lo que GO
+#: invente despues sin que nadie lo decida: admitio IBA, propagado mecanicamente
+#: por PAINT desde un nodo ancestral (58% del universo entraba solo por ahi), y
+#: ND, que es como GO registra que un curador miro y no encontro nada, sobre los
+#: tres terminos RAIZ cuya Information Accretion es cero por construccion.
+#:
+#: Los tres niveles enumeran 22 de los 26 codigos que conoce el mapeo ECO; los
+#: otros cuatro (IEA, IBA, IBD, ND) quedan fuera, cada uno por su razon, y un
+#: codigo desconocido se cuenta y se rechaza en vez de entrar en silencio.
+ADMIT_TIERS = ["truth", "curated_inference", "swissprot_of_release"]
 
 EXPECTED_RELEASES = 75
 
@@ -268,25 +307,31 @@ def universe_done(api: Api) -> set[int]:
     exactly that; the clean-slate truncate then removed it, which is luck, not a
     reason to drop the filter.
 
-    The ``evidence_scope`` filter is the same failure one step removed, and it
-    bit on 2026-10-06. A pass under a DIFFERENT criterion also wrote something
-    that is no longer there: the criterion changed, ``protein`` was truncated,
-    ``job`` was not, and this function went on counting 13 releases as done.
-    "Done" has to mean "done under the criterion we are about to use", so the
-    query matches :data:`EVIDENCE_SCOPE`.
+    The CRITERION filter is the same failure one step removed, and it bit on
+    2026-10-06. A pass under a DIFFERENT criterion also wrote something that is
+    no longer there: the criterion changed, ``protein`` was truncated, ``job``
+    was not, and this function went on counting 13 releases as done. "Done" has
+    to mean "done under the criterion we are about to use".
 
-    Jobs predating the field carry no ``evidence_scope``; they ran under the
-    operation's default of the time, which was ``curated``, so that is what they
-    are counted as.
+    The comparison is made HERE and not in SQL, as a SET of tier names. Two
+    payloads naming the same three tiers in different order are the same
+    criterion, and ``payload->'admit' = '[...]'::jsonb`` would say they are not:
+    JSONB array equality is ordered. A resume check that answers "not done" for
+    work that was done costs a 24 GB re-read; one that answers "done" for work
+    that was not costs a hole in the corpus.
+
+    Jobs from before the split ran ``ensure_goa_universe`` under a scope word
+    rather than tiers, and are counted as done by NOTHING: that operation no
+    longer exists, and no tier list is equivalent to ``reliable``, which admitted
+    IBA and ND.
     """
     out = subprocess.run(
         [
             "docker", "exec", "protea-postgres-1", "psql", "-U", "protea", "-d", "protea",
-            "-t", "-A", "-c",
-            "SELECT DISTINCT payload->>'gaf_url' FROM job "
-            "WHERE operation='ensure_goa_universe' AND status='SUCCEEDED' "
-            "AND coalesce((payload->>'dry_run')::boolean, false) = false "
-            f"AND coalesce(payload->>'evidence_scope', 'curated') = '{EVIDENCE_SCOPE}';",
+            "-t", "-A", "-F", "\t", "-c",
+            "SELECT payload->>'gaf_url', coalesce(payload->>'admit', '[]') FROM job "
+            "WHERE operation='extract_goa_universe' AND status='SUCCEEDED' "
+            "AND coalesce((payload->>'dry_run')::boolean, false) = false;",
         ],
         capture_output=True,
         text=True,
@@ -294,19 +339,29 @@ def universe_done(api: Api) -> set[int]:
     )
     if out.returncode != 0:
         raise RuntimeError(f"universe_done psql failed: {out.stderr[:300]}")
+    quiere = set(ADMIT_TIERS)
     found: set[int] = set()
-    for line in out.stdout.split():
-        m = re.search(r"goa_uniprot_all\.gaf\.(\d+)\.gz", line)
+    for line in out.stdout.splitlines():
+        if "\t" not in line:
+            continue
+        gaf_url, admit_json = line.split("\t", 1)
+        try:
+            admit = set(json.loads(admit_json))
+        except (ValueError, TypeError):
+            continue
+        if admit != quiere:
+            continue
+        m = re.search(r"goa_uniprot_all\.gaf\.(\d+)\.gz", gaf_url)
         if m:
             found.add(int(m.group(1)))
     return found
 
 
-def job_result(api: Api, job_id: str) -> dict:
+def job_result(api: Api, job_id: str, event: str = "extract_goa_universe.done") -> dict:
     """The operation's result dict, which lives ONLY in the job.succeeded event.
 
     There is no ``result`` column on ``job`` and the API's job detail does not
-    expose one; the phase 2 loop logs ``findings``, which ``ensure_goa_universe``
+    expose one; the phase 2 loop logs ``findings``, which the universe pass
     leaves NULL. Reading ``job["result"]`` therefore logs ``null`` for a pass that
     worked, which is the exact shape of silence this campaign keeps paying for:
     the numbers that justify the run would not be in the log.
@@ -316,7 +371,7 @@ def job_result(api: Api, job_id: str) -> dict:
     except Exception:  # noqa: BLE001 - logging must not fail the release
         return {}
     for ev in items(events):
-        if ev.get("event") == "ensure_goa_universe.done":
+        if ev.get("event") == event:
             return ev.get("fields") or {}
     for ev in items(events):
         if ev.get("event") == "job.succeeded":
@@ -329,7 +384,7 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
 
     Three things make this a different loop and not a flag on the other one.
 
-    No ontology. ``ensure_goa_universe`` reads the GAF and UniProt, never a
+    No ontology. ``extract_goa_universe`` reads the GAF and nothing else, never a
     snapshot, so the load_ontology_snapshot step and the whole ``ont_pending``
     dance do not apply.
 
@@ -353,13 +408,16 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     the oldest few would have given phase 2 a free start. Both phases now run
     ascending, so they share no boundary and there is nothing to keep.
 
-    Sequential, not MAX_IN_FLIGHT. Two universe passes at once would both ask
-    UniProt for accessions, and the batch endpoint is the slow part: release 156
-    scanned in 4,3 min and then spent longer than that fetching 117.136
-    accessions in batches of a thousand. NOTE that ``ensure_cached`` BLOCKS, so
-    download and pass do not overlap: the measured cycle is 423 s of prefetch plus
-    375 s of pass, and the releases grow from 3,4 GB at the old end to 19 GB at the
-    new one.
+    Sequential, not MAX_IN_FLIGHT, and the reason CHANGED with PROTEA#989. It
+    used to be UniProt: two passes at once both hit the batch endpoint, which was
+    the slow part (release 156 scanned in 4,3 min and then spent longer than that
+    fetching 117.136 accessions). The pass no longer talks to UniProt at all, so
+    what remains is the disk and the laptop: one release is a single gzip stream
+    of up to 24 GB decompressed on one machine that already runs Postgres,
+    RabbitMQ, MinIO, the API and the frontend, and more consumers on it buy +14%
+    throughput at 97 C. NOTE that ``ensure_cached`` BLOCKS, so download and pass
+    do not overlap: the measured prefetch is 423 s and the releases grow from 3,4
+    GB at the old end to 19 GB at the new one.
 
     ASCENDING, oldest first, 156 -> 235. Reverted from descending on
     2026-10-06, together with the evidence criterion.
@@ -375,19 +433,22 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     with the project's definition of truth, which is first appearance and not a
     pairwise difference.
 
-    NOTE that ``first_release`` is still not a column. Under descending its
-    absence was justified because the value would have been meaningless; that
-    justification is now gone, and the value is only implicit in ``created_at``
-    against the job windows. Recoverable but fragile. Adding the column is a
-    separate decision, not a rider on this one.
+    ``protein.first_admitted_release`` is now a column (PROTEA migration
+    ``f2a8c41d9e37``), and the ascending order is what gives it a meaning. The
+    operation writes it as a MINIMUM, not as a first writer, so this loop is free
+    to resume, repeat a release or process them out of order without the value
+    drifting upward. It is NOT the ``first_release`` an earlier migration
+    refused: that one meant the earliest release that existed once the entry
+    existed, is derivable from ``date_created``, and remains unstored. See
+    ADR-D49.
 
     WHAT ASCENDING COSTS, declared rather than discovered later. A partial run
     stops being useful: the evaluation window is GOA 220 -> 227, at the new end,
     so an interrupted ascending run leaves 2016-2019 done and the window
     untouched. Descending covered the window in its first fifteen passes. The
-    cost is accepted because ``reliable`` makes a pass far cheaper -- it fetches a
-    fraction of the accessions that ``curated`` did -- so the whole of phase 1 is
-    expected to finish in one stretch.
+    cost is accepted because a pass is now far cheaper than it was: it fetches
+    NOTHING from UniProt, so what used to be scan plus fetch is scan alone, and
+    the whole of phase 1 is expected to finish in one stretch.
 
     It also loses a cache alignment: descending FINISHED on the files phase 2
     STARTS with, which left a free start on the table. Ascending ends at 235 and
@@ -408,12 +469,12 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     if done and _protein_count() == 0:
         raise SystemExit(
             f"estado incoherente: protein esta a 0 pero {len(done)} releases "
-            f"cuentan como hechas bajo {EVIDENCE_SCOPE!r} ({sorted(done)}). "
+            f"cuentan como hechas bajo {ADMIT_TIERS} ({sorted(done)}). "
             "Seguir dejaria el universo sin lo que solo aportan esas releases. "
             "O se restauran sus filas, o sus jobs no deben contar."
         )
     if done:
-        log(f"universe already done (skipped, scope={EVIDENCE_SCOPE}): {sorted(done)}")
+        log(f"universe already done (skipped, admit={ADMIT_TIERS}): {sorted(done)}")
     # Ascendente: ver el docstring. `plan` ya llega ascendente de parse_plan.
     pending = [r for r, _ in plan if r not in done]
     log(f"phase 1 ascending: {len(pending)} releases to go, {pending[:3]}..{pending[-1:]}")
@@ -435,36 +496,29 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
             "POST",
             "/v1/jobs",
             {
-                "operation": "ensure_goa_universe",
+                "operation": "extract_goa_universe",
                 "queue_name": "protea.jobs",
                 "description": f"fase 1, release {release}",
                 "payload": {
                     "gaf_url": gaf_url,
+                    # La release va en el payload porque la operacion la escribe
+                    # en cada fila que inserta, como
+                    # ``protein.first_admitted_release``. La operacion NO la
+                    # saca de la URL: un numero leido de un nombre de fichero es
+                    # una suposicion sobre una convencion, y este entra al corpus.
+                    "release": release,
                     "dry_run": False,
                     "timeout_seconds": 3600,
-                    # Los TRECE de lafa, no "todo lo no-IEA". Declarado aqui
-                    # aunque la operacion tenga un defecto, porque el defecto
-                    # que obligo a tirar la campana anterior fue un criterio
-                    # que viajaba en el codigo y no en el payload.
+                    # Los niveles, declarados AQUI aunque la operacion tenga
+                    # un defecto igual, porque el defecto que obligo a tirar la
+                    # campana anterior fue un criterio que viajaba en el codigo
+                    # y no en el payload: un ``search_criteria: reviewed:true``
+                    # dentro de un payload de insert_proteins del 2026-09-15 fijo
+                    # el alcance de toda una campana sin que nadie lo declarase.
                     #
-                    # POR QUE SE REVIRTIO, el 2026-10-06. "curated" admite por
-                    # la EXISTENCIA de una fila no-IEA, nunca por si esa fila
-                    # lleva informacion, y resulta que la mayoria no la lleva:
-                    #   - 58% del universo entraba SOLO por IBA, propagado
-                    #     mecanicamente desde un nodo ancestral por PAINT;
-                    #   - y habia proteinas que entraban SOLO por ND, que es
-                    #     como GO registra que un curador miro y no encontro
-                    #     nada. Sus unicas filas estan sobre los tres terminos
-                    #     RAIZ, cuya Information Accretion es cero por
-                    #     construccion. Como donante de KNN no aporta nada y
-                    #     ocupa un hueco entre los k vecinos: no es inerte, es
-                    #     danino. Ejemplo medido: A0A021WW64, tres filas ND
-                    #     sobre GO:0003674, GO:0005575 y GO:0008150.
-                    #
-                    # El criterio de admision pasa a ser el de la VERDAD, y el
-                    # principio es: se admite una proteina solo por evidencia
-                    # que sea una medicion sobre esa proteina.
-                    "evidence_scope": EVIDENCE_SCOPE,
+                    # El razonamiento de cada nivel y de cada exclusion esta en
+                    # ADR-D49 y en MARCO-DECLARADO.md, con sus mediciones.
+                    "admit": ADMIT_TIERS,
                 },
             },
         )
@@ -512,7 +566,7 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
         # Asi que el filtro util pierde el 17,5%, no los dos tercios que dijo
         # una medicion anterior mal planteada. Pero 17,5% no es 0, y lo que hace
         # falta es 0: la fase 2 no filtra por evidencia -- el accept del plugin
-        # solo se pasa en la fase 1, ensure_goa_universe.py:434, nunca en
+        # solo se pasa en la fase 1, extract_goa_universe.py, nunca en
         # load_goa_annotations.py:648 -- asi que toda fila IEA de un miembro del
         # universo se guarda, y el filtro las tiraria.
         #
@@ -533,6 +587,93 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
 
     log(f"phase 1 finished: {len(pending) - failures} ok, {failures} failed")
     return 1 if failures else 0
+
+
+def _sin_secuencia() -> int:
+    """Cuantas filas de ``protein`` no tienen secuencia todavia.
+
+    Por la base y no por el informe de un job: es la cifra que decide si la fase
+    3 tiene algo que hacer, y leerla del resultado del job anterior seria creerle
+    a un numero en vez de mirar el estado.
+    """
+    out = subprocess.run(
+        [
+            "docker", "exec", "protea-postgres-1", "psql", "-U", "protea", "-d", "protea",
+            "-t", "-A", "-c", "SELECT count(*) FROM protein WHERE sequence_id IS NULL;",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if out.returncode != 0:
+        raise RuntimeError(f"sin_secuencia psql failed: {out.stderr[:300]}")
+    return int(out.stdout.strip() or 0)
+
+
+def run_phase3(api: Api) -> int:
+    """Phase 3: the universe gets its sequences, once, from today's UniProt.
+
+    WHY IT IS A PHASE AND NOT A STEP OF PHASE 1. The sequences are needed over
+    the UNION of the 75 releases, not per release. Asking per release asked
+    UniProt the same question up to 75 times and asked repeatedly about
+    accessions it does not serve at all: 34% of the requests across the ten
+    passes that ran that way, measured.
+
+    WHY IT RUNS AFTER PHASE 2 AND NOT BETWEEN 1 AND 2. ``load_goa_annotations``
+    gates on ``select(Protein.accession)`` alone, so an accession-only row admits
+    every annotation its release carries: phase 2 does not need a single
+    sequence. Running the fetch first would only mean fetching sequences for
+    proteins before knowing the corpus is complete, and spending a day of
+    requests before the thing that can still fail has finished.
+
+    What DOES need the sequences is the embeddings, which come after this.
+
+    THE POPULATION IS NOT A PAYLOAD. The operation asks the table for every row
+    with no ``sequence_id`` at the moment the job runs. This driver passes no
+    accession list, deliberately: a list built here would be a snapshot of the
+    database taken before the job was even queued.
+
+    NO TIMEOUT OF OUR OWN BEYOND THE JOB'S. One job over some 700.000 accessions
+    in batches of a thousand is on the order of hours, and the retries live in the
+    plugin. The driver waits and logs; if it dies, re-running is cheap, because
+    the population is "whatever is still missing" and after a complete run that is
+    only the deleted accessions.
+    """
+    pendientes = _sin_secuencia()
+    log(f"phase 3: {pendientes} protein rows with no sequence")
+    if pendientes == 0:
+        log("phase 3: nothing to resolve, skipped")
+        return 0
+    job = api.call(
+        "POST",
+        "/v1/jobs",
+        {
+            "operation": "resolve_protein_sequences",
+            "queue_name": "protea.jobs",
+            "description": "fase 3, secuencias y fechas de todo el universo",
+            "payload": {"timeout_seconds": 300},
+        },
+    )
+    job_id = str(job["id"])
+    log(f"phase 3: job {job_id[:8]} submitted")
+    try:
+        finished = api.wait_job(job_id, RESOLVE_JOB_TIMEOUT_S)
+    except TimeoutError as exc:
+        log(f"phase 3: {exc}")
+        return 1
+    status = (finished.get("status") or "").lower()
+    if status != "succeeded":
+        log(f"phase 3: FAILURE ({status}) err={finished.get('error_message')}")
+        return 1
+    resultado = job_result(api, job_id, "resolve_protein_sequences.done")
+    log(f"phase 3: ok {json.dumps(resultado, ensure_ascii=False)}")
+    restantes = _sin_secuencia()
+    # Lo que queda sin secuencia DESPUES de una pasada completa son las
+    # accesiones que UniProt ya no sirve, y sus nombres estan en el artefacto
+    # sin_resolver.txt de este job. No es un fallo: es una cantidad, y antes era
+    # la que el filtro silencioso tiraba.
+    log(f"phase 3: {restantes} rows still without a sequence (deleted in UniProt)")
+    return 0
 
 
 def drain_in_flight(api: Api) -> None:
@@ -603,8 +744,8 @@ def main() -> int:
     phase = 2
     if "--phase" in sys.argv:
         phase = int(sys.argv[sys.argv.index("--phase") + 1])
-    if phase not in (1, 2):
-        raise SystemExit(f"--phase must be 1 or 2, got {phase}")
+    if phase not in (1, 2, 3):
+        raise SystemExit(f"--phase must be 1, 2 or 3, got {phase}")
 
     key = open(KEY_FILE, encoding="utf-8").read().strip()
     api = Api(API, key)
@@ -612,6 +753,8 @@ def main() -> int:
 
     if phase == 1:
         return run_phase1(api, plan)
+    if phase == 3:
+        return run_phase3(api)
 
     log(
         f"driver start: {len(plan)} releases, {plan[0][0]}..{plan[-1][0]}, "
