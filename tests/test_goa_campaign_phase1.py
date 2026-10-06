@@ -8,6 +8,7 @@ SILENCIO en ese modo cuestan la serie entera, asi que se fijan aqui.
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import pathlib
 from unittest.mock import patch
 
@@ -351,3 +352,70 @@ class TestTheGafIsKeptWhileTheDiskAllows:
             patch.object(d.os, "remove", boom),
         ):
             d._drop_or_keep(156)
+
+
+class TestTheDownloadOverlapsTheScan:
+    """``ensure_cached`` blocks, so phase 1 spent 423 s downloading and then 390 s
+    scanning, in series: 813 s a release when the two can overlap almost entirely.
+    Over the 67 remaining releases that serialisation costs about 7.2 h, which is
+    the biggest avoidable cost left in the run.
+    """
+
+    def test_the_next_release_starts_downloading_before_this_one_is_scanned(self):
+        """The ordering IS the optimisation, so it is what gets pinned: the
+        prefetch of N+1 must be started before the job for N is submitted, not
+        after it returns."""
+        d = _driver()
+        src = inspect.getsource(d.run_phase1)
+        kick = src.index("prefetcher.start(")
+        submit = src.index('"operation": "extract_goa_universe"')
+        assert kick < submit, "the prefetch is kicked off after the job, so nothing overlaps"
+
+    def test_it_waits_for_the_in_flight_prefetch_before_using_the_file(self):
+        """The prefetch started last iteration may be for THIS release, so the loop
+        has to join before it reads the file. Without the wait, ensure_cached would
+        see no file and start a SECOND download of the same release."""
+        d = _driver()
+        src = inspect.getsource(d.run_phase1)
+        assert src.index("prefetcher.wait()") < src.index("ensure_cached(release)")
+
+    def test_a_background_failure_does_not_end_the_run(self):
+        """The prefetch is an optimisation. If it throws, the main loop's own
+        ensure_cached finds no file and downloads synchronously, which is exactly
+        what happened before the prefetcher existed."""
+        d = _driver()
+        with patch.object(d, "ensure_cached", side_effect=RuntimeError("EBI dijo 503")):
+            d._Prefetcher._quiet(164)  # must not raise
+
+    def test_only_one_prefetch_at_a_time(self):
+        """Two concurrent downloads would halve each other's share of one link and
+        double the peak disk, and the peak is what the floor has to leave room
+        for: the worst adjacent pair in the series is 24 GB plus 24 GB."""
+        d = _driver()
+        p = d._Prefetcher()
+        started = []
+        with patch.object(d.threading, "Thread", lambda **kw: _FakeThread(started, kw)):
+            p.start(164)
+            p.start(165)
+        assert len(started) == 2, "each start spawns one thread"
+        assert p._thread is not None
+
+    def test_starting_with_no_next_release_is_a_no_op(self):
+        """The last release of the series has nothing after it."""
+        d = _driver()
+        p = d._Prefetcher()
+        p.start(None)
+        assert p._thread is None
+        p.wait()
+
+
+class _FakeThread:
+    def __init__(self, registry, kwargs):
+        registry.append(kwargs)
+        self.name = kwargs.get("name")
+
+    def start(self):
+        pass
+
+    def join(self):
+        pass

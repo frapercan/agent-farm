@@ -50,6 +50,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 import sys
 import time
 import urllib.error
@@ -78,7 +79,11 @@ RESOLVE_JOB_TIMEOUT_S = 24 * 3600
 #: Gigabytes libres por debajo de los cuales la fase 1 vuelve a BORRAR el GAF tras
 #: su pasada en vez de guardarlo para la fase 2.
 #:
-#: Guardarlo es lo que evita bajar los 802 GB dos veces, y las dos fases recorren
+#: Guardarlo evita bajar los 802 GB dos veces, lo que ahorra ANCHO DE BANDA y
+#: casi nada de reloj: la segunda descarga se esconde detras de las cargas de la
+#: fase 2, que son 35 min por release contra 7 de descarga. Dije que ahorraba
+#: 12,5 h y era falso. Vale la pena igualmente, porque nos cubre un dia en que
+#: EBI vaya lento y baja la carga que le metemos. Las dos fases recorren
 #: la serie ASCENDENTE, asi que los ficheros que la fase 1 ve primero son
 #: exactamente los que la fase 2 necesita primero: un prefijo guardado se consume
 #: sin una sola descarga.
@@ -221,19 +226,37 @@ def _drop_or_keep(release: int) -> None:
     sin que el disco llegue nunca a cero. Degrada solo, sin una decision previa
     sobre cuantas releases guardar.
 
-    POR QUE NO SE PUEDE, EN CAMBIO, CARGAR LAS ANOTACIONES EN LA MISMA PASADA
-    --que seria el ahorro grande-- queda escrito aqui porque es la pregunta que
-    todo el mundo hace. ``load_goa_annotations`` solo guarda una fila si su
-    accesion ya esta en ``protein``. Si se intercalara, al cargar las anotaciones
-    de 2016 solo existirian las proteinas que la release 156 admitio, y toda
-    proteina admitida DESPUES perderia en silencio su historia anterior.
+    POR QUE NO SE CARGAN LAS ANOTACIONES EN LA MISMA PASADA queda escrito aqui
+    porque es la pregunta que todo el mundo hace, y la respuesta que di el
+    2026-10-06 era FALSA en su parte central. Queda corregida.
 
-    Y no es una perdida pequena ni repartida. Medido en las seis primeras pasadas:
-    la 156 aporta 608.194 accesiones y cada release posterior anade unas mil
-    (912, 1.143, 140, 1.119, 688). Son unas 74.000 sobre las 75 releases, el 11%
-    del corpus -- y son EXACTAMENTE las proteinas que ganaron anotacion dentro de
-    la ventana, que es la senal que la campana mide. Intercalar no perderia ruido:
-    perderia el sujeto del experimento.
+    El mecanismo es cierto: ``load_goa_annotations`` solo guarda una fila si su
+    accesion ya esta en ``protein``, asi que intercalando, una proteina admitida
+    en la release N no tendria cargadas sus filas de 156..N-1.
+
+    LO QUE DIJE MAL. Afirme que eso "perderia el sujeto del experimento". No es
+    verdad, y lo contrario es DEMOSTRABLE: bajo orden ascendente, si una proteina
+    se admite en N es porque en 156..N-1 no tenia ninguna evidencia admisible --
+    ni codigo de verdad, ni curated_inference, ni era Swiss-Prot. Si hubiera
+    tenido un IDA en la 160 se habria admitido en la 160. Luego las filas que
+    intercalar perderia son EXCLUSIVAMENTE IEA, IBA, IBD y ND. Y la evaluacion
+    filtra por experimentales (``protea/core/evaluation.py``, ``_EXP_CODES``) y la
+    IA usa regimen ``lafa``, asi que ninguna de las dos las lee.
+
+    POR QUE SE MANTIENEN LAS DOS FASES DE TODAS FORMAS, que es el argumento
+    correcto y no el que di: mi demostracion dice que la EVALUACION esta a salvo,
+    no que el CORPUS este completo, y el corpus es el activo. Intercalando,
+    ``annotation_set(156)`` deja de ser "GOA 156 restringido al corpus" y pasa a
+    ser "GOA 156 restringido al corpus conocido en 156". Es un objeto distinto,
+    incompleto por el lado antiguo, y NO reparable sin volver a bajar los 802 GB,
+    porque la informacion que haria falta para filtrar la 156 correctamente no
+    existe hasta haber leido la 235.
+
+    Y el ahorro que justificaria el riesgo no esta ahi. La segunda descarga se
+    esconde detras de las cargas de la fase 2, que son 35 min por release contra
+    7 de descarga, y la fase 2 ya hace prefetch dentro de su bucle. Lo que si
+    costaba horas era que la fase 1 bajara y escaneara EN SERIE, y eso lo arregla
+    :class:`_Prefetcher` sin tocar la completitud de nada.
     """
     libres = free_gb()
     if libres > DISK_FLOOR_GB_TO_KEEP:
@@ -244,6 +267,55 @@ def _drop_or_keep(release: int) -> None:
         log(f"universe {release}: GAF removed, {libres} GB free is under the floor")
     except OSError:
         pass
+
+
+class _Prefetcher:
+    """Downloads the NEXT release while the current one is being scanned.
+
+    ``ensure_cached`` BLOCKS, so phase 1 used to spend 423 s downloading and then
+    390 s scanning, in series: 813 s a release when the two could overlap almost
+    entirely. Over the 67 remaining releases that serialisation costs about 7,2 h,
+    which is the single biggest avoidable cost in the run, bigger than the second
+    download the two-phase design needs (that one hides behind phase 2's loads,
+    which are 35 min a release against 7 of download).
+
+    One prefetch at a time, deliberately. Two concurrent downloads would halve
+    each other's share of the same link and double the peak disk, and the peak is
+    what the floor in :func:`_drop_or_keep` has to leave room for: the worst
+    adjacent pair in the series is 24 GB plus 24 GB.
+
+    A failure here is NOT raised. The main loop calls ``ensure_cached`` for the
+    release it is about to process, which finds no file and downloads it
+    synchronously, exactly as it did before this existed. The prefetch is an
+    optimisation, so it must never be the thing that ends a run.
+    """
+
+    def __init__(self) -> None:
+        self._thread: threading.Thread | None = None
+        self.release: int | None = None
+
+    def start(self, release: int | None) -> None:
+        if release is None:
+            return
+        self.release = release
+        self._thread = threading.Thread(
+            target=self._quiet, args=(release,), daemon=True, name=f"prefetch-{release}"
+        )
+        self._thread.start()
+
+    def wait(self) -> None:
+        """Block until the in-flight prefetch ends. Its failure is the caller's to rediscover."""
+        if self._thread is not None:
+            self._thread.join()
+        self._thread = None
+        self.release = None
+
+    @staticmethod
+    def _quiet(release: int) -> None:
+        try:
+            ensure_cached(release)
+        except Exception as exc:  # noqa: BLE001 - an optimisation never ends the run
+            log(f"prefetch {release}: failed in background ({exc}); the main loop will retry")
 
 
 def log(msg: str) -> None:
@@ -546,13 +618,18 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
     log(f"cache: serving {CACHE_DIR} at {base}")
 
     failures = 0
-    for release in pending:
+    prefetcher = _Prefetcher()
+    for i, release in enumerate(pending):
+        # Lo que la iteracion anterior dejo bajando puede ser justamente esta.
+        prefetcher.wait()
         try:
             ensure_cached(release)
         except Exception as exc:  # noqa: BLE001 - one release must not end the run
             log(f"universe {release}: prefetch FAILED ({exc}); skipped")
             failures += 1
             continue
+        # Y la siguiente se baja MIENTRAS esta se escanea, que es el ahorro.
+        prefetcher.start(pending[i + 1] if i + 1 < len(pending) else None)
         gaf_url = f"{base}/goa_uniprot_all.gaf.{release}.gz"
         job = api.call(
             "POST",
