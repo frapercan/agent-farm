@@ -419,3 +419,59 @@ class _FakeThread:
 
     def join(self):
         pass
+
+
+class TestTheReleaseDatesCloseTheHoldoutGuard:
+    """Phase 2 creates 75 annotation sets and none has a publication date.
+
+    The holdout guard compares a window's end against the board's mark, and the
+    thing it compares is `annotation_set.source_published_at`. An undated set is
+    PASSED, so without this step the guard's undecidable branch is not an edge
+    case, it is the only case, and the protection appears to be present while
+    being absent.
+    """
+
+    def test_phase_2_stamps_the_dates_when_it_finishes(self):
+        d = _driver()
+        assert "failures += stamp_release_dates(api)" in inspect.getsource(d)
+
+    def test_it_runs_after_the_releases_not_before(self):
+        """The operation matches `goa` sets against the FTP index, so every set
+        has to exist first."""
+        d = _driver()
+        src = inspect.getsource(d)
+        fin = src.index("driver finished: all releases processed")
+        stamp = src.index("failures += stamp_release_dates(api)")
+        assert fin < stamp
+
+    def test_it_submits_the_right_operation_with_an_empty_payload(self):
+        d = _driver()
+        sent = {}
+
+        class _Api:
+            def call(self, verb, path, body=None):
+                if verb == "POST":
+                    sent.update(body)
+                    return {"id": "abc"}
+                return []
+
+            def wait_job(self, job_id, timeout_s):
+                return {"status": "succeeded"}
+
+        assert d.stamp_release_dates(_Api()) == 0
+        assert sent["operation"] == "refresh_goa_release_dates"
+        assert sent["payload"] == {}, "la operacion recorre el indice entero, no toma argumentos"
+
+    def test_a_failure_is_counted_and_says_what_it_costs(self):
+        """A silent failure here leaves the guard inert, so it has to be loud and
+        it has to make the driver exit non-zero."""
+        d = _driver()
+
+        class _Api:
+            def call(self, verb, path, body=None):
+                return {"id": "abc"} if verb == "POST" else []
+
+            def wait_job(self, job_id, timeout_s):
+                return {"status": "failed", "error_message": "EBI index unreachable"}
+
+        assert d.stamp_release_dates(_Api()) == 1
