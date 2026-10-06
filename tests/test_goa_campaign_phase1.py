@@ -17,9 +17,23 @@ PLAN = REPO / "plans" / "GOA-ONTOLOGY-PAIRING.md"
 
 
 def _driver():
+    """El modulo del driver, con ``log`` NEUTRALIZADO.
+
+    ``log`` escribe en ``goa-campaign.log`` junto al script, que en esta maquina
+    es el log VIVO de la campana. Sin este parcheo cada ``pytest`` le metia nueve
+    lineas inventadas -- "phase 3: job abc submitted", "FAILURE (failed) err=502
+    de UniProt" -- y cuatro ejecuciones dejaron 36. No es ruido: es el registro
+    del que se leen las cifras de la corrida, y una linea de test ahi es
+    indistinguible de un fallo real ocurrido a esa hora.
+
+    Se parchea en la factoria y no en cada test, porque el defecto aparecio al
+    anadir el PRIMER test que llamaba a una funcion que registra, y el siguiente
+    que lo haga no tiene por que acordarse.
+    """
     spec = importlib.util.spec_from_file_location("goa_driver", DRIVER)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    mod.log = lambda _msg: None
     return mod
 
 
@@ -244,3 +258,32 @@ class TestLaFase3PreguntaALaBase:
                 assert "1, 2 or 3" in str(exc)
             else:
                 raise AssertionError("un --phase 4 tiene que abortar")
+
+
+class TestLosTestsNoEscribenEnElLogDeLaCampana:
+    """La regresion que deja este fichero, fijada para que no vuelva.
+
+    Cualquier test que llame a una funcion del driver que registre escribiria en
+    el log vivo si ``_driver`` dejara de neutralizar ``log``.
+    """
+
+    def test_la_factoria_neutraliza_el_log(self):
+        d = _driver()
+        assert d.log("esto no debe aparecer en ningun fichero") is None
+
+    def test_llamar_a_una_fase_no_toca_el_fichero(self):
+        d = _driver()
+        log_path = pathlib.Path(d.LOG)
+        antes = log_path.stat().st_mtime_ns if log_path.exists() else None
+        tamano = log_path.stat().st_size if log_path.exists() else None
+
+        class _Api:
+            def call(self, *a, **k):
+                raise AssertionError("no deberia encolar nada")
+
+        with patch.object(d, "_sin_secuencia", lambda: 0):
+            d.run_phase3(_Api())
+
+        if antes is not None:
+            assert log_path.stat().st_size == tamano, "el test ha escrito en el log vivo"
+            assert log_path.stat().st_mtime_ns == antes
