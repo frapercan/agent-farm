@@ -99,13 +99,16 @@ class TestUnDryRunNoCuentaComoHecho:
         que se leyo, y eso es la url. Si el patron cambia, el resume no reconoce
         nada y repite las 75."""
         d = _driver()
-        tiers = '["truth", "curated_inference", "swissprot_of_release"]'
+        tres = '["truth", "curated_inference", "swissprot_of_release"]'
+        dos = '["truth", "curated_inference"]'
 
         class _Out:
             returncode = 0
+            # Cada release con el criterio que LE TOCA: la 156 lleva los tres
+            # niveles, la 235 solo dos porque su GAF no trae el nombre de entrada.
             stdout = (
-                f"http://100.64.0.1:8790/goa_uniprot_all.gaf.156.gz\t{tiers}\n"
-                f"http://100.64.0.1:8790/goa_uniprot_all.gaf.235.gz\t{tiers}\n"
+                f"http://100.64.0.1:8790/goa_uniprot_all.gaf.156.gz\t{tres}\n"
+                f"http://100.64.0.1:8790/goa_uniprot_all.gaf.235.gz\t{dos}\n"
             )
             stderr = ""
 
@@ -475,3 +478,67 @@ class TestTheReleaseDatesCloseTheHoldoutGuard:
                 return {"status": "failed", "error_message": "EBI index unreachable"}
 
         assert d.stamp_release_dates(_Api()) == 1
+
+
+class TestTheSwissProtTierIsDeclaredPerRelease:
+    """GOA dropped the UniProtKB entry name from DB Object Synonym at release 179,
+    so the ``swissprot_of_release`` tier has no data from there on.
+
+    Why the boundary is a constant here and not a detection inside the operation:
+    the tier is a property of the release FORMAT, not of a row, and a per-row shape
+    heuristic over a column that does not contain the data always leaks. It was
+    tried: a shape check let 1.6 million locus tags of the form ``FD15_GL001936``
+    through on the release-179 pass, and they had to be deleted.
+    """
+
+    def test_the_old_half_keeps_all_three_tiers(self):
+        d = _driver()
+        for release in (156, 160, 178):
+            assert d.admit_for(release) == d.ADMIT_TIERS, release
+
+    def test_the_new_half_drops_the_swissprot_tier(self):
+        d = _driver()
+        for release in (179, 180, 220, 235):
+            assert d.admit_for(release) == ["truth", "curated_inference"], release
+
+    def test_the_boundary_is_178_and_179(self):
+        """Measured: 178 carries the entry name in 100% of its rows, 179 in 0%."""
+        d = _driver()
+        assert "swissprot_of_release" in d.admit_for(178)
+        assert "swissprot_of_release" not in d.admit_for(179)
+        assert d.LAST_RELEASE_WITH_ENTRY_NAME == 178
+
+    def test_the_payload_carries_the_release_s_own_criterion(self):
+        """The criterion travels in the payload so it is on the job row and
+        queryable afterwards, which is the rule the campaign was restarted for."""
+        d = _driver()
+        src = inspect.getsource(d.run_phase1)
+        assert '"admit": admit_for(release)' in src
+
+    def test_resume_compares_against_the_release_s_own_criterion(self):
+        """A pass of release 235 done correctly with two tiers must count as done.
+        Comparing against a fixed three-tier set would mark the whole new half as
+        pending and re-read 700 GB."""
+        d = _driver()
+
+        class _Out:
+            returncode = 0
+            stdout = 'http://x/goa_uniprot_all.gaf.235.gz\t["truth", "curated_inference"]\n'
+            stderr = ""
+
+        with patch.object(d.subprocess, "run", lambda *a, **k: _Out()):
+            assert d.universe_done(object()) == {235}
+
+    def test_the_old_criterion_on_a_new_release_does_not_count(self):
+        """The three-tier pass of release 179 is exactly the one that inserted 1.6
+        million wrong rows. It must not be read as done."""
+        d = _driver()
+
+        class _Out:
+            returncode = 0
+            stdout = ('http://x/goa_uniprot_all.gaf.179.gz\t'
+                      '["truth", "curated_inference", "swissprot_of_release"]\n')
+            stderr = ""
+
+        with patch.object(d.subprocess, "run", lambda *a, **k: _Out()):
+            assert d.universe_done(object()) == set()
