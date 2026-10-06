@@ -74,6 +74,23 @@ GOA_JOB_TIMEOUT_S = 8 * 3600
 #: son horas, no minutos, y el techo generoso evita que un driver impaciente
 #: declare fallida una pasada que esta funcionando.
 RESOLVE_JOB_TIMEOUT_S = 24 * 3600
+
+#: Gigabytes libres por debajo de los cuales la fase 1 vuelve a BORRAR el GAF tras
+#: su pasada en vez de guardarlo para la fase 2.
+#:
+#: Guardarlo es lo que evita bajar los 802 GB dos veces, y las dos fases recorren
+#: la serie ASCENDENTE, asi que los ficheros que la fase 1 ve primero son
+#: exactamente los que la fase 2 necesita primero: un prefijo guardado se consume
+#: sin una sola descarga.
+#:
+#: El suelo son 230 GB y NO es un numero redondo elegido a ojo. La base de la
+#: campana anterior, con un corpus de tamano comparable y las anotaciones de sus
+#: 71 releases, ocupa 120 GB medidos (``pg_database_size('protea_old')``). Se
+#: reservan 200 GB para que la fase 2 quepa con holgura, mas 30 GB de margen para
+#: el fichero que se este bajando, que llega a 24 GB en la release 202. Postgres
+#: vive en el mismo sistema de ficheros, asi que llenarlo no es una parada limpia:
+#: es un PANIC de WAL en la base de la propia campana.
+DISK_FLOOR_GB_TO_KEEP = 230
 POLL_S = 20
 
 # 75 ficheros, releases 156..235. Eran 71 (160..235) mientras se creyo que la
@@ -182,6 +199,51 @@ def ensure_cached(release: int) -> None:
         raise RuntimeError(f"gzip integrity check failed: {test.stderr.strip()[:200]}")
     mb = os.path.getsize(dest) / 1e6
     log(f"goa {release}: prefetched {mb:.0f} MB in {time.time() - t0:.0f}s")
+
+
+def free_gb() -> int:
+    """Gigabytes libres en el sistema de ficheros del cache."""
+    st = os.statvfs(CACHE_DIR if os.path.isdir(CACHE_DIR) else HERE)
+    return int(st.f_bavail * st.f_frsize / 1e9)
+
+
+def _drop_or_keep(release: int) -> None:
+    """Tras la pasada de universo: guardar el GAF si cabe, borrarlo si no.
+
+    POR QUE GUARDARLO. La fase 2 vuelve a leer el mismo fichero, y bajarlo dos
+    veces cuesta 23 h de las 47 que dura todo, medido a los 9,6 MB/s reales. Las
+    dos fases recorren la serie ascendente, asi que el prefijo que la fase 1
+    procesa primero es el que la fase 2 pide primero: ``ensure_cached`` ve el
+    fichero y vuelve sin bajar nada.
+
+    POR QUE NO SIEMPRE. La serie son 802 GB y no caben. El suelo decide: por
+    encima se guarda, por debajo se borra, y asi el prefijo que quepa se aprovecha
+    sin que el disco llegue nunca a cero. Degrada solo, sin una decision previa
+    sobre cuantas releases guardar.
+
+    POR QUE NO SE PUEDE, EN CAMBIO, CARGAR LAS ANOTACIONES EN LA MISMA PASADA
+    --que seria el ahorro grande-- queda escrito aqui porque es la pregunta que
+    todo el mundo hace. ``load_goa_annotations`` solo guarda una fila si su
+    accesion ya esta en ``protein``. Si se intercalara, al cargar las anotaciones
+    de 2016 solo existirian las proteinas que la release 156 admitio, y toda
+    proteina admitida DESPUES perderia en silencio su historia anterior.
+
+    Y no es una perdida pequena ni repartida. Medido en las seis primeras pasadas:
+    la 156 aporta 608.194 accesiones y cada release posterior anade unas mil
+    (912, 1.143, 140, 1.119, 688). Son unas 74.000 sobre las 75 releases, el 11%
+    del corpus -- y son EXACTAMENTE las proteinas que ganaron anotacion dentro de
+    la ventana, que es la senal que la campana mide. Intercalar no perderia ruido:
+    perderia el sujeto del experimento.
+    """
+    libres = free_gb()
+    if libres > DISK_FLOOR_GB_TO_KEEP:
+        log(f"universe {release}: GAF kept for phase 2 ({libres} GB free)")
+        return
+    try:
+        os.remove(cache_path(release))
+        log(f"universe {release}: GAF removed, {libres} GB free is under the floor")
+    except OSError:
+        pass
 
 
 def log(msg: str) -> None:
@@ -580,10 +642,7 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
         # pequeno: unos 23 GB para la serie entera. Pero solo se conoce cuando
         # la fase 1 termina, y releer cada bruto para aplicarlo ya es la segunda
         # descarga. No ahorra nada frente a borrar.
-        try:
-            os.remove(cache_path(release))
-        except OSError:
-            pass
+        _drop_or_keep(release)
 
     log(f"phase 1 finished: {len(pending) - failures} ok, {failures} failed")
     return 1 if failures else 0
