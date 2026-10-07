@@ -124,6 +124,46 @@ POLL_S = 20
 #: codigo desconocido se cuenta y se rechaza en vez de entrar en silencio.
 ADMIT_TIERS = ["truth", "curated_inference", "swissprot_of_release"]
 
+#: La ULTIMA release cuyo GAF trae el nombre de entrada de UniProtKB en la columna
+#: DB Object Synonym. A partir de la siguiente, GOA pone el simbolo del gen y el
+#: nombre no esta en ninguna otra columna de la fila: desaparecio del registro.
+#:
+#: MEDIDO el 2026-10-06 sobre las releases en cache, fraccion de filas con nombre
+#: de entrada legible:
+#:
+#:     164..178   100%
+#:     179          0%
+#:     180          0%
+#:     231          5%
+#:
+#: Por que es una constante aqui y no una deteccion en la operacion: el nivel es
+#: una propiedad del FORMATO de la release, no de una fila, y una heuristica por
+#: fila sobre una columna que no contiene el dato siempre filtra. Se intento: una
+#: comprobacion de forma dejo pasar 1,6 millones de locus tags del tipo
+#: `FD15_GL001936` en la pasada de la 179, que hubo que borrar. El criterio se
+#: declara en el payload, queda en la fila del job, y la operacion REFUSA si
+#: alguien pide el nivel donde no se puede derivar (PROTEA#995).
+LAST_RELEASE_WITH_ENTRY_NAME = 178
+
+
+def admit_for(release: int) -> list[str]:
+    """Los niveles que esta release puede sostener.
+
+    De la 179 en adelante sale `swissprot_of_release`, y el hueco lo cubre la
+    siembra de la Swiss-Prot ACTUAL con `insert_proteins` sobre los ficheros
+    planos de release: 617.103 registros en 131 s, de los que 80.061 eran nuevos.
+    Decision A+B en MARCO-DECLARADO.
+
+    Lo que se pierde al cubrirlo asi, dicho donde se decide: la pertenencia a
+    Swiss-Prot deja de estar FECHADA en esa mitad de la serie. Una proteina
+    sembrada por esa via queda con `first_admitted_release` a NULL, que es
+    exactamente lo que significa "admitida por la fuente del presente y por
+    ninguna release".
+    """
+    if release <= LAST_RELEASE_WITH_ENTRY_NAME:
+        return list(ADMIT_TIERS)
+    return [t for t in ADMIT_TIERS if t != "swissprot_of_release"]
+
 EXPECTED_RELEASES = 75
 
 
@@ -473,7 +513,6 @@ def universe_done(api: Api) -> set[int]:
     )
     if out.returncode != 0:
         raise RuntimeError(f"universe_done psql failed: {out.stderr[:300]}")
-    quiere = set(ADMIT_TIERS)
     found: set[int] = set()
     for line in out.stdout.splitlines():
         if "\t" not in line:
@@ -483,11 +522,16 @@ def universe_done(api: Api) -> set[int]:
             admit = set(json.loads(admit_json))
         except (ValueError, TypeError):
             continue
-        if admit != quiere:
-            continue
         m = re.search(r"goa_uniprot_all\.gaf\.(\d+)\.gz", gaf_url)
-        if m:
-            found.add(int(m.group(1)))
+        if not m:
+            continue
+        release = int(m.group(1))
+        # El criterio esperado depende de la RELEASE: de la 179 en adelante son dos
+        # niveles y no tres, asi que comparar contra un conjunto fijo marcaria como
+        # no-hechas todas las pasadas correctas del extremo nuevo.
+        if admit != set(admit_for(release)):
+            continue
+        found.add(release)
     return found
 
 
@@ -657,7 +701,7 @@ def run_phase1(api: Api, plan: list[tuple[int, str]]) -> int:
                     #
                     # El razonamiento de cada nivel y de cada exclusion esta en
                     # ADR-D49 y en MARCO-DECLARADO.md, con sus mediciones.
-                    "admit": ADMIT_TIERS,
+                    "admit": admit_for(release),
                 },
             },
         )
