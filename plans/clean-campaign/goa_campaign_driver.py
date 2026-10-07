@@ -81,8 +81,14 @@ RESOLVE_JOB_TIMEOUT_S = 24 * 3600
 #:
 #: Guardarlo evita bajar los 802 GB dos veces, lo que ahorra ANCHO DE BANDA y
 #: casi nada de reloj: la segunda descarga se esconde detras de las cargas de la
-#: fase 2, que son 35 min por release contra 7 de descarga. Dije que ahorraba
-#: 12,5 h y era falso. Vale la pena igualmente, porque nos cubre un dia en que
+#: fase 2, que son 123,5 min de media por release contra 37 de descarga en las
+#: grandes. Dije que ahorraba 12,5 h y era falso.
+#:
+#: Esos 123,5 min estan MEDIDOS (2026-10-07, sobre los 73 jobs
+#: ``load_goa_annotations`` SUCCEEDED de ``protea_old``: media 123,5 min, minimo
+#: 53,4, maximo 583,8, suma 150,2 h). Antes aqui decia "35 min contra 7", que no
+#: salia de ninguna medida y subestimaba la carga por 3,5. La conclusion no
+#: cambia, se refuerza: el margen con que la descarga se esconde es mayor. Vale la pena igualmente, porque nos cubre un dia en que
 #: EBI vaya lento y baja la carga que le metemos. Las dos fases recorren
 #: la serie ASCENDENTE, asi que los ficheros que la fase 1 ve primero son
 #: exactamente los que la fase 2 necesita primero: un prefijo guardado se consume
@@ -293,8 +299,9 @@ def _drop_or_keep(release: int) -> None:
     existe hasta haber leido la 235.
 
     Y el ahorro que justificaria el riesgo no esta ahi. La segunda descarga se
-    esconde detras de las cargas de la fase 2, que son 35 min por release contra
-    7 de descarga, y la fase 2 ya hace prefetch dentro de su bucle. Lo que si
+    esconde detras de las cargas de la fase 2, que son 123,5 min de media por
+    release contra 37 de descarga en las grandes (medido el 2026-10-07 sobre los
+    73 jobs de ``protea_old``), y la fase 2 ya hace prefetch dentro de su bucle. Lo que si
     costaba horas era que la fase 1 bajara y escaneara EN SERIE, y eso lo arregla
     :class:`_Prefetcher` sin tocar la completitud de nada.
     """
@@ -317,7 +324,8 @@ class _Prefetcher:
     entirely. Over the 67 remaining releases that serialisation costs about 7,2 h,
     which is the single biggest avoidable cost in the run, bigger than the second
     download the two-phase design needs (that one hides behind phase 2's loads,
-    which are 35 min a release against 7 of download).
+    measured at 123.5 min a release on average against 37 of download for the
+    big files).
 
     One prefetch at a time, deliberately. Two concurrent downloads would halve
     each other's share of the same link and double the peak disk, and the peak is
