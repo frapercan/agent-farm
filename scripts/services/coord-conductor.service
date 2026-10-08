@@ -1,0 +1,28 @@
+[Unit]
+Description=agent-farm coordination conductor: runs the handoff the keeper writes
+Documentation=https://github.com/frapercan/agent-farm/blob/main/plans/FARM-COORD.md
+# Not Requires=: the conductor is useful on its own if the keeper is restarted,
+# and coupling them would mean a keeper failure takes down the only thing that
+# can drain what the keeper already claimed.
+After=coord-keeper.service
+
+[Service]
+Type=simple
+Environment=AGENT_FARM_ROOT=%h/Thesis2/agent-farm
+# Seconds between passes. The tick is cheap when there is nothing to do: one
+# directory glob and an early exit.
+Environment=COORD_CONDUCTOR_INTERVAL=20
+# Ceiling on a single spawned agent. Past this it is killed and logged as exit
+# 124, which is deliberately distinguishable from the agent's own failure.
+Environment=COORD_CONDUCTOR_TIMEOUT=1800
+ExecStart=/bin/bash %h/Thesis2/agent-farm/scripts/services/coord-conductor-supervisor.sh
+WorkingDirectory=%h/Thesis2/agent-farm
+Restart=always
+RestartSec=30
+# 78 is EX_CONFIG: the tick script is missing, or the claude binary is not
+# executable. Restarting cannot fix either, so systemd stops and says so
+# instead of looping. Same contract the keeper uses for a missing clone.
+RestartPreventExitStatus=78
+
+[Install]
+WantedBy=default.target

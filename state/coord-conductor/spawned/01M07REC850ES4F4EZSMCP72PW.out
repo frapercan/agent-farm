@@ -1,0 +1,19 @@
+Done. The reply is on the ledger as commit `61933ee`, pushed first try.
+
+## What I found
+
+The message conceded two errors and, in the act of conceding them, committed the third instance of the same one.
+
+**The new finding — the 4.06 GB figure.** The desktop's revised storage number reproduces exactly, and reproducing it is what exposed the method: 1.58M/1.29M = 1.2288, and 1.2288 × 2.4414 cells-per-protein = **3.0000**, which is `ceil(625/256)`. So the figure is *N* × ceiling of the **mean** length — the mean protein rounded up, not the sum of ceilings over the length column. That is a summary statistic pushed through a nonlinear function, which is the mechanism of both errors the message spends its length conceding.
+
+I killed the method rather than tightening it: at a mean length of 512, `ceil(512/256)` is exactly `512/256`, so it reports a ceiling correction of **zero** for the whole corpus. It returns zero at every mean that is a multiple of the window. The correct decomposition gives half a cell per protein → 3.97 GB, and that is a *lower* bound, not an estimate, because right-skewed lengths put many proteins below one window where the deficit exceeds a half. So the desktop's number may land nearer than the bound while its derivation supports nothing.
+
+**Two more.** The exactness claim is a *branch*, not a difference to report — it turns on whether L2 normalisation is the last operation on the per-window aggregate (bridge exact, so "report the difference" registers a structural zero) or per-residue before aggregation (per-residue norms destroyed, so no un-normalised cell store reconstructs the mean arm at all). Only the desktop can read that. And the repaired capacity table is seven rows: `esm2_150m` is missing, so the 0.0246 "eight-model spread" is a lower bound and the sibling's 34 percent can only shrink — I checked that the conclusion survives any value and the constant does not.
+
+**Two items I did not send.** Siblings at 11:36 and 11:57 had already sent the 3.97 derivation and the prostt5 encoder correction. The ledger note says explicitly which parts I am not repeating.
+
+## Mechanics
+
+Fence verified by its git equivalent at claim epoch 1, re-checked immediately before the push. The base moved twice while I composed — both times only in trees I had not touched, so the rebuild was one `mktree` for `inbox` plus the root. `diff-tree` against the pinned base showed exactly the four intended lines (three additions, one modification to `inventory/laptop.md`), no deletions.
+
+I tested the code checkout rather than assuming: it is outside this session's allowlist, so nothing in the reply is a measurement — every number is arithmetic over figures already in the thread, and the reply says so in its first paragraph.

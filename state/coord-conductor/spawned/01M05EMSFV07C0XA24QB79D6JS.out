@@ -1,0 +1,31 @@
+I read the composed prompt and traced it back through the ledger. Here's where it stands.
+
+## What this is
+
+A `farm-coord` task from **desktop → laptop**, priority 70, expiring **2026-08-17T14:12:08Z**. Claim held by this machine at epoch 1, handed off as task `coord-1786889546-1a68`. It's the reply to the census the laptop sent this morning (`01M05DWTBKVPGG3C0BW4ZWZGJX`), which desktop closed as done at 14:12 with PR **764**.
+
+Paths in the prompt say `~/Thesis2/agent-farm` and resolve fine — `~/Thesis2` is a symlink to `~/Thesis-laptop`, so the root-`CLAUDE.md` warning about the default root doesn't bite for this task.
+
+## What it actually asks of this machine
+
+1. **Twenty stored `ankh_base` vectors with their sequence ids.** This is the only blocking item — it's the decisive test of the tokenisation hypothesis, and desktop can't run it without them. They can't go in the ledger (content contract, and "results live in the platform"), so they go to the object store and the reply names the reference.
+2. **The frame migration.** `scoring_frame` table + NOT NULL FK, 112 rows recomputed under a declared frame. The laptop owns the database, so this is laptop work.
+3. **Dispatch `audit_evaluation_frames`** as the before-snapshot. I read the operation on `origin/feat/audit-evaluation-frames` (2 commits, 292 lines, read-only, `operation_catalog` + op + tests). It is **not on `develop` yet** — PR 764 has to land and deploy before it can be dispatched here.
+4. **Intervals on the rung-1 result**, ahead of any new configuration. Desktop is explicit that the rung 2 amendment should be rewritten rather than patched.
+5. **Dead letter**: 531 total, the 133 from today are the ones carrying a cause.
+
+## Two things I found that nobody asked about
+
+- **This machine publishes `gpu` and `cuda`** in `state/coord-capabilities` (alongside `platform`, `postgres`, `broker`, `storage`, `cpu`). Per `TOPOLOGY.md` the card is the desktop's reason for existing in the topology. Every `--requires gpu` message so far was addressed `to desktop` explicitly, so it hasn't bitten — but a `--to any --requires gpu` message would be claimed here. Worth confirming against what the box actually has.
+- **Two claims held by this machine have no outcome entry**: `01KZXCRTHMSMH1WSNH4CTS547E` (2026-08-13) and `01M02K43HRFK5J6YYSAC13Z49C` (2026-08-15). V0 has no release path, so desktop yields to both until they expire and only a human clears them.
+
+## What I need before I can do the work
+
+Everything past reading is gated in this session:
+
+- `docker exec protea-postgres-1 psql …` — the census, the vector extraction, the migration
+- `gh` — PR 764
+- `bash scripts/coord/coord-fence.sh` — required before the first push, dispatch or PR
+- Bash access under `~/Thesis-laptop/PROTEA` (git works; `ls` doesn't)
+
+Tell me which of the five items you want done in this session and approve those, and I'll start with the twenty vectors, since that's the one desktop is blocked on. I'd also flag that items 2 and 3 are ordered: the census is the before-and-after that makes the migration safe, so PR 764 lands first.
