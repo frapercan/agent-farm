@@ -1061,14 +1061,29 @@ MAX_IN_FLIGHT_DEFAULT = 10
 #: nearly two hours of idle nodes for one integer. Now: write the number here
 #: and the next pass picks it up. Lowering it does not kill anything in
 #: flight, it just stops topping the pipeline up until the count drops.
+#: ``0`` PAUSES: nothing new is dispatched at all, which is the state
+#: DECLARED-REVISION.txt requires before the declaration can move.
 MAX_IN_FLIGHT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "max_in_flight")
 
 
 def max_in_flight() -> int:
-    """The live concurrency ceiling, re-read on every pass.
+    """The live concurrency ceiling, re-read on every pass. ``0`` means PAUSE.
 
-    A missing, empty or unparseable file means the default, logged once per
-    distinct complaint so a typo cannot be silent and cannot spam the log.
+    ZERO IS A VALUE, NOT AN ERROR, and the first version of this got that
+    wrong. It folded everything below 1 into the default, reasoning that a
+    typo must never pause a campaign silently. The effect was that the file
+    could not express a pause at all: writing 1 stops the top-up only while
+    something is still in flight, and the moment the last load closes
+    ``0 < 1`` holds and the driver dispatches one more. A load lasts 20 to 75
+    minutes, so the precondition this exists to reach -- the one
+    DECLARED-REVISION.txt states, no job QUEUED or RUNNING -- was
+    unreachable. A guard that makes the real case impossible is the defect,
+    not the protection.
+
+    So 0 pauses and says so once; only a NEGATIVE number or a non-integer is
+    an error and falls back. Nothing in flight is killed either way: a pause
+    stops dispatching and lets the live loads finish by themselves, which is
+    what makes the jump cost slot-hours instead of a drain.
     """
     try:
         raw = open(MAX_IN_FLIGHT_FILE, encoding="utf-8").read().strip()
@@ -1080,9 +1095,13 @@ def max_in_flight() -> int:
         if _quejas.add_once(f"bad:{raw}"):
             log(f"max_in_flight: {MAX_IN_FLIGHT_FILE} says {raw!r}, not an integer; using {MAX_IN_FLIGHT_DEFAULT}")
         return MAX_IN_FLIGHT_DEFAULT
-    if n < 1:
-        if _quejas.add_once(f"low:{n}"):
-            log(f"max_in_flight: {n} is below 1; using {MAX_IN_FLIGHT_DEFAULT}")
+    if n == 0:
+        if _quejas.add_once("paused"):
+            log("max_in_flight: 0, PAUSED -- dispatching nothing; live loads finish on their own")
+        return 0
+    if n < 0:
+        if _quejas.add_once(f"neg:{n}"):
+            log(f"max_in_flight: {n} is negative; using {MAX_IN_FLIGHT_DEFAULT}")
         return MAX_IN_FLIGHT_DEFAULT
     return n
 
