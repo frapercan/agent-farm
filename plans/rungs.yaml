@@ -247,7 +247,46 @@ rungs:
           now. Rung 7 is what tests it.
     gate: one frozen substrate, chosen on validation, per cell
     winner: per_cell
-    status: running
+    status: closed
+    result: >
+      NO SUBSTRATE SEPARATES, AND THE GATE CANNOT BE SATISFIED AS WRITTEN.
+      Both halves are findings and the second is the more important.
+
+      THE MEASUREMENT. Eight pretrained backbones spanning an eighty-one-fold
+      range of capacity, best arm each, mean f_micro_w over the nine cells on
+      the GOA 226 to 227 frame. Through the weighting that wins they span
+      0.00241, and the 8M-parameter model sits 0.00111 behind the 650M one,
+      which is below the study's 0.0013 resolution floor. Every one of the
+      sixteen maxima is at K=3, where the budget is exactly two arms per
+      backbone for all eight, so that column is a balanced cut rather than a
+      maximum over unequal searches.
+
+      The ordering fails to be one in three independent ways: it does not
+      correlate with the embedding-only ordering (rho 0.000); it does not
+      reproduce against itself across neighbourhood sizes (mean 0.56 against
+      the embedding side's 0.85); and it does not survive recomputing the mean
+      as population-weighted, which moves the winner at spreads that clear the
+      floor. Any claim that one of these backbones is the right one, made on
+      this evidence, is a claim about which arm won a coin toss.
+
+      THE GATE. It asks for a substrate "chosen on validation". No row in this
+      database can satisfy that clause: window_role is NULL in all three
+      evaluation sets, and leakage_role takes only NULL and 'probe'. No
+      validation frame was ever evaluated, so the choosing the gate describes
+      never happened and cannot be reconstructed after the fact. The gate is
+      recorded as unmet rather than quietly reinterpreted.
+
+      WHAT THIS RUNG THEREFORE LICENSES, WHICH IS NOT NOTHING. A rung whose
+      axis does not separate does not hand the next rung a winner. It hands it
+      permission to FREEZE ANY MEMBER and proceed, which is a weaker and
+      cleaner warrant than a per-cell winner would have been, and it is the
+      warrant rungs 2 and 3 actually need. Rung 2 declares "the winner of rung
+      1" as a held constant; that constant should be read as "any substrate,
+      frozen and declared", and the arm it in fact held is ankh-base.
+
+      This result was declared on 2026-08-26, after rung 2 had already closed
+      on top of it. That ordering is itself recorded: a rung closed against a
+      constant that its predecessor had not declared, and nothing objected.
 
   - number: 2
     title: the learned representation as the lever
