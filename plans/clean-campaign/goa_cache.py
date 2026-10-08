@@ -165,12 +165,30 @@ def _range_resume_start(rs: int, re: int, holes: list[tuple[int, int]]) -> int |
     return None
 
 
-MAX_LINEA = 1 << 20
+MAX_LINEA = 64 << 20
 """Longitud maxima admisible de una linea de GAF, en bytes.
 
-Medido sobre este corpus: una linea son ~187 bytes y la mas larga vista en 16
-millones fueron 1.278. Un MiB deja ochocientas veces de margen, asi que no
-rechaza nada legitimo, y aun asi cae de inmediato en el caso que importa.
+Una linea son ~187 bytes y la mas larga vista en 16 millones fueron 1.278. Con
+eso el tope era 1 MiB, ochocientas veces de margen, y parecia no rechazar nada
+legitimo. Rechazaba la release 203.
+
+MEDIDO el 2026-10-08, y por triplicado:
+
+1. La 203 falla en la linea 340.299.635, que mide 6.788.717 bytes. Dos descargas
+   independientes, a horas distintas y por rutas de red distintas, dan la MISMA
+   linea y el MISMO recuento de bytes. La corrupcion de transporte no se
+   reproduce byte a byte: es contenido publicado.
+2. La muestra de 16 millones de lineas que fijo el MiB no alcanzaba la 340
+   millones, asi que el margen de 800x se calculo sobre un tramo que no contenia
+   el caso.
+3. La campana anterior CARGO la 203 el 2026-09-21 y produjo 5.527.537
+   anotaciones, entre las 5.624.464 de la 202 y las 5.536.651 de la 204. Esa
+   linea no envenena nada: el cargador la digirio y el resultado es normal.
+
+El caso que esta funcion existe para cazar es de otra escala. La corrupcion real
+decodifico a una linea de GIGABYTES y mato al worker a 25 GB; esto son 6,79 MB,
+tres ordenes de magnitud por debajo. 64 MiB sigue cazando la bomba con margen de
+sobra y deja de rechazar una release legitima de la serie.
 """
 
 
