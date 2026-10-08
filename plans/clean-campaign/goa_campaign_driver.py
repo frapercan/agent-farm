@@ -63,7 +63,19 @@ PLAN = os.path.join(HERE, "..", "GOA-ONTOLOGY-PAIRING.md")
 LOG = os.path.join(HERE, "goa-campaign.log")
 CACHE_SCRIPT = os.path.join(HERE, "goa_cache.py")
 CACHE_DIR = os.path.join(HERE, "gaf_cache")
-SERVE_PORT = 8790
+#: 8791 y no 8790 desde el 2026-10-08. El servidor de 8790 sirve sin tope de
+#: ritmo, y eso llenaba la cola del router hacia el nodo remoto: ver
+#: `_PACING_BYTES` en goa_cache.py para la medicion. El puerto cambia en vez de
+#: reiniciar el servidor porque un reinicio habria cortado los diez GAF en
+#: streaming y esas diez cargas habrian fallado a mitad. El 8790 se queda
+#: sirviendo las cargas que ya tenian su URL hasta que cierren.
+SERVE_PORT = 8791
+
+#: Tope por conexion del servidor de cache, en bytes/s, que `ensure_cache_server`
+#: pasa al arrancarlo. Sin esto, un reinicio del driver levantaria un servidor
+#: SIN tope y la cola del router volveria a llenarse en silencio, que es la
+#: forma de fallo que esta campana lleva todo el dia pagando.
+CACHE_PACING_BYTES = 4_000_000
 
 GAF_URL = "https://ftp.ebi.ac.uk/pub/databases/GO/goa/old/UNIPROT/goa_uniprot_all.gaf.{release}.gz"
 OBO_URL = "https://release.geneontology.org/{date}/ontology/go-basic.obo"
@@ -219,6 +231,7 @@ def ensure_cache_server() -> None:
         stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL,
         start_new_session=True,
+        env={**os.environ, "GOA_CACHE_PACING_BYTES": str(CACHE_PACING_BYTES)},
     )
     for _ in range(20):
         try:
