@@ -753,5 +753,55 @@
 # CUDA: la instalacion va con pip --no-deps y NUNCA con poetry install.
 # ---------------------------------------------------------------------------
 
-coordinator 652ec86f805f32e0c6e5fa4247b43f17126a72eb
-schema-applied 652ec86f805f32e0c6e5fa4247b43f17126a72eb
+# ---------------------------------------------------------------------------
+# DECIMOTERCER SALTO, 2026-10-07. 4aa6ff5d121140eb416d5d19cbb4d03f61b1567a.
+#
+# Dos saltos en una noche, y el segundo existe porque el primero arreglo la mitad
+# del problema y dejo la otra pareciendo arreglada.
+#
+# QUE PASO. 652ec86 (#994) hizo que la regla de Swiss-Prot exigiera evidencia
+# positiva del nombre de entrada y AVISARA cuando la columna es ilegible. La
+# release 179 aviso --98,4% de filas sin nombre-- y acto seguido inserto 1.601.408
+# proteinas admitidas por el nivel que acababa de declarar inservible. Una guarda
+# que informa y continua es una guarda que continua.
+#
+# Y la comprobacion de FORMA del nombre dejaba pasar locus tags: `FD15_GL001936`
+# tiene el sufijo en mayusculas y alfanumerico. La forma no es la identidad.
+#
+# LAS FILAS SE BORRARON y la aritmetica cerro exacta: 1.601.737 selladas con
+# release 179, menos 329 preexistentes que el UPDATE de minimo habia sellado, son
+# las 1.601.408 que la pasada inserto. Estado restaurado a 715.602 filas, rango
+# 156..178, 617.103 con secuencia. Cero anotaciones y cero embeddings las
+# referenciaban.
+#
+# QUE TRAE #995. `assert_the_tier_is_derivable` LEVANTA cuando el payload pide
+# `swissprot_of_release` y mas de la mitad de las filas de la release no traen
+# nombre de entrada. Se llama despues del escaneo y ANTES de mirar la base: el
+# unico punto que puede a la vez saber la respuesta y evitar el dano. Mas el tope
+# de cinco caracteres del mnemonico de organismo, como defensa en profundidad.
+#
+# Y EN agent-farm, c9f3e8e (#346): el driver declara el nivel POR RELEASE.
+# `admit_for(release)` manda tres niveles hasta la 178 y dos de la 179 en
+# adelante, y `universe_done` compara contra el criterio de CADA release. Sin eso,
+# las pasadas correctas del extremo nuevo se marcarian como no hechas y se
+# releerian 700 GB; y la pasada mala de la 179 contaria como hecha.
+#
+# EL CORPUS, declarado: tres niveles en 156..178, dos en 179..235, y el hueco
+# cubierto por la siembra de la Swiss-Prot ACTUAL con insert_proteins sobre los
+# ficheros planos de release (617.103 registros en 131 s, 80.061 nuevos). Una
+# proteina sembrada asi queda con first_admitted_release a NULL, que es lo que
+# significa "admitida por la fuente del presente y por ninguna release".
+#
+# EL ESQUEMA no se mueve: f2a8c41d9e37.
+#
+# ORDEN SEGUIDO: arbol sincronizado, API y worker reiniciados, verificado
+# `revision=4aa6ff5d...` en el log del worker y un solo consumidor en
+# protea.jobs, y solo entonces este fichero.
+#
+# EL SOBREMESA: nada de esto toca una tabla que el nodo escriba. protea-sources
+# sigue en 946227ca3b8840eb0ea7223c8fc52b746027f9fe. Alli el torch SI es el de
+# CUDA: pip --no-deps, NUNCA poetry install.
+# ---------------------------------------------------------------------------
+
+coordinator 4aa6ff5d121140eb416d5d19cbb4d03f61b1567a
+schema-applied 4aa6ff5d121140eb416d5d19cbb4d03f61b1567a
