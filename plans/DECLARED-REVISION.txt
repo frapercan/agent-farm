@@ -803,5 +803,71 @@
 # CUDA: pip --no-deps, NUNCA poetry install.
 # ---------------------------------------------------------------------------
 
-coordinator 4aa6ff5d121140eb416d5d19cbb4d03f61b1567a
-schema-applied 4aa6ff5d121140eb416d5d19cbb4d03f61b1567a
+# ---------------------------------------------------------------------------
+# DECIMOCUARTO SALTO, 2026-10-08. 55d0df33236af1f2e786948c89e22107a4db7284.
+#
+# Tres PRs de PROTEA, ninguna de las cuales cambia una fila de lo que la campana
+# escribe. Eso es lo que hace que este salto se pueda dar CON la campana viva, y
+# por eso lo primero es la prueba y no la intencion.
+#
+# #996: la web. No toca el paquete.
+#
+# #997: el ack espera a que el job termine, y el job sale del hilo de E/S. El
+# consumer confirmaba el mensaje ANTES de ejecutar, para esquivar el
+# `consumer_timeout`. Ese nunca fue el temporizador que mandaba: lo era el
+# heartbeat AMQP, porque `handle_job` bloquea el bucle de pika una hora y el
+# broker cierra a los 2x600 s. Medido: 75 "missed heartbeats" en el log del
+# broker y 58 StreamLostError en el del worker, uno por carga, durante dias. Y el
+# ack al inicio libera la ventana de prefetch mientras el worker esta ocupado,
+# asi que el broker le entrega el mensaje siguiente y ese mensaje se queda en el
+# buffer de pika una hora: con dos nodos en la cola, el segundo se queda sin
+# trabajo. Las dos mitades son inseparables. Verificado tras el despliegue: 0
+# StreamLostError y 0 heartbeats perdidos en una carga completa de 63,6 min, y
+# `messages_ready=0 messages_unacknowledged=1` por worker ocupado.
+#
+# #998: la carga filtra la accesion ANTES de construir el record. El 98,06% de
+# las lineas de un release no son corpus --390.328.823 de 398.132.939 en la 168--
+# y el plugin construia un `GoaAnnotationRecord` validado para cada una. La
+# cifra medida es la del docstring de `GoaSource.stream`: 11,5 min de streaming
+# pasan a 4,4 en la GOA 156, unos 7 min por release. NO es "2,6x sobre el job":
+# el job entero son 63,6 min con un hilo al 92%.
+#
+# POR QUE ESTE SALTO NO NECESITO DRENAR LAS DOS MAQUINAS A LA VEZ. La regla de
+# arriba es sobre diferencias NO demostradas, y la de #998 esta demostrada:
+# `tests/test_goa_accession_prefilter.py` corre cada GAF tres veces --el bucle de
+# a38486d copiado, el actual sin filtro y el actual con filtro-- y exige iguales
+# los totales, la secuencia COMPLETA de eventos, los commits y las filas
+# compiladas de cada INSERT, en 126 combinaciones de page_size, total_limit y
+# commit_every_page mas 60 GAF aleatorios. Dos revisiones que escriben lo mismo
+# no son dos experimentos. El portatil relevo sus dos workers release a release,
+# sin parar la campana; el sobremesa salta aparte porque su node-sync es todo o
+# nada sobre sus ocho.
+#
+# DOS COMPROBACIONES QUE EL TEST NO PODIA DAR, hechas contra protea-sources 0.2.1
+# instalado, con GAF gzipado por HTTP real y no con el `io` parcheado del test:
+#   - `accept` se llama UNA vez por linea y en orden, 40 llamadas para 40 lineas,
+#     con el contador en 4n+1 en cada entrega. De eso depende toda la aritmetica
+#     de `_goa_pages`: si el plugin filtrara por bloques, los rechazos caerian en
+#     la pagina equivocada.
+#   - las filas malformadas se descartan ANTES del predicado. Con lineas de 1, 2 y
+#     14 columnas, vacias y de solo espacios, `accept` se llamo 3 veces y siempre
+#     con 17 columnas. `cols[1]` no puede reventar, que importa porque el fichero
+#     de la release 202 es anomalo.
+#
+# EL ESQUEMA no se mueve: nada en `alembic/`, ni en `poetry.lock`, ni en
+# `pyproject.toml` entre 4aa6ff5 y este sha. Para el nodo el salto es checkout y
+# reinicio, sin hermanos que instalar.
+#
+# EL SOBREMESA: protea-sources sigue en 946227ca3b8840eb0ea7223c8fc52b746027f9fe,
+# que es donde vive el `accept` que #998 cablea. Alli el torch es el de CUDA:
+# pip --no-deps, NUNCA poetry install.
+#
+# ORDEN SEGUIDO: #349 de agent-farm fusionada e instalada en el nodo PRIMERO, para
+# que su node-sync reconozca un job en vuelo --el viejo buscaba "Dispatching
+# operation" y los jobs escriben "Dispatching job", asi que paraba workers a mitad
+# de carga-- y solo DESPUES este fichero. Al reves, el node-sync viejo habria
+# parado las ocho cargas del nodo.
+# ---------------------------------------------------------------------------
+
+coordinator 55d0df33236af1f2e786948c89e22107a4db7284
+schema-applied 55d0df33236af1f2e786948c89e22107a4db7284
