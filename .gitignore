@@ -69,3 +69,4 @@ farm.env
 # fichero rastreado obligaria a un commit por cambio, que es justo el coste que
 # este mecanismo existe para eliminar. Su ausencia vale el default del codigo.
 plans/clean-campaign/max_in_flight
+plans/clean-campaign/prefetch-lejano.log
