@@ -912,36 +912,195 @@ def stamp_release_dates(api: Api) -> int:
 
 
 def drain_in_flight(api: Api) -> None:
+    """Wait out in-flight ONTOLOGY jobs only. The GAF loads get adopted.
+
+    This used to wait for ``load_goa_annotations`` too, which made every
+    restart cost a full load. Measured on 2026-10-08: raising MAX_IN_FLIGHT
+    meant waiting for releases 172, 173 and 174, and because the drain counts
+    QUEUED as in flight it also waited for 173, which was an orphan the reaper
+    would not republish for another 45 minutes. One knob change, nearly two
+    hours of idle nodes.
+
+    An ontology snapshot takes 20 to 40 seconds, so draining those is free and
+    keeps the loop's assumption that a release's snapshot exists before its
+    GAF is enqueued. The safety property the drain was written for survives in
+    ``adopt_in_flight``: a load that ends non-SUCCEEDED is seen by the reaper
+    step at the bottom of the main loop, which counts it as a failure and says
+    so, exactly as it does for a load this process dispatched itself.
+    """
     while True:
-        running = []
-        jobs = api.call("GET", "/v1/jobs?limit=50")
-        for j in items(jobs):
-            if (j.get("status") or "").upper() in {"RUNNING", "QUEUED", "PENDING"} and j.get(
-                "operation"
-            ) in {"load_goa_annotations", "load_ontology_snapshot"}:
-                running.append(j)
+        running = [
+            j
+            for j in items(api.call("GET", "/v1/jobs?limit=50"))
+            if (j.get("status") or "").upper() in {"RUNNING", "QUEUED", "PENDING"}
+            and j.get("operation") == "load_ontology_snapshot"
+        ]
         if not running:
             return
-        log(
-            "drain: waiting for "
-            + ", ".join(f"{j['operation']}:{j['id'][:8]}" for j in running)
-        )
+        log("drain: waiting for " + ", ".join(f"ontology:{j['id'][:8]}" for j in running))
         for j in running:
             try:
-                job = api.wait_job(str(j["id"]), GOA_JOB_TIMEOUT_S)
+                job = api.wait_job(str(j["id"]), ONTOLOGY_JOB_TIMEOUT_S)
             except TimeoutError:
-                log(f"drain: job {j['id']} still running after timeout; keep waiting")
+                log(f"drain: ontology {j['id']} still running after timeout; keep waiting")
                 continue
             if (job.get("status") or "").lower() != "succeeded":
                 log(
-                    f"drain: in-flight {j['operation']}:{j['id']} ended "
-                    f"{job.get('status')} err={job.get('error_message')}; aborting "
-                    f"so a failed release is never silently skipped"
+                    f"drain: in-flight ontology:{j['id']} ended {job.get('status')} "
+                    f"err={job.get('error_message')}; aborting so a release is never "
+                    f"bound to a snapshot that does not exist"
                 )
                 raise SystemExit(1)
 
 
-MAX_IN_FLIGHT = 2  # one GAF load per worker node (laptop + sobremesa)
+def adopt_in_flight(api: Api) -> dict[int, tuple[str, str]]:
+    """Take over the GAF loads that are already in flight, without waiting.
+
+    Returns the ``in_flight`` mapping the main loop expects, rebuilt from the
+    job rows: release -> (job_id, gaf_url). Both come out of the payload, which
+    is why the release travels in it rather than being read off the URL.
+
+    QUEUED counts as in flight on purpose. A QUEUED load is either waiting for
+    a free consumer or orphaned by a publish nobody confirmed, and in both
+    cases somebody still has to watch it to the end. Re-dispatching it would
+    open a second annotation_set for the same release.
+    """
+    adopted: dict[int, tuple[str, str]] = {}
+    for j in items(api.call("GET", "/v1/jobs?limit=50")):
+        if (j.get("status") or "").upper() not in {"RUNNING", "QUEUED", "PENDING"}:
+            continue
+        if j.get("operation") != "load_goa_annotations":
+            continue
+        # The LIST response carries no payload -- measured 2026-10-08, its keys
+        # stop at queue_name -- so the release has to come from the detail. A
+        # first version of this read `j["payload"]` off the list, found None for
+        # all three loads in flight, and would have left them in `pending` to be
+        # dispatched a SECOND time, opening a second annotation_set per release.
+        # Hence the abort below: an unreadable in-flight load is not something
+        # to skip past.
+        jid = str(j["id"])
+        detail = api.call("GET", f"/v1/jobs/{jid}")
+        payload = detail.get("payload") or {}
+        version = payload.get("source_version")
+        url = payload.get("gaf_url")
+        if version is None or url is None:
+            log(
+                f"adopt: load {jid} is {j.get('status')} but its payload has no "
+                f"source_version/gaf_url, so it cannot be adopted and must not be "
+                f"re-dispatched; aborting rather than opening a second "
+                f"annotation_set for a release nobody can name"
+            )
+            raise SystemExit(1)
+        adopted[int(version)] = (jid, str(url))
+    if adopted:
+        log(
+            "adopted in flight: "
+            + ", ".join(f"{r}:{jid[:8]}" for r, (jid, _u) in sorted(adopted.items()))
+        )
+    return adopted
+
+
+#: One GAF load per worker PROCESS, not per machine. Raised from 2 to 3 on
+#: 2026-10-08 after measuring where the load actually spends its time: the
+#: operation reads 398,132,939 lines to insert 7,604,137 and discard
+#: 390,328,823 (98.06%), all in one Python thread at 92.4% user / 0.43% system
+#: CPU. That is 1 of the laptop's 16 threads. Nothing else was near its
+#: ceiling: NVMe at 2-26% utilisation, Postgres with no lock waits, and the
+#: WiFi link carrying the GAF at 0.15 MB/s of a ~15 MB/s path with the sender
+#: rwnd-limited 85.2% of the time, which means the stream is throttled by
+#: whoever consumes it and never by the pipe.
+#:
+#: So the ceiling is per-core, and a second laptop worker buys a second core.
+#: It is 3 and not 5 because the laptop sat at 76 C (TCPU) with a SINGLE local
+#: load, and the one measurement this machine has of adding consumers is +14%
+#: throughput at 97 C. The next ceiling is unmeasured and most likely the
+#: unique-index maintenance of ``protein_go_annotation`` under
+#: ON CONFLICT DO NOTHING, on a table heading for ~550M rows.
+#:
+#: HOW TO CHANGE IT: this number alone does nothing. Each concurrent load needs
+#: its own worker process, because the consumer has prefetch=1 and runs one job
+#: at a time. Raise this AND launch that many ``scripts/worker.py --queue
+#: protea.jobs`` (with setsid: see nohup-dies-with-the-session). Lowering it
+#: back is safe at any time; a restart drains what is in flight first.
+#: Raw GAF lines buffered before one flush. Raised from the operation's
+#: default of 10,000 on 2026-10-08, because 10,000 is the wrong unit here: the
+#: buffer holds RAW lines and 98,06% of them are not corpus members, so a page
+#: of 10,000 lines inserts about 191 rows. Release 168 did 39.814 pages, each
+#: one an INSERT, a commit and a page_done event.
+#:
+#: That is cheap on this machine, where Postgres is a unix socket away, and it
+#: is the whole bottleneck on the desktop. Measured there on release 172: the
+#: hot thread sits in user CPU only 42,8% of the time and is blocked in
+#: poll_schedule_timeout for 54% of samples, waiting on round trips to this
+#: machine's Postgres at 6,4 ms. It is NOT waiting on the GAF: that socket
+#: holds 238-376 KB already arrived and unread. 105 min against this laptop's
+#: 62, for the same file.
+#:
+#: 200.000 gives about 2.000 pages of ~3.800 surviving rows, which is still one
+#: INSERT per page under the 5.000-row chunk, and cuts the round trips 20x.
+#: It also cuts page_done events from ~40.000 to ~2.000 per release, which is
+#: 3 million fewer job_event rows over the series.
+#:
+#: WHAT IT CHANGES IN THE RECORD, and it does change something. The rows in the
+#: database are identical: dedup is ON CONFLICT DO NOTHING over
+#: _IDENTITY_ELEMENTS, so a duplicate caught across pages or within one lands
+#: the same. But ``annotations_inserted`` counts rows ATTEMPTED and
+#: ``skipped_duplicate_in_batch`` counts duplicates caught inside one page, and
+#: a bigger page moves weight from the first to the second. Releases 156-174
+#: ran at 10.000 and the rest run at 200.000, so those two counters are NOT
+#: comparable across that boundary and any series over them has to group by
+#: page_size. It travels in the payload, so each release records which regime
+#: it ran under. Decided by Francisco on 2026-10-08 with that tradeoff stated.
+PAGE_SIZE = 200_000
+
+MAX_IN_FLIGHT_DEFAULT = 10
+
+#: Where the live value is read from, on EVERY pass of the loop. Changing the
+#: number used to mean restarting the driver, and a restart used to mean
+#: draining every load in flight; on 2026-10-08 that pair would have cost
+#: nearly two hours of idle nodes for one integer. Now: write the number here
+#: and the next pass picks it up. Lowering it does not kill anything in
+#: flight, it just stops topping the pipeline up until the count drops.
+MAX_IN_FLIGHT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "max_in_flight")
+
+
+def max_in_flight() -> int:
+    """The live concurrency ceiling, re-read on every pass.
+
+    A missing, empty or unparseable file means the default, logged once per
+    distinct complaint so a typo cannot be silent and cannot spam the log.
+    """
+    try:
+        raw = open(MAX_IN_FLIGHT_FILE, encoding="utf-8").read().strip()
+    except OSError:
+        return MAX_IN_FLIGHT_DEFAULT
+    try:
+        n = int(raw)
+    except ValueError:
+        if _quejas.add_once(f"bad:{raw}"):
+            log(f"max_in_flight: {MAX_IN_FLIGHT_FILE} says {raw!r}, not an integer; using {MAX_IN_FLIGHT_DEFAULT}")
+        return MAX_IN_FLIGHT_DEFAULT
+    if n < 1:
+        if _quejas.add_once(f"low:{n}"):
+            log(f"max_in_flight: {n} is below 1; using {MAX_IN_FLIGHT_DEFAULT}")
+        return MAX_IN_FLIGHT_DEFAULT
+    return n
+
+
+class _QuejasUnaVez:
+    """One log line per distinct complaint, because this is read every pass."""
+
+    def __init__(self) -> None:
+        self._vistas: set[str] = set()
+
+    def add_once(self, clave: str) -> bool:
+        if clave in self._vistas:
+            return False
+        self._vistas.add(clave)
+        return True
+
+
+_quejas = _QuejasUnaVez()
 
 
 def sweep_cache(done: set[int]) -> None:
@@ -993,10 +1152,11 @@ def main() -> int:
 
     log(
         f"driver start: {len(plan)} releases, {plan[0][0]}..{plan[-1][0]}, "
-        f"api={API}, max_in_flight={MAX_IN_FLIGHT}"
+        f"api={API}, max_in_flight={max_in_flight()}"
     )
 
     drain_in_flight(api)
+    adoptadas = adopt_in_flight(api)
     done = loaded_releases(api)
     if done:
         log(f"already loaded (skipped): {sorted(done)}")
@@ -1006,9 +1166,11 @@ def main() -> int:
     ensure_cache_server()
     log(f"cache: serving {CACHE_DIR} at {base}")
 
-    pending = [(r, s) for r, s in plan if r not in done]
+    # Lo adoptado NO vuelve a pending: re-despacharlo abriria un segundo
+    # annotation_set para la misma release.
+    pending = [(r, s) for r, s in plan if r not in done and r not in adoptadas]
     ont_pending: dict[int, tuple[str, str]] = {}  # release -> (job_id, obo_url)
-    in_flight: dict[int, tuple[str, str]] = {}  # release -> (job_id, gaf_url)
+    in_flight: dict[int, tuple[str, str]] = dict(adoptadas)  # release -> (job_id, gaf_url)
     failures = 0
 
     while pending or ont_pending or in_flight:
@@ -1034,6 +1196,7 @@ def main() -> int:
                         "ontology_snapshot_id": snapshot_id,
                         "gaf_url": gaf_url,
                         "source_version": str(release),
+                        "page_size": PAGE_SIZE,
                     },
                 },
             )
@@ -1041,7 +1204,7 @@ def main() -> int:
             log(f"goa {release}: loading from local cache")
 
         # 2. top up the pipeline: prefetch GAF, then submit its ontology job
-        while len(ont_pending) + len(in_flight) < MAX_IN_FLIGHT and pending:
+        while len(ont_pending) + len(in_flight) < max_in_flight() and pending:
             release, snap_date = pending.pop(0)
             try:
                 ensure_cached(release)
