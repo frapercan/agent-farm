@@ -102,6 +102,20 @@ RESOLVE_JOB_TIMEOUT_S = 24 * 3600
 #: vive en el mismo sistema de ficheros, asi que llenarlo no es una parada limpia:
 #: es un PANIC de WAL en la base de la propia campana.
 DISK_FLOOR_GB_TO_KEEP = 230
+
+#: Por debajo de esto, `ensure_cached` se NIEGA a bajar en vez de llenar el
+#: disco. La fase 2 no miraba el espacio en absoluto: `free_gb` solo se usaba en
+#: `_drop_or_keep`, que es de fase 1. Un disco lleno aqui no corrompe nada --
+#: `goa_cache fetch` falla, el bucle lo captura y reintenta cada 60 s-- pero
+#: gira en vacio, y esta es la maquina que tiene Postgres.
+#:
+#: Es DELIBERADAMENTE mas bajo que el suelo del prefetch adelantado
+#: (`prefetch_lejano.sh`, 100 GB mas el peor fichero). Si los dos quieren
+#: espacio, gana el driver y cede el prefetch: la necesidad del driver es
+#: inmediata y la del prefetch es especulativa. El borrado del bucle libera
+#: 5-24 GB por release cerrada, asi que esperar funciona mientras haya cargas
+#: vivas.
+DISK_FLOOR_GB_TO_FETCH = 40
 POLL_S = 20
 
 # 75 ficheros, releases 156..235. Eran 71 (160..235) mientras se creyo que la
@@ -231,6 +245,13 @@ def ensure_cached(release: int) -> None:
     dest = cache_path(release)
     if os.path.exists(dest):
         return
+    libres = free_gb()
+    if libres < DISK_FLOOR_GB_TO_FETCH:
+        raise RuntimeError(
+            f"{libres} GB libres, por debajo del suelo de {DISK_FLOOR_GB_TO_FETCH}: "
+            f"no bajo la release {release}. El bucle reintenta, y cada carga que "
+            f"cierra libera su GAF"
+        )
     os.makedirs(CACHE_DIR, exist_ok=True)
     url = GAF_URL.format(release=release)
     t0 = time.time()
@@ -1193,6 +1214,17 @@ def main() -> int:
     failures = 0
 
     while pending or ont_pending or in_flight:
+        # Una PAUSA tiene que parar los dos pasos, y la primera version solo
+        # paraba el segundo. El paso 1 convierte una ontologia terminada en una
+        # carga encolada y no mira `max_in_flight`, asi que con 0 escrito el
+        # driver seguia despachando una carga mas por cada release que ya tenia
+        # su snapshot en vuelo -- justo lo que impide alcanzar la precondicion
+        # para la que existe la pausa: ni un job en QUEUED ni en RUNNING. Las
+        # releases se quedan en `ont_pending` y avanzan cuando se despausa.
+        if max_in_flight() == 0:
+            time.sleep(POLL_S)
+            continue
+
         # 1. advance ontology jobs whose snapshot just completed -> enqueue GAF
         for release, (job_id, obo_url) in list(ont_pending.items()):
             job = api.call("GET", f"/v1/jobs/{job_id}")
@@ -1279,13 +1311,25 @@ def main() -> int:
                 f"error={job.get('error_message')}"
             )
             del in_flight[release]
-            try:
-                os.remove(cache_path(release))
-            except OSError:
-                pass
-            if status != "succeeded":
+            if status == "succeeded":
+                try:
+                    os.remove(cache_path(release))
+                except OSError:
+                    pass
+            else:
+                # EL GAF SE QUEDA. La condicion anterior borraba en cualquier
+                # estado terminal, fallo incluido, y la cache existe justo para
+                # no pagar EBI dos veces: medido el 2026-10-08, EBI da 4,0 MB/s
+                # de media sobre 189 descargas y los ficheros del extremo nuevo
+                # pesan 17-24 GB, asi que un fallo costaba hasta hora y media de
+                # descarga antes de poder reintentarlo. Y un fallo es
+                # exactamente cuando mas falta hace tener el fichero: para
+                # mirarlo.
                 failures += 1
-                log(f"goa {release}: FAILURE; release skipped, continuing with the rest")
+                log(
+                    f"goa {release}: FAILURE; release skipped, continuing with the rest. "
+                    f"Su GAF se conserva en {cache_path(release)} para reintentar o inspeccionar"
+                )
 
         if pending or ont_pending or in_flight:
             time.sleep(POLL_S)
