@@ -55,7 +55,11 @@ Every step that changes the node is gated on the check in front of it, and a
 check that cannot run is a refusal. It refuses a sha that is absent from the
 clone, a sha that is not an ancestor of `origin/develop`, a dirty deploy slot,
 and a sha that changes `alembic/versions/` unless the declaration also carries a
-matching `schema-applied` line. If an install fails, leaves a sibling wrong,
+matching `schema-applied` line. It defers while any worker of the queue has a
+job or a batch in flight, reading the first worker's log and every extra's: a
+batch until its log has been silent for 1500 s, a job until it is 6 h old,
+because a job consumer writes nothing between dispatch and finish and a GOA
+release load is silent for close to two hours. If an install fails, leaves a sibling wrong,
 costs torch its CUDA build, or leaves the operation unimportable, **the worker
 stays down**: a silent wrong consumer is worse than no consumer.
 
@@ -72,7 +76,8 @@ PROTEA_SYNC_DRYRUN=1 ~/.local/lib/protea/protea-node-sync.sh
 systemctl --user list-timers protea-node-sync.timer
 ```
 
-A dry run reports what it would do and touches nothing. `node-sync.state` in the
+A dry run runs every check a real tick runs and stops where it would act, so it
+reports a refusal, a deferral or the units it would stop, and touches nothing. `node-sync.state` in the
 log directory carries the last verdict and is written on every path, including
 the ones that do nothing, because a state file left from an earlier run reads as
 a current one.

@@ -6,6 +6,19 @@ Description=Poll for the revision the server declares
 # inside one batch, and a tick costs one fetch. Persistent so that a
 # reboot of this personal machine catches up on the tick it slept
 # through instead of waiting a full interval.
+#
+# OnActiveSec gives the timer a first tick counted from its own start,
+# and without it a timer started long after boot never ticks at all.
+# OnBootSec is already in the past by then, and the Persistent stamp of
+# an earlier install survives in ~/.local/share/systemd/timers, so
+# systemd counts the boot tick as spent. OnUnitActiveSec has no base
+# either, because nothing has run the service in this boot. The timer
+# sits in `active (elapsed)` with no next tick and reports no error.
+# That happened on the compute node on 2026-10-08: enabled at 14:46,
+# silent for four hours while the declaration moved under it. The same
+# unit file without this line reproduces it on demand, and with it the
+# timer waits for its first tick a minute out.
+OnActiveSec=1min
 OnBootSec=90s
 OnUnitActiveSec=3min
 AccuracySec=15s

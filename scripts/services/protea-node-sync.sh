@@ -25,16 +25,27 @@ VENV="${PROTEA_VENV:-${HOME}/.cache/pypoetry/virtualenvs/protea-M-JALCmz-py3.12}
 QUEUE="${PROTEA_QUEUE:-protea.predictions.batch}"
 UNIT="protea-lab-worker@${QUEUE}.service"
 DECL_PATH="${PROTEA_DECL_PATH:-plans/DECLARED-REVISION.txt}"
-STATE="${HOME}/Thesis2/storage/logs/node-sync.state"
+LOGDIR="${PROTEA_LOGDIR:-${HOME}/Thesis2/storage/logs}"
+STATE="${LOGDIR}/node-sync.state"
 PY="${VENV}/bin/python"
+DRYRUN="${PROTEA_SYNC_DRYRUN:-0}"
 
-# A batch that has been running for less than this is worth waiting a tick for
-# rather than interrupting. Longer than this and it is not progress, it is a
-# stall, and the sync goes ahead.
+# A batch whose log moved less than this long ago is worth waiting a tick for
+# rather than interrupting. A batch consumer writes a line per batch, so a log
+# silent for longer than this is not progress, it is a stall, and the sync goes
+# ahead.
 INFLIGHT_GRACE=1500
+# A job consumer writes nothing between "Dispatching job" and the end of the job,
+# by design: a GOA release load ran 105 to 109 minutes silent on this node on
+# 2026-10-08. So for a job the measure is the age of the job, not the silence of
+# the log, and the bound is three times the longest job measured here.
+INFLIGHT_JOB_STALL=21600
 
 say() { echo "$(date -Is) node-sync: $*"; }
 refuse() { say "REFUSED, $*"; exit 0; }
+# Past the drift check a dry run reports and touches nothing, the state file
+# included: the state is this node's verdict, and a rehearsal is not one.
+put_state() { [[ "${DRYRUN}" == "1" ]] || echo "$*" > "${STATE}"; }
 
 # --- read the declaration, without touching any working tree ----------------
 # `git show origin/main:<path>` reads the committed file directly. A checkout
@@ -115,16 +126,9 @@ fi
 
 say "drift: ${DRIFT[*]}"
 
-# A dry run says what it would do and touches nothing. It exists so the acting
-# path can be exercised on a live node without acting on it.
-if [[ "${PROTEA_SYNC_DRYRUN:-0}" == "1" ]]; then
-  say "DRY RUN, would stop ${UNIT}, check out ${WANT_COORD:0:12} and install the siblings above"
-  exit 0
-fi
-
 # --- refuse rather than guess ------------------------------------------------
 if [[ -n "$(git -C "${SLOT}" status --porcelain)" ]]; then
-  echo "blocked dirty-slot ${WANT_COORD}" > "${STATE}"
+  put_state "blocked dirty-slot ${WANT_COORD}"
   refuse "the deploy slot has uncommitted changes; a sync would destroy them"
 fi
 
@@ -143,33 +147,90 @@ MIG="$(git -C "${SLOT}" diff --name-only "${HAVE_COORD}" "${WANT_COORD}" -- 'ale
 if [[ -n "${MIG}" ]]; then
   ACK="$(printf '%s\n' "${DECL}" | awk '$1=="schema-applied"{print $2; exit}')"
   if [[ "${ACK}" != "${WANT_COORD}" ]]; then
-    echo "blocked unmigrated ${WANT_COORD}" > "${STATE}"
+    put_state "blocked unmigrated ${WANT_COORD}"
     say "the declared revision changes migrations: $(printf '%s' "${MIG}" | tr '\n' ' ')"
     refuse "no 'schema-applied ${WANT_COORD:0:12}' line in the declaration; the server must apply the migration and say so before this node follows"
   fi
   say "migrations change and the declaration says the schema is applied; proceeding"
 fi
 
+# --- is any worker of this queue in the middle of something? -----------------
 # An unacknowledged batch is redelivered by the broker, so stopping mid-batch
-# costs duplicated compute rather than work. It is still worth one tick to
-# avoid, but not worth blocking on forever: past the grace it is a stall.
-LOG="${HOME}/Thesis2/storage/logs/protea-lab-worker-${QUEUE}.log"
-if [[ -r "${LOG}" ]]; then
-  last_disp="$(grep -a 'Dispatching operation' "${LOG}" | tail -1 || true)"
-  last_ack="$(grep -a 'Operation acked' "${LOG}" | tail -1 || true)"
-  if [[ -n "${last_disp}" && -z "${last_ack}" ]] || \
-     [[ -n "${last_disp}" && "$(grep -an 'Dispatching operation' "${LOG}" | tail -1 | cut -d: -f1)" -gt "$(grep -an 'Operation acked' "${LOG}" | tail -1 | cut -d: -f1 || echo 0)" ]]; then
-    age=$(( $(date +%s) - $(stat -c %Y "${LOG}") ))
-    if (( age < INFLIGHT_GRACE )); then
-      echo "deferred in-flight ${WANT_COORD}" > "${STATE}"
-      say "a batch is in flight and the log moved ${age}s ago; deferring to the next tick"
-      exit 0
+# costs duplicated compute rather than work. A job costs more: a GOA release
+# load runs for close to two hours, and until PROTEA#997 a job consumer acked
+# its message on START, so a job stopped mid-run was not redelivered at all but
+# left RUNNING for the reaper to find.
+#
+# Every worker of the queue appends to its own log. The unit named after the
+# queue writes protea-lab-worker-<queue>.log, and each extra worker tied to it
+# (protea-lab-worker-extra@.service, PartOf= that unit, so the stop below reaches
+# it too) writes protea-lab-worker-<queue>@<n>.log. '@' cannot occur in a queue
+# name, so the glob cannot pick up another queue's log, which a '.' suffix would:
+# protea.embeddings.* matches protea.embeddings.batch.
+#
+# A log is in flight when its last dispatch line comes after its last end line.
+# "Job acked." is in neither list, on purpose: before PROTEA#997 a job consumer
+# acked on START and after it at the END, and a marker that changes side
+# between two revisions of one consumer reads wrong under one of them. A worker
+# restart ends whatever was running, so it counts as an end.
+#
+# Until 2026-10-08 this check looked for "Dispatching operation" alone, which a
+# job consumer never writes. Every job was invisible to it, and a declaration
+# move would have stopped a release load wherever it happened to be.
+DISPATCH_RE='Dispatching (operation|job)\.'
+END_RE='(Operation acked\.|Operation failed\.|Operation requested retry|Job finished\.|Job failed\.|Job will retry|Job re-published\.|Worker started\.|Worker stopped\.)'
+now="$(date +%s)"
+blocking=0
+for log in "${LOGDIR}/protea-lab-worker-${QUEUE}.log" "${LOGDIR}/protea-lab-worker-${QUEUE}@"*.log; do
+  [[ -r "${log}" ]] || continue
+  d="$(grep -anE "${DISPATCH_RE}" "${log}" | tail -1 | cut -d: -f1 || true)"
+  [[ -n "${d}" ]] || continue
+  e="$(grep -anE "${END_RE}" "${log}" | tail -1 | cut -d: -f1 || true)"
+  (( d > ${e:-0} )) || continue
+  line="$(sed -n "${d}p" "${log}")"
+  name="$(basename "${log}")"
+  if [[ "${line}" == *"Dispatching job."* ]]; then
+    # The job's age is read off its own dispatch line, not off the log's mtime:
+    # any line written mid-job would move the mtime and make an old job look
+    # young, and since PROTEA#997 the I/O thread keeps running during a job.
+    ts="$(printf '%s\n' "${line}" | sed -n 's/.*"timestamp": *"\([^"]*\)".*/\1/p')"
+    since="$(date -d "${ts}" +%s 2>/dev/null || stat -c %Y "${log}")"
+    job="$(printf '%s\n' "${line}" | sed -n 's/.*job_id=\([0-9a-f-]*\).*/\1/p')"
+    age=$(( now - since ))
+    if (( age < INFLIGHT_JOB_STALL )); then
+      say "job ${job:-?} has been in flight on ${name} for ${age}s; deferring to the next tick"
+      blocking=$(( blocking + 1 ))
+    else
+      say "job ${job:-?} has been in flight on ${name} for ${age}s, past ${INFLIGHT_JOB_STALL}s; that is a stall, not counting it"
     fi
-    say "a batch has been in flight with a log silent for ${age}s; that is a stall, syncing anyway"
+  else
+    age=$(( now - $(stat -c %Y "${log}") ))
+    if (( age < INFLIGHT_GRACE )); then
+      say "a batch is in flight on ${name} and the log moved ${age}s ago; deferring to the next tick"
+      blocking=$(( blocking + 1 ))
+    else
+      say "a batch has been in flight on ${name} with the log silent for ${age}s; that is a stall, not counting it"
+    fi
   fi
+done
+if (( blocking > 0 )); then
+  put_state "deferred in-flight ${WANT_COORD}"
+  exit 0
+fi
+
+# A dry run stops here, after every check, so that what it reports is what a
+# real tick would do: refuse, defer, or act. It exists so the acting path can
+# be rehearsed on a live node without acting on it.
+if [[ "${DRYRUN}" == "1" ]]; then
+  tied="$(systemctl --user show -p ConsistsOf --value "${UNIT}" 2>/dev/null || true)"
+  say "DRY RUN, would stop ${UNIT}${tied:+ and with it ${tied}}, check out ${WANT_COORD:0:12} and install the siblings above"
+  exit 0
 fi
 
 # --- act ---------------------------------------------------------------------
+# Stopping the unit also stops every unit that is PartOf it, and starting it
+# brings back every unit whose [Install] says WantedBy= it, so extra workers of
+# the queue move with it and none is left on the old revision.
 say "stopping ${UNIT}"
 systemctl --user stop "${UNIT}" || refuse "could not stop the worker; not touching the tree under a running process"
 

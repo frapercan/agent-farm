@@ -76,6 +76,44 @@ user-level rotation that needs no root; wire it into your own crontab. It uses
 `copytruncate` on purpose, because the worker holds the file open through systemd
 and a rename would leave it writing to an unlinked inode.
 
+## More than one worker on a queue
+
+One worker process runs one job at a time, in one Python thread. For a queue
+whose jobs are long and single threaded, such as the GOA release loads on
+`protea.jobs`, the node runs extra workers beside the first one:
+
+```bash
+install -m 644 scripts/services/protea-lab-worker-extra@.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now protea-lab-worker-extra@{2..8}.service   # eight workers in all
+```
+
+**Enable them, do not just start them.** Each extra is `PartOf=` the
+`protea-lab-worker@protea.jobs` unit, so stopping or restarting that unit stops
+or restarts every extra, and `WantedBy=` it, so starting that unit starts them
+again. That is what lets `protea-node-sync` move all of them across a revision
+with the one stop and the one start it already does. An extra started without
+`enable` has no `.wants` link and stays down after the first sync.
+
+Each extra logs to `protea-lab-worker-protea.jobs@<n>.log`, one file per
+process, because the sync's in-flight check reads the order of the lines in each
+log and two processes appending to one file interleave. The extras run at
+`Nice=10` with `SCHED_BATCH`, because this node is also somebody's personal
+machine.
+
+How many is a measurement, not a guess. On 2026-10-08 one GOA load on this node
+used 43 per cent of a core and spent 54 per cent of its time waiting on round
+trips to the server's database, so the count is bounded by the link and by the
+server rather than by the CPU here. Tell the server the total: its campaign
+driver keeps a fixed number of loads in flight, and workers beyond that number
+take jobs away from faster consumers instead of adding any.
+
+At the end of the campaign:
+
+```bash
+systemctl --user disable --now protea-lab-worker-extra@{2..8}.service
+```
+
 ## What it assumes
 
 - `~/.secrets/protea-lab.env` defines `PROTEA_DB_URL` and `PROTEA_AMQP_URL`
@@ -306,13 +344,33 @@ a check that cannot run is a refusal. In order:
 | declared sha not an ancestor of `origin/develop` | refuses |
 | declared sha changes `alembic/versions/` | refuses unless the declaration also carries `schema-applied <same sha>` |
 | deploy slot has uncommitted changes | refuses |
-| a batch in flight and the log still moving | defers one tick, then treats silence past 1500s as a stall |
+| a batch in flight on any worker of the queue, its log moved within 1500 s | defers a tick; past that the silence is a stall and the sync goes ahead |
+| a job in flight on any worker of the queue, dispatched less than 6 h ago | defers a tick; only past 6 h is it a stall |
 | an install fails, or leaves a sibling wrong | worker stays **down** |
 | torch loses CUDA, or the operation does not import | worker stays **down** |
 
 The last two are the point. A silent wrong consumer is worse than no consumer,
 because the queue drains into refusals or into answers nobody asked for, and
 both look like progress from the other machine.
+
+The two in-flight rows read every log of the queue: the first worker's and each
+extra's (see "More than one worker on a queue"). A log is in flight when its
+last `Dispatching job.` or `Dispatching operation.` line comes after its last
+end line: `Job finished.`, `Job failed.`, `Job will retry`, `Job re-published.`,
+`Operation acked.`, `Operation failed.`, `Operation requested retry`, or a
+`Worker started.` / `Worker stopped.` that ended whatever was running. `Job
+acked.` is neither, because PROTEA#997 moved it from the start of a job to the
+end. Jobs and batches get different stall rules because they log differently. A
+batch consumer writes a line per batch, so a quiet log means a stuck batch. A
+job consumer writes nothing between dispatch and finish, by design, and a GOA
+release load is quiet for close to two hours. Until 2026-10-08 the check looked
+for `Dispatching operation` alone. It never saw a job, so a declaration move
+would have stopped a release load wherever it happened to be.
+
+To move the declaration during a job campaign without waiting on the in-flight
+rows, stop the server's dispatcher from refilling first. The loads in flight
+then finish on their own, the node syncs at the first tick after the last one,
+and the dispatcher resumes once the node reports the new revision.
 
 The migration row deserves its own note. A revision can be correct code against
 a database that has not been migrated to it: the code sets the new columns and
@@ -330,10 +388,17 @@ there is never a window where the file says go and the schema says no.
 PROTEA_SYNC_DRYRUN=1 ~/.local/lib/protea/protea-node-sync.sh
 ```
 
-reports what it would do and touches nothing. `node-sync.state` in the log
-directory carries the last verdict, and it is written on every path including
-the ones that do nothing, because a state file left over from an earlier run
-reads as a current one.
+reports what it would do and touches nothing. It runs every check a real tick
+runs, the dirty slot, the migrations and the in-flight logs, and stops only
+where a real tick would act, so its answer is the tick's answer: refuse, defer,
+or the units it would stop. It writes no state past the drift check, because a
+rehearsal is not the node's verdict.
+
+`node-sync.state` in the log directory carries the last verdict, and it is
+written on every path of a real tick, including the ones that do nothing,
+because a state file left over from an earlier run reads as a current one.
+`PROTEA_LOGDIR` points the logs and the state somewhere else, which is how the
+in-flight rows can be rehearsed against fixture logs.
 
 ## The throughput sampler, retired 2026-09-04
 
