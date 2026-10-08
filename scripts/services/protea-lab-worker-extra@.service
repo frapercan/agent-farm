@@ -1,0 +1,53 @@
+[Unit]
+Description=PROTEA compute-node extra worker %i for queue protea.jobs
+Documentation=https://github.com/frapercan/agent-farm/blob/main/scripts/services/README-lab-worker.md
+# More than one process on one queue, for work that is one Python thread per
+# job. A GOA release load is exactly that: on 2026-10-08 one load on the compute
+# node spent 43 per cent of its time computing and 54 per cent waiting on round
+# trips to the server's database, so a single process used under half a core
+# of a six core machine. N processes are N loads at once. The instance name is
+# only a number: protea-lab-worker-extra@2, @3, and so on, next to the
+# protea-lab-worker@protea.jobs unit, which stays the first worker.
+#
+# TIED TO THAT UNIT, and the tie is the point of this file. protea-node-sync
+# stops protea-lab-worker@<queue> before it checks out a new revision and
+# starts it afterwards. PartOf= carries that stop to every extra, and the
+# WantedBy= below carries the start, so the extras move with it. An extra
+# started any other way keeps the revision it loaded while the main worker
+# moves on, and the header of plans/DECLARED-REVISION.txt says what that costs.
+# Enable the extras, do not just start them: the start comes back through the
+# .wants link that `enable` creates.
+#
+# The queue is written out rather than taken from the instance name, because a
+# unit carries one instance string and PartOf= has to name the main unit. A copy
+# for another queue replaces protea.jobs everywhere it appears in this file.
+PartOf=protea-lab-worker@protea.jobs.service
+After=protea-lab-worker@protea.jobs.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/bin/bash %h/.local/lib/protea/protea-lab-worker.sh protea.jobs
+WorkingDirectory=%h/Thesis2/repositories/PROTEA
+
+# The compute node is also somebody's personal machine. Nice and SCHED_BATCH
+# let these take every idle cycle while anything interactive goes first.
+Nice=10
+CPUSchedulingPolicy=batch
+
+Restart=always
+RestartSec=30
+RestartPreventExitStatus=78
+
+# One log per process, because protea-node-sync decides whether a job is in
+# flight from the order of the lines in a log, and two processes appending to
+# one file interleave. The '@' cannot occur in a queue name, so node-sync's glob
+# protea-lab-worker-<queue>@*.log cannot reach another queue's log.
+StandardOutput=append:%h/Thesis2/storage/logs/protea-lab-worker-protea.jobs@%i.log
+StandardError=inherit
+
+TimeoutStopSec=120
+KillSignal=SIGINT
+
+[Install]
+WantedBy=protea-lab-worker@protea.jobs.service

@@ -52,7 +52,7 @@ Total first-class capabilities: **77**.
 
 | Feature | State | Source | Smoke | Runbook | Owner |
 |---|---|---|---|---|---|
-| [lab-worker-service](lab-worker-service.md) | working | `scripts/services/protea-lab-worker.sh`, `scripts/services/protea-lab-worker@.service`, `scripts/services/protea-lab-worker.logrotate` | `bash -n scripts/services/protea-lab-worker.sh` | `scripts/services/README-lab-worker.md` | compute node, unattended |
+| [lab-worker-service](lab-worker-service.md) | working | `scripts/services/protea-lab-worker.sh`, `scripts/services/protea-lab-worker@.service`, `scripts/services/protea-lab-worker-extra@.service`, `scripts/services/protea-lab-worker.logrotate` | `bash -n scripts/services/protea-lab-worker.sh` | `scripts/services/README-lab-worker.md` | compute node, unattended |
 | [node-revision-sync](node-revision-sync.md) | working | `scripts/services/protea-node-sync.sh`, `scripts/services/protea-node-sync.service`, `scripts/services/protea-node-sync.timer`, `plans/DECLARED-REVISION.txt` | `bash -n scripts/services/protea-node-sync.sh` | `scripts/services/README-lab-worker.md` | compute node, unattended |
 
 ## 4-lifecycle

@@ -6,6 +6,7 @@ owner: compute node, unattended
 source:
   - scripts/services/protea-lab-worker.sh
   - scripts/services/protea-lab-worker@.service
+  - scripts/services/protea-lab-worker-extra@.service
   - scripts/services/protea-lab-worker.logrotate
 runbook: scripts/services/README-lab-worker.md
 smoke: bash -n scripts/services/protea-lab-worker.sh
@@ -25,6 +26,8 @@ cost an hour of throughput for that reason and no other.
 
 - `scripts/services/protea-lab-worker@.service`, a templated systemd user unit,
   one instance per queue
+- `scripts/services/protea-lab-worker-extra@.service`, extra workers on
+  `protea.jobs` that stop and start with the first one
 - `scripts/services/protea-lab-worker.sh`, the wrapper the unit runs
 - `scripts/services/protea-lab-worker.logrotate`
 - `scripts/services/README-lab-worker.md`, the runbook
@@ -39,6 +42,13 @@ Logs are appended under the user's own storage and emitted as JSON, because the
 platform's log rules are JSON and a worker writing plain text is invisible to
 every dashboard rule that parses them. That was the defect this feature was
 extended to fix.
+
+A queue whose jobs are long and single threaded can run more than one worker:
+`protea-lab-worker-extra@2`, `@3` and so on beside `protea-lab-worker@protea.jobs`.
+Each extra is `PartOf=` and `WantedBy=` that unit, so node-revision-sync moves
+all of them with the one stop and start it already does, and each writes its
+own log, `protea-lab-worker-protea.jobs@<n>.log`. See "More than one worker on a
+queue" in the runbook.
 
 `PYTHONUNBUFFERED=1` is set. Without it the wrapper's output is block buffered
 when stdout is a file, and a healthy worker looks dead for the first half hour.
