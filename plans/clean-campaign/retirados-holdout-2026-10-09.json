@@ -1,0 +1,54 @@
+[
+    {
+        "id": "da5fc4d4-fae5-4875-bf43-18d739e905b8",
+        "stats": {
+            "mode": "reconciled",
+            "lk_proteins": 723,
+            "nk_proteins": 12527,
+            "pk_proteins": 6994,
+            "delta_proteins": 20106,
+            "lk_annotations": 10289,
+            "nk_annotations": 154354,
+            "pk_annotations": 45938,
+            "removed_proteins": 21249,
+            "known_terms_count": 4839015,
+            "removed_annotations": 121517,
+            "pivot_ontology_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226"
+        },
+        "job_id": "80394def-e8c4-487d-bbd9-6aafaf4d1830",
+        "created_at": "2026-10-09T14:41:21.84347+00:00",
+        "window_role": null,
+        "groundtruth_uri": "s3://protea/eval_groundtruth/da5fc4d4-fae5-4875-bf43-18d739e905b8/groundtruth.parquet",
+        "pivot_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226",
+        "new_annotation_set_id": "6f988042-a281-4672-b7f5-d965e4cca08b",
+        "old_annotation_set_id": "5f007dc7-bd9e-40f0-b1c1-2a14d562cf63",
+        "new_native_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226",
+        "old_native_snapshot_id": "28c785ca-bbb0-460f-8bf9-a7334d608017"
+    },
+    {
+        "id": "4afd2f95-c3be-4ea2-a898-ac9de3e2e7da",
+        "stats": {
+            "mode": "same_snapshot",
+            "lk_proteins": 100,
+            "nk_proteins": 776,
+            "pk_proteins": 1176,
+            "delta_proteins": 2025,
+            "lk_annotations": 139,
+            "nk_annotations": 2430,
+            "pk_annotations": 1618,
+            "removed_proteins": 4689,
+            "known_terms_count": 726610,
+            "removed_annotations": 9435,
+            "pivot_ontology_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226"
+        },
+        "job_id": "736eaaa3-67c3-4168-bc5a-927a821a04dc",
+        "created_at": "2026-10-09T15:32:55.320784+00:00",
+        "window_role": null,
+        "groundtruth_uri": "s3://protea/eval_groundtruth/4afd2f95-c3be-4ea2-a898-ac9de3e2e7da/groundtruth.parquet",
+        "pivot_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226",
+        "new_annotation_set_id": "6045a73a-2bf8-4505-a9aa-2c4cde221932",
+        "old_annotation_set_id": "6f988042-a281-4672-b7f5-d965e4cca08b",
+        "new_native_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226",
+        "old_native_snapshot_id": "dfdccca3-1636-4a7f-b85f-c30e19db9226"
+    }
+]
