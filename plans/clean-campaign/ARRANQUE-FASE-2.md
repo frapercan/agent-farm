@@ -95,12 +95,39 @@ La fase 2 crea el snapshot de ontología de cada release antes de su carga, y
 reutiliza los GAF que la fase 1 dejó en caché. Lo que no esté cacheado lo baja, y
 esa descarga se esconde detrás de la carga, que es el doble de lenta.
 
-## 4. Lo primero que hay que medir, en la primera release
+## 4. El coste de la fase 2, medido en la campaña anterior
 
-**La ETA de la fase 2 no está medida en esta campaña.** Las ~44 h que circulan
-salen de «35 min por release» del docstring del driver, que son de la campaña
-anterior, convertidos a 196 s/GB sobre una release media. En cuanto cierre la
-primera carga:
+**Las ~44 h que circulaban eran falsas.** Salían de «35 min por release» del
+docstring del driver, que no venía de ninguna medida. El 2026-10-07 medí la fase
+de anotaciones de `protea_old`, que corrió esta misma operación en esta misma
+máquina (15 sep al 4 oct):
+
+| | |
+|---|---|
+| jobs `load_goa_annotations` SUCCEEDED | 73 |
+| media por release | **123,5 min** (mín 53,4, máx 583,8) |
+| suma de tiempo de job | 150,2 h |
+| reloj de pared | 433,4 h (dos tercios eran hueco muerto) |
+| concurrencia máxima | 2 |
+
+Las 433 h no son la referencia: la mayor parte del hueco era el defecto de
+solapamiento documentado en el bucle de la fase 2, ya corregido (la 218 se
+descargó a las 17:27 y su carga se encoló cinco horas después, ~1,25 h de hueco
+por release). La referencia es la suma, 150,2 h, escalada por nuestro universo.
+
+**Volumen, también medido.** Las filas por release son **planas**, no
+proporcionales al fichero: de 4,74 a 6,15 M en las 71 releases del viejo, media
+5,34 M, mientras el GAF crece de 4,6 a 24 GB. Lo que crece es TrEMBL, que no es
+miembro. Total 379.462.116 filas en 112 GB con índices, o 316,5 bytes por fila.
+Nuestro universo da 1,52× más filas en la 164 (7.640.145 contra 5.021.145), así
+que la proyección es **~610 M filas y ~190 GB**. Cualquier cifra sacada de
+extrapolar un porcentaje fijo del GAF está inflada ~2,3× por esta razón.
+
+El loader no filtra por código: en la 164 del viejo, 4,07 M de las 5,02 M filas
+son IEA. Es la regla del investigador, si la proteína pasa el criterio entran
+todas sus anotaciones de ese instante.
+
+En cuanto cierre la primera carga, confirmar contra esto:
 
 ```bash
 grep "goa 156: ok" goa-campaign.log | tail -1
@@ -119,8 +146,8 @@ Vigilar también en esa primera release:
   a necesaria.
 - **La transacción abierta del worker.** El patrón de dos sesiones de
   `BaseWorker` mantiene una transacción viva mientras el job corre. En la fase 1
-  son 7 min; en la fase 2 serán ~35 por release, y eso impide a autovacuum limpiar
-  mientras dura. Mirar bloat en `protein_go_annotation` al cabo de unas releases.
+  son 7 min; en la fase 2 serán ~123 por release (medido), y eso impide a
+  autovacuum limpiar mientras dura. Mirar bloat en `protein_go_annotation` al cabo de unas releases.
 
 ## 5. Lo que viene después, y no antes
 
