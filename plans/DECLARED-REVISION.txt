@@ -868,6 +868,37 @@
 # de carga-- y solo DESPUES este fichero. Al reves, el node-sync viejo habria
 # parado las ocho cargas del nodo.
 # ---------------------------------------------------------------------------
+#
+# DECIMOQUINTO SALTO, 2026-10-11. 1f4cd2aa2e0ca9d5aa99f36a7e796799ec6d31f3.
+#
+# QUE TRAE. Dos PR de PROTEA. La #999 da a `analyze_annotation_evolution` su semilla
+# de reparto, el commit por release y `temp_buffers`; sin la semilla un rango que se
+# reparte describe dos veces su release de frontera, medido en +3 filas por shard. La
+# #1000 anade a `resolve_protein_sequences` un tercer pase contra UniParc.
+#
+# POR QUE EL TERCER PASE. La pasada del 2026-10-10 dejo 28.868 accesiones sin
+# secuencia: UniProtKB dejo de servirlas y su endpoint por lotes las cuenta en
+# X-Total-Results sin devolverlas. UniParc las tiene. Sobre una muestra aleatoria de
+# 600, resolvio 600. No es un fleco: por nivel de evidencia a lo largo de las 74
+# releases falta el 9,2% de las proteinas que alguna vez llevaron experimental y el
+# 7,8% de las de inferencia curada, contra el 0,07% del resto, y por corte eso es el
+# 7,5% del banco en la 160 y el 0% en la 235. Ese gradiente se disfraza de
+# crecimiento del banco.
+#
+# EL HERMANO QUE SE MUEVE: protea-sources pasa de 946227ca3b8840eb0ea7223c8fc52b746027f9fe
+# a fc43ab942ebec811afae25eda3be18b3f37d0e46, que es donde vive `search_uniparc_tsv`.
+# EN EL SOBREMESA, pip --no-deps, NUNCA poetry install: alli el torch es el de CUDA.
+# Aqui se hizo asi y el torch siguio en 2.12.0+cpu, comprobado despues de instalar.
+#
+# EL ESQUEMA no se mueve: ni una migracion entre 55d0df3 y este sha, y la base sigue
+# en f2a8c41d9e37. Para el nodo el salto es checkout, pip --no-deps del hermano, y
+# reinicio.
+#
+# ORDEN SEGUIDO: PR del plugin fusionada e instalada en el portatil PRIMERO, con el
+# import verificado, y solo DESPUES este fichero. Al reves, cualquier worker que
+# arrancase entre las dos cosas habria cargado codigo que la declaracion ya nombraba
+# y el venv todavia no tenia.
+# ---------------------------------------------------------------------------
 
-coordinator 55d0df33236af1f2e786948c89e22107a4db7284
-schema-applied 55d0df33236af1f2e786948c89e22107a4db7284
+coordinator 1f4cd2aa2e0ca9d5aa99f36a7e796799ec6d31f3
+schema-applied 1f4cd2aa2e0ca9d5aa99f36a7e796799ec6d31f3
