@@ -942,5 +942,54 @@
 # nadie ha cargado.
 # ---------------------------------------------------------------------------
 
-coordinator 1eb70c3d29930ebdc65a52bc112b5a68428d034e
-schema-applied 1eb70c3d29930ebdc65a52bc112b5a68428d034e
+# ---------------------------------------------------------------------------
+#
+# DECIMOSEPTIMO SALTO, 2026-10-11. 92866b62f26499197f1d5dd6325ca45bb1fd0327.
+#
+# QUE TRAE. Dos PR de PROTEA, las dos de correccion, y la segunda abre una puerta
+# que llevaba cerrada toda la campana.
+#
+# #1004, LA DESCARGA DEL TSV MANDABA UN TROZO HTTP POR FILA. stream_groundtruth le
+# pasaba a StreamingResponse un iterador sobre la lista de filas, asi que cada fila
+# salia como su propio mensaje ASGI. En known-terms.tsv eso son 2.235.489 mensajes
+# para 43,6 MB. Medido en el mismo proceso, sin base de datos y sin socket: 172,83 s
+# con un trozo por fila contra 0,21 s con bloques de 64 KB, 823x, salida identica
+# byte a byte. El docstring suponia "unos pocos miles de filas para splits CAFA
+# tipicos"; los ground truth por categoria si lo son, 12.355 filas en NK, pero
+# known-terms es el universo entero. Afecta a las cinco rutas que comparten el
+# helper.
+#
+# #1005, LA EVALUACION NO PODIA CORRER FUERA DEL HILO PRINCIPAL, Y DECIA QUE SI.
+# run_cafa_evaluation NUNCA HA PRODUCIDO UNA METRICA EN ESTA CAMPANA. El unico
+# evaluation_result de la base es el de la prueba de humo de hoy y tiene los tres
+# compartimentos vacios, con el trabajo en SUCCEEDED.
+#   La causa: _invoke_cafaeval_signal_safe llama a signal.signal, que CPython
+# rechaza fuera del hilo principal, y _job_pump.py:61 corre cada operacion en un
+# hilo por trabajo. La funcion que existia para hacer SEGURA la llamada a cafaeval
+# era lo unico que la hacia IMPOSIBLE desde un worker, y los tres ajustes morian
+# ahi. Saltarse el reset fuera del hilo principal es seguro y no solo necesario:
+# este llamante pasa siempre per_protein_sink y cafaeval rechaza ese sink en su ruta
+# densa, asi que solo corren los kernels dispersos, que no abren pool. Se mantiene
+# en el hilo principal para una llamada directa en proceso.
+#   La puerta, que es lo que lo dejo invisible: un ajuste que fallaba se registraba
+# como WARNING y aportaba {}, asi que tres celdas vacias pasaban por resultado.
+# Ahora los tres corren, cada uno emite su evento, y despues el trabajo falla con
+# SettingEvaluationError nombrandolos todos.
+#   El test que afirmaba el defecto, test_cafa_eval_failure_catches_exception, pasa
+# a afirmar el contrato nuevo. Los tests de invocacion que ya existian solo llamaban
+# a la funcion desde el hilo principal, que es por lo que pasaban mientras ninguna
+# corrida real funcionaba.
+#
+# QUE NO PRUEBA #1005: que la evaluacion TERMINE. Quita el bloqueo conocido. Si hay
+# un segundo detras, lo dira relanzar el trabajo sobre el PredictionSet 50970bf7,
+# que no hay que recalcular.
+#
+# EL ESQUEMA NO SE MUEVE: ni una migracion ni un modelo entre 1eb70c3 y este sha, y
+# la base sigue en f2a8c41d9e37. LOS HERMANOS TAMPOCO: pyproject.toml y poetry.lock
+# sin tocar, protea-sources se queda en fc43ab94. Cinco ficheros en total, dos de
+# ellos de tests. Para el nodo el salto es checkout y reinicio, sin instalar nada.
+# ---------------------------------------------------------------------------
+
+coordinator 92866b62f26499197f1d5dd6325ca45bb1fd0327
+schema-applied 92866b62f26499197f1d5dd6325ca45bb1fd0327
+
