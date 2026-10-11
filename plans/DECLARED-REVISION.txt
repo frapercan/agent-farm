@@ -899,6 +899,48 @@
 # arrancase entre las dos cosas habria cargado codigo que la declaracion ya nombraba
 # y el venv todavia no tenia.
 # ---------------------------------------------------------------------------
+#
+# DECIMOSEXTO SALTO, 2026-10-11. 1eb70c3d29930ebdc65a52bc112b5a68428d034e.
+#
+# QUE TRAE. Tres PR de PROTEA, todas de correccion y ninguna de funcionalidad
+# nueva salvo dos rutas de lectura.
+#
+# #1001, EL IA CONTABA LAS FILAS NOT COMO EVIDENCIA A FAVOR. La consulta de
+# _propagate no tenia ni una condicion sobre qualifier, asi que una fila que dice
+# que la proteina NO tiene el termino contaba como portadora DE ese termino. El
+# dano va en la direccion mala: el IA es menos log2 de la frecuencia, asi que
+# inflarla BAJA el peso justo de los terminos sobre los que alguien publico
+# evidencia negativa. Y era silencioso: la tabla salia con la forma correcta.
+# POR ESO NO SE CALCULO NINGUN IA ANTES DE ESTE SALTO. En la base hay cero
+# InformationAccretionSet, asi que todos los que existan son posteriores al
+# arreglo por construccion y no hace falta marcarlos.
+#
+# #1002, LA PAGINA PUBLICA PUBLICABA PASADA LA MARCA. Los endpoints de
+# estadisticas responden SIN clave y la tarjeta de densidad servia la release de
+# numero mas alto: medido, la 235, cinco por delante de v227 y dentro de la
+# ventana prospectiva. Ahora se acotan por FECHA contra el published de la marca,
+# leido del mismo registro que usa la guarda. De paso quita carga: esa consulta la
+# re-ejecuta prewarm_all en un bucle de fondo sobre 538 millones de filas, y ahora
+# se para en la 227 en vez de llegar a la 235.
+# Tambien: la cobertura por PLM dividia dos poblaciones distintas y daba 121,5%, y
+# el split experimental usaba 6 codigos donde la evaluacion usa el conjunto entero.
+#
+# #1003, LA API SIRVE EL IA. Dos rutas de lectura al lado de las de la verdad,
+# information-accretion-sets y su ia.tsv, con filtro por snapshot y por release.
+# Verifica content_sha256 antes de servir y no entrega nada pasado v227.
+#
+# EL ESQUEMA NO SE MUEVE: ni una migracion ni un modelo entre 1f4cd2a y este sha,
+# y la base sigue en f2a8c41d9e37. LOS HERMANOS TAMPOCO: pyproject.toml y
+# poetry.lock sin tocar, asi que protea-sources se queda en fc43ab94. Para el nodo
+# el salto es checkout y reinicio, sin instalar nada.
+#
+# ADEMAS, Y ESTO NO ES EL SALTO SINO LO QUE LO HACIA NECESARIO: la API estaba
+# corriendo A MANO desde el 7 de octubre, con setsid, pese a existir
+# protea-api.service. Cuatro dias entre lo fusionado y lo servido, sin que nada lo
+# dijera. En este salto pasa a su unidad, como los workers el 2026-10-10. Mientras
+# un proceso que sirve no este bajo su unidad, la declaracion habla de un arbol que
+# nadie ha cargado.
+# ---------------------------------------------------------------------------
 
-coordinator 1f4cd2aa2e0ca9d5aa99f36a7e796799ec6d31f3
-schema-applied 1f4cd2aa2e0ca9d5aa99f36a7e796799ec6d31f3
+coordinator 1eb70c3d29930ebdc65a52bc112b5a68428d034e
+schema-applied 1eb70c3d29930ebdc65a52bc112b5a68428d034e
