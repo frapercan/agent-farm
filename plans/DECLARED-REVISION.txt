@@ -990,6 +990,77 @@
 # ellos de tests. Para el nodo el salto es checkout y reinicio, sin instalar nada.
 # ---------------------------------------------------------------------------
 
-coordinator 92866b62f26499197f1d5dd6325ca45bb1fd0327
-schema-applied 92866b62f26499197f1d5dd6325ca45bb1fd0327
+# ---------------------------------------------------------------------------
+#
+# DECIMOCTAVO SALTO, 2026-10-12. 06582becd623431a3a7f58030afcb073abb69e39.
+#
+# QUE TRAE. Tres PR de PROTEA, y la tercera es la que importa: el orden del
+# banco de donantes.
+#
+# #1006, EL TAMANO DE known-terms.tsv ESTABA A LA MITAD. Correccion de cifras
+# sobre #1004, sin comportamiento: el fichero son 5.206.444 filas y 95.038.180
+# bytes, no 2.235.489 y 43,6 MB. La medida original fue una transferencia
+# truncada al 46% por el kill de la API del salto anterior, medida con
+# "curl -s | wc -l", que cuenta lo que llegue y no puede informar de un corte.
+# Los numeros buenos: 95 MB completos en 11,2 s por la API viva, y 209,48 s
+# contra 0,57 s en proceso al recuento real, 367x y no 823x.
+#
+# #1007 + #1008, EL BANCO DE DONANTES NO TENIA ORDEN. El 91% de las consultas
+# tienen vecinos a distancia ~0, ellas mismas o gemelas con la misma secuencia,
+# asi que los terminos candidatos EMPATAN en el k-esimo hueco y gana el donante
+# que vaya primero en el banco. Cuatro sitios lo decidian por accidente:
+#
+#   1. La consulta del pool unificado sin ORDER BY. Medido sobre el banco de la
+#      219, 142.422 filas identicas: hash join da 89b79ad15383 y merge join da
+#      cf77c750bed5, que es exactamente el orden por accesion. El plan por si
+#      solo movia f_micro_w ~1e-3 por celda, y el plan depende de work_mem.
+#   2. El array de indices por aspecto, construido iterando un set DE CADENAS.
+#      CPython aleatoriza el hash de cadenas por proceso y PYTHONHASHSEED no
+#      esta fijado: tres interpretes, tres ordenes. Cambiaba en cada arranque de
+#      worker que reconstruyera la cache.
+#   3. La colacion. ORDER BY usaba en_US.utf8, cuya glibc ignora la puntuacion
+#      en la primera pasada y pone A0A18 antes de A0A1-9, mientras sorted() de
+#      Python es codepoint: las dos mitades del arreglo no coincidian ENTRE SI.
+#      Ahora COLLATE "C".
+#   4. Las listas de anotaciones por donante, que se aplanan POSICIONALMENTE en
+#      el CSR de disco y de las que el candidato toma su evidence_code, que
+#      multiplica la puntuacion. Ordenadas en Python, no con un ORDER BY, porque
+#      esa consulta recorre 11.160.704 filas en la 219.
+#
+# ESTO ACOTA UN HECHO QUE YA TENIAMOS: la evaluacion reproduce 117 de 117
+# metricas exactamente, asi que el suelo de reproducibilidad NO vive en la
+# puntuacion. Vive en la RECUPERACION.
+#
+# _CACHE_EPOCH PASA DE 3 A 4, Y ES LA MITAD QUE HACE QUE EL RESTO SIRVA. El orden
+# es parte de lo que contiene un pool cacheado, pero es invisible a los tres
+# guardas: la carga de disco valida solo len(accessions) == expected_count y el
+# conjunto de filas no cambio; la rama de frescura se salta incluso esa cuenta; y
+# los indices por aspecto los guarda pool_fingerprint calculado sobre las
+# accesiones RECIEN CARGADAS DE ESA MISMA CACHE, que es autorreferencial. Medido
+# antes del salto sobre la cache viva: 142.422 accesiones sin ordenar y los tres
+# .pool con 901a354f173edfa9, la huella del orden viejo, donde el ordenado da
+# dc280304d5dce097. Sin la epoca el arreglo era un no-op silencioso.
+#
+# PARA EL NODO: los ficheros de data/ref_cache bajo e3 quedan inalcanzables, no
+# corruptos. Se pueden borrar o dejar; el primer predict reconstruye bajo e4 y
+# paga una carga de banco, que son unos 63 s en el portatil.
+#
+# COMO SALIO: de una revision adversarial de #1007 con cuatro lentes y
+# verificacion por refutacion. Siete hallazgos sobrevivieron y cuatro eran
+# defectos del propio cambio, incluido que era un no-op. #1007 se fusiono a
+# medias porque el auto-merge disparo con el primer verde y el commit de las
+# correcciones llego 26 minutos despues; #1008 lo rescata.
+#
+# QUEDA FUERA A PROPOSITO: un cuarto banco en _protst_text.py con el mismo
+# ORDER BY ausente y un argpartition que rompe empates por posicion. Esa ruta
+# esta apagada por defecto (compute_protst en false).
+#
+# EL ESQUEMA NO SE MUEVE: ni una migracion ni un modelo entre 92866b6 y este sha,
+# y la base sigue en f2a8c41d9e37. LOS HERMANOS TAMPOCO: pyproject.toml y
+# poetry.lock sin tocar, protea-sources se queda en fc43ab94.
+# ---------------------------------------------------------------------------
+
+coordinator 06582becd623431a3a7f58030afcb073abb69e39
+schema-applied 06582becd623431a3a7f58030afcb073abb69e39
+
 
