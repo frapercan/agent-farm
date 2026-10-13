@@ -1060,7 +1060,56 @@
 # poetry.lock sin tocar, protea-sources se queda en fc43ab94.
 # ---------------------------------------------------------------------------
 
-coordinator 06582becd623431a3a7f58030afcb073abb69e39
-schema-applied 06582becd623431a3a7f58030afcb073abb69e39
+# ---------------------------------------------------------------------------
+#
+# DECIMONOVENO SALTO, 2026-10-13. 131e14b2e4e37284f13c88f88df9d44fe082fa7a.
+#
+# QUE TRAE. Tres PR de PROTEA: una del calculo y dos de interfaz.
+#
+# #1011, EL IA CONDENSA LOS CICLOS EN VEZ DE RECHAZARLOS. La ontologia de la
+# 221 (releases/2024-06-10) cierra dos triangulos, GO:0045257/0045273/0045281 y
+# GO:0045258/0045274/0045282, cada uno mezclando is_a y part_of. Uno de los 61
+# snapshots de 156..227, verificado por separado en las dos maquinas.
+#   No es que el IA se midiera mal ahi: es que no se mediria nunca. La
+# propagacion cierra por alcanzabilidad, asi que los miembros de un ciclo son
+# ancestros unos de otros y llevan EL MISMO conjunto de proteinas; cada uno
+# tiene un padre con su mismo conjunto, el cociente es 1 y term_ia devuelve
+# exactamente 0.0 para los seis. Como f_micro_w pondera por IA, esos terminos no
+# pesarian nada: invisibles, no mal medidos.
+#   LA REGLA, decidida por Francisco el 2026-10-12: un componente es un
+# concepto, su IA se mide contra sus padres EXTERNOS y se reparte a partes
+# iguales. El reparto igual conserva el invariante del que depende f_micro_w,
+# que SUMA el IA de los terminos que lleva una proteina: una proteina que lleva
+# un miembro los lleva todos.
+#   EN LOS 60 SNAPSHOTS ACICLICOS NO CAMBIA NADA, y no dentro de una tolerancia:
+# la ruta sin componentes llama a term_ia y a nada mas, asi que es el mismo
+# flotante. Hay test que lo exige con ==.
+#   La puerta pasa de rechazar a condensar y contar. Sigue rechazando un ciclo
+# cuyos miembros no comparten conjunto de proteinas, porque eso significa que la
+# propagacion no cerro. stats gana terms_in_cycles.
+#
+# #1009, LA MIGA DE PAN SALIA DOS VECES en trece paginas. El layout la pinta
+# para todas las rutas y esas paginas la pintaban ademas. No se veia en el HTML
+# servido porque son componentes de cliente: la segunda aparece al hidratar.
+#
+# #1010, EL EJE DEL GRAFO ETIQUETABA LAS 75 RELEASES. 75 x 70 px son 5.250 px de
+# etiquetas en un viewBox de 900 que se escala al contenedor, asi que unas 62 se
+# dibujaban fuera y se recortaban en silencio. Ahora se etiquetan solo las
+# marcas con carga (extremos de ventana, lo de dentro, el pivote, y las dos
+# vecinas) y spread() se acota entre los dos bordes, porque solo empujaba a la
+# derecha y cinco etiquetas bastaban para salirse.
+#
+# PARA EL NODO: #1011 es la unica que afecta al calculo. Las otras dos son de
+# apps/web y no tocan nada que el nodo ejecute. El frontend se despliega con
+# scripts/deploy-frontend.sh, nunca a mano.
+#
+# EL ESQUEMA NO SE MUEVE: ni una migracion ni un modelo entre 06582be y este
+# sha, y la base sigue en f2a8c41d9e37. LOS HERMANOS TAMPOCO: pyproject.toml y
+# poetry.lock sin tocar, protea-sources se queda en fc43ab94.
+# ---------------------------------------------------------------------------
+
+coordinator 131e14b2e4e37284f13c88f88df9d44fe082fa7a
+schema-applied 131e14b2e4e37284f13c88f88df9d44fe082fa7a
+
 
 
