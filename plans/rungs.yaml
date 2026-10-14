@@ -331,10 +331,161 @@ rungs:
         map at 128 of 2048 atoms, sparse per-residue. Six values of K, nine
         weightings, three knowledge regimes, banded by identity.
       layer: >
-        two levels on ankh-base, [0] and [10] of 48 under the reverse
-        convention. Never varied before this rung: all eleven configs in
-        the database carried [0], including rung 1's eight backbones, so
-        the axis had been pinned by omission exactly as rung 1's was.
+        two levels on ankh-base, and they are CLOSER TOGETHER than the
+        labels suggest. The platform indexes in reverse,
+        hidden_states[-(li + 1)] in all four backends, so over 49 hidden
+        states from 48 layers:
+
+          layer_indices [0]  -> depth 48, the last layer
+          layer_indices [10] -> depth 38
+          layer_indices [24] -> depth 24, the true midpoint
+
+        The arm that ran is [10], which is DEPTH 38, not depth 10. It was
+        chosen to match a retrieval probe that indexes forward and whose
+        "layer 10" is depth 10, so the two sample points are 28 layers
+        apart and neither checks the other. The intent was a mid-layer
+        comparison and the measurement is a near-top one.
+
+        So what is settled is narrower than first reported: the last layer
+        beats depth 38 in all sixteen comparisons, and the effect attenuates
+        through the winning weighting as the encoding's does. Whether a
+        mid-depth layer beats the last one is NOT settled by this rung, and
+        the two recorded ablations the rung set out to reconcile remain
+        unreconciled at mid depth.
+
+        CLOSED after the correction, on four depths rather than two. The
+        retrieval consumer measured depth 38 against the last layer on the
+        same bank and bands, and it loses at two of three candidate
+        budgets. With the residue consumer's earlier depth 10, the axis is
+        monotone:
+
+          depth 10   loses by 0.042 to 0.045
+          depth 38   loses by 0.005 to 0.010
+          depth 48   wins, the last layer
+
+        The loss shrinks four to eightfold as depth grows. The frozen
+        recipe's layer field is measured rather than inherited and stays
+        at [0].
+
+        ALL THREE DEPTHS ARE THE POOLED CONSUMER, WHICH IS WHAT LICENSES
+        READING THEM AS ONE CURVE. Depth 10 was first reported as the
+        residue consumer, which would have made the curve a comparison
+        between two different quantities. It is not: the depth-10 arm
+        means over residues and L2-normalises before retrieval, so it
+        pools the probe's residues after the fact, while depth 38 reads
+        vectors the platform pooled on the card. Different provenance,
+        same measured quantity.
+
+        The two pipelines were then checked where they overlap, on the
+        last layer, which both hold:
+
+          budget    probe, pooled after    platform, pooled on card    diff
+            10           0.6020                   0.6011              0.0009
+            25           0.6285                   0.6294              0.0009
+            50           0.6767                   0.6767              0.0000
+
+        Float32 residues pooled afterwards against a bfloat16 forward pass
+        pooled on the card and cast to halfvec for storage, on the same
+        populations under the same metric. They agree BELOW the study's
+        0.0013 resolution floor, so the shared arm is not two arms. This
+        also retires the concern raised in PR 243 that the redundancy
+        claim spanned two extraction pipelines whose same-protein cosine
+        was about 0.28; whatever those were, they are not these.
+
+        AND THE TWO CONSUMERS AGREE BY BAND, WHICH NEITHER SHOWS ALONE.
+        Depth 38 minus the last layer:
+
+                        task, f_micro_w    retrieval, reachability
+          <=30              +0.0068              +0.0010
+          30-60             -0.0142              -0.0158
+          60-90             -0.0129              -0.0099
+          >90               -0.0010              -0.0162
+
+        Same sign in three of four bands and close in magnitude in the two
+        middle ones, from two instruments sharing no code and measuring
+        different quantities. Both say depth is inert in twilight and costs
+        elsewhere, which is the OPPOSITE shape to the encoding axis, whose
+        effect was largest in twilight and zero above ninety per cent.
+
+        So depth and encoding are not the same lever seen twice. Depth
+        costs where the answer was already easy; encoding matters only
+        where it was hard.
+
+        Never varied before this rung either way: all eleven configs in the
+        database carried [0], including rung 1's eight backbones, so the
+        axis had been pinned by omission exactly as rung 1's was.
+
+        THE MIDPOINT WAS MEASURED RATHER THAN ASSUMED AWAY, AND THERE IS
+        NO MID PEAK. Depth 24 is the one point the rung's own declared
+        reconciliation named and the earlier depths did not contain. It
+        was cheap for a reason worth recording:
+        the residues do not have to be written. Depths 10 and 48 came off
+        a residue probe because the sparse arms needed one; the midpoint
+        is wanted only for the pooled curve, so it is averaged as it comes
+        off the card and never stored, turning 129 GB of disk into 270 MB
+        and leaving the forward pass as the only cost. 89,013 proteins and
+        46.6 million residues at a measured 203,000 residues per minute is
+        3.8 hours, against about 17 for the corpus-scale platform route
+        that this question does not need.
+
+        Depth 24 is also the fixed point of the two conventions: the
+        platform's depth d is layer_indices [48 - d], so at d = 24 both
+        readings coincide and the reversal that put a corpus-scale run at
+        depth 38 cannot fire again. The lab loads ankh in float32 rather
+        than bfloat16, so the mid-layer activations near 490,000 are
+        represented exactly rather than clipped, with a per-protein
+        finiteness check that exits rather than writing a quiet NaN.
+
+        RESULT, and it settles the reconciliation this rung was opened for.
+        Three depths on ONE pipeline, the residue probe, float32 end to
+        end, pooled as the mean over residues then L2. Same encoder, same
+        chunking, same populations, same metric, so this is one curve
+        rather than three arms compared across instruments:
+
+          depth        budget 10     budget 25     budget 50
+          10 of 48       -0.0423       -0.0444       -0.0446
+          24 of 48       -0.0076       -0.0118       -0.0112
+          48 of 48      reference     reference     reference
+
+        Every interval separates. With depth 38 from the platform pipeline
+        at -0.0053 to -0.0099, the axis reads -0.044, -0.012, -0.008,
+        reference across four depths: monotone, with the loss shrinking
+        about sixfold from depth 10 to the last layer. A bump at 24 would
+        have had to be invisible to both neighbours. It is not there.
+
+        WHERE THE SHALLOWER DEPTHS LOSE. Budget 25, against the last
+        layer, by identity band:
+
+          depth      twilight     distant       close    near-identical
+          10         -0.0703      -0.0665      -0.0131        -0.0049
+          24         -0.0164      -0.0158      -0.0058        -0.0058
+
+        The penalty for going shallower is largest in twilight and
+        vanishes among near-identical pairs. Depth is not a free parameter
+        where it matters: it has teeth exactly in the band the served
+        population sits in.
+
+        NOT CLAIMED. Depth 38 measured flat in twilight, +0.0010 with an
+        interval of [-0.013, +0.015], against depth 24's -0.0164 with
+        [-0.032, -0.000]. Those overlap heavily and the two arms come from
+        different pipelines, so no change of band profile between 24 and
+        38 is asserted. What is solid is the aggregate ordering and the
+        twilight-against-near-identical contrast within each depth.
+
+        COST. 226 minutes against a 228-minute estimate, so the measured
+        rate held to within one per cent. The saving was not the card, it
+        was declining to write: only the pooled vector was wanted, so
+        residues were averaged as they came off and never stored, 274 MB
+        instead of 129 GB. The same depth through the platform would have
+        been a full-corpus job of about seventeen hours for a number
+        needed on 89,013 proteins.
+
+        ON WHICH FLOOR APPLIES, BECAUSE IT CUTS BOTH WAYS. A two-arm
+        comparison decided before it ran is held to the study's resolution
+        floor of 0.0013. A maximum taken over a search is held to the
+        selection floor, about 0.0093 for 104 arms. That is why a 0.0099
+        loss here counts and a 0.0021 margin over 104 arms does not. The
+        discriminator is the search budget, not the size of the number.
       quantisation: >
         NOT registered as separate configs, which is what this rung asks
         for. Measured as an analysis: 4 bits at 240 bytes against 688,
