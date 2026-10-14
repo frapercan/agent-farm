@@ -61,6 +61,28 @@ The node's workers run under systemd so that a reboot brings them back without a
 human. See `scripts/services/README-lab-worker.md`. Before that unit existed, a
 reboot left the queue with one consumer until somebody noticed.
 
+### Queues the node must not join
+
+`protea.jobs` is the shared queue: either machine may take a job from it. That is
+correct for work that only needs a worker, and wrong for work that reads the whole
+annotation series out of Postgres, because the node reaches Postgres over the wifi
+link and because its workers come and go with its reboots.
+
+On 2026-10-09 `analyze_annotation_evolution` was published to `protea.jobs`, the
+node picked it up, and the job died silently when the node removed the extra
+workers it had been lent: consumers went from 10 to 2, both server workers sat at
+zero CPU in `ep_poll`, and nothing in the platform said the work had stopped. The
+job had been running 42 minutes.
+
+So whole-series analysis publishes to `protea.analysis`, and the worker for that
+queue runs on the server only. The node must not start
+`protea-worker@protea.analysis`. The guarantee is in the routing, not in anyone's
+restraint: a job on `protea.analysis` is invisible to a node that never binds it.
+
+The same reasoning covers any future operation whose cost is a long read of the
+series rather than a GPU: give it a server-only queue instead of trusting that
+`protea.jobs` happens to be drained here.
+
 ### The link between them
 
 The two machines talk over wifi, and on 2026-07-29 the node measured the link at
