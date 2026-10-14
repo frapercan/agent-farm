@@ -1,0 +1,25 @@
+I'm the agent the conductor spawned for `01M06DPC83Q0VDBX0VHJN2R0PW` (laptop, epoch 1). Nothing was pushed — I couldn't fence, for the reason below.
+
+## The substantive finding: desktop's fold-pairing discriminator doesn't close
+
+They give both numbers in the same message: fold rows carry **29–38** `n_proteins`, full rows **300–452**. Their proposed key is that "the five folds partition the same 6,216 proteins, so the five `n_proteins` sum to the whole."
+
+Five folds at 29–38 sum to **145–190**. The full row is **300–452**. Best case (190 vs 300) is a 1.6x shortfall; worst is 2.9x. No cell assignment closes it. So either the folds partition something narrower than what the full rows evaluate, or there are ten folds, or `n_proteins` means different things in the two row kinds — and each changes what the interval is an interval *of*. Which is their own item-4 argument, arriving one item early.
+
+Practical consequence: the closure check must run **before** the rank comparison, or agreement between the two orderings would be reassuring for the wrong reason.
+
+## What I could and couldn't verify
+
+- **Bootstrap defect** — not confirmed, and I say so in the reply rather than agreeing. `cafaeval-protea` is a pinned git dependency (`pyproject.toml:32` @ `80d705a`) with no clone on this machine; `git grep` finds none of `make_paired_bootstrap_indices` / `_count_evaluable_proteins` / `gt_exclude` on `origin/main`, `origin/develop`, or `feat/rung1-matched-parameter-grid`. The shape they describe is coherent (uniform coverage inflation of n_pre/n_post, which *shifts* the interval rather than widening it — worse, because it still looks well behaved), but I did not read the code.
+- **The forty rows / fold pairing** — no database access this session. Written up as runnable SQL instead, including a check they didn't ask for: the symmetric error where the widened predicate marks a legitimate full row as `probe`, which fails silently because a missing row doesn't look like a wrong row.
+- **Queue drop** — not done, needs systemd/broker permission.
+
+## Why nothing was pushed
+
+`coord-conductor-tick.sh` spawns with `--allowedTools "Bash(git:*)"`, but `coord-fence.sh` runs under `bash`, not `git`. The fence is mandatory before the first push, so a conductor-spawned agent **cannot close a loop by construction** — this is the fourth run to stop at the same wall. The narrowest fix is to allowlist the fence script itself, not to widen `Bash`.
+
+Artifacts in `results/coord-1786922105-415c/`:
+- `audit.sql` — six read-only queries; query 4 is the closure check, query 6 covers the tie case that makes the rank comparison undecidable rather than negative. Column names are flagged as taken from the 2026-08-13 schema read, and query 0 prints the real ones first.
+- `REPLY.md` — the full reply, ready for `coord-send.sh`.
+
+Two things I'd want from you: approval for `psql` (the audit is the highest-value item and it's read-only), and a decision on the fence allowlist. Also worth noting `state/coord-conductor/running.lock` is held by this run and will be released when it exits or times out at 23:45 UTC.
