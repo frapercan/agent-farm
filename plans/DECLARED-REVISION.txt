@@ -1108,8 +1108,48 @@
 # poetry.lock sin tocar, protea-sources se queda en fc43ab94.
 # ---------------------------------------------------------------------------
 
-coordinator 131e14b2e4e37284f13c88f88df9d44fe082fa7a
-schema-applied 131e14b2e4e37284f13c88f88df9d44fe082fa7a
+# ---------------------------------------------------------------------------
+#
+# VIGESIMO SALTO, 2026-10-21. 819d31ffc644091e9851864ad13e0ee396820dd6.
+#
+# QUE TRAE. Tres PR de PROTEA. La que importa para la maquina es #1014.
+#
+# #1014, LA CACHE NO TENIA PRODUCTOR UNICO. cached() soltaba el cerrojo del
+# almacen ANTES de llamar al productor, asi que cada llamada concurrente sobre
+# una clave fria o caducada arrancaba su propia copia de una consulta DISTINCT
+# sobre joins de cientos de millones de filas.
+#   MEDIDO muestreando pg_stat_activity 30 minutos sin lanzar ni una consulta:
+# la matriz de anotaciones GO corrio 8 veces, mediana 137 s, maximo 171 s,
+# 1.167 s de 1.800. El 65% del tiempo de pared recalculando UN agregado, con dos
+# workers cada vez. Eso es lo que tenia el load en 11 con cero trabajos.
+#   El bucle de refresco explica unas 2,6 de esas 8; las demas eran visitas a la
+# pagina publica que llegaban mientras ya estaba en vuelo.
+#   Arreglo en dos mitades: un cerrojo por clave, y el que llega mientras otro
+# produce RECIBE EL VALOR VIEJO en vez de bloquearse, porque el propio
+# _refresh_interval ya nombra el limite de 30 s de ngrok y esperar por un
+# agregado de 137 s da un timeout, no una respuesta mas fresca.
+#
+# #1013, LA EVALUACION NOMBRA EL CICLO. Un snapshot ciclico mataba la corrida
+# dentro del parseo del obo con un mensaje que no nombraba ni el snapshot ni un
+# termino. Ahora se rechaza por nombre y ANTES de una descarga de 31 MB, y el
+# mensaje dice que el IA del mismo snapshot si se puede calcular.
+#
+# #1012, DOS PANELES CONTABAN MENOS DE LO QUE HAY. El top de organismos
+# agrupaba por nombre y no por taxon, y las dos rutas de carga escriben el
+# nombre distinto: 726 taxones partidos y los seis primeros del ranking entre
+# ellos. Y la cobertura por PLM medía la espina Swiss-Prot y no el corpus:
+# decia 576.450 al 100% cuando hay 746.014 canonicas y todas estan embebidas.
+#
+# PARA EL NODO: ninguna de las tres cambia un numero que el nodo produzca.
+# #1014 es del proceso de la API y #1012 de apps/web.
+#
+# EL ESQUEMA NO SE MUEVE: ni migraciones ni modelos entre 131e14b y este sha, la
+# base sigue en f2a8c41d9e37, y pyproject.toml y poetry.lock sin tocar.
+# ---------------------------------------------------------------------------
+
+coordinator 819d31ffc644091e9851864ad13e0ee396820dd6
+schema-applied 819d31ffc644091e9851864ad13e0ee396820dd6
+
 
 
 
