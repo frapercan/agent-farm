@@ -41,15 +41,23 @@ linter = _load_module()
 
 
 class TestAllowlist:
-    def test_allowlist_has_exactly_ten_tokens(self) -> None:
-        assert len(linter.GOA_ALLOWLIST) == 10
+    def test_allowlist_has_exactly_eleven_tokens(self) -> None:
+        assert len(linter.GOA_ALLOWLIST) == 11
 
     def test_allowlist_exact_membership(self) -> None:
         expected = {
-            "v160", "v200", "v210", "v215", "v220",
+            "v160", "v200", "v210", "v211", "v215", "v220",
             "v225", "v226", "v227", "v229", "v230",
         }
         assert set(linter.GOA_ALLOWLIST) == expected
+
+    def test_allowlist_includes_v211(self) -> None:
+        # v211 is the t0 of the long validation window 211 -> 227, registered
+        # as a band in PROTEA on 2026-10-27 (protea.core.band_registry). It is
+        # a GOA snapshot like the other ten and not a reranker shorthand, and
+        # before it was listed here the linter blocked PROTEA's own deploy note
+        # for naming the band it had just created.
+        assert "v211" in linter.GOA_ALLOWLIST
 
     def test_allowlist_excludes_v228(self) -> None:
         # v228 is a real GOA release but NOT in the slice spec; the
