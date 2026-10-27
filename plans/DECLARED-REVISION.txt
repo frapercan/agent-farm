@@ -1147,8 +1147,75 @@
 # base sigue en f2a8c41d9e37, y pyproject.toml y poetry.lock sin tocar.
 # ---------------------------------------------------------------------------
 
-coordinator 819d31ffc644091e9851864ad13e0ee396820dd6
-schema-applied 819d31ffc644091e9851864ad13e0ee396820dd6
+# ---------------------------------------------------------------------------
+#
+# VIGESIMOPRIMER SALTO, 2026-10-27. e4096a525cd500caa8e316d42e2e0f3a6a86bb3a
+#
+# QUE TRAE. Diez PR de PROTEA de una sesion nocturna. Las que importan para la
+# maquina son tres, y una de ellas es una correccion de correccion.
+#
+# #1022, EL GUARDIA DE BANDAS ADMITIA EL IA DE OTRA VENTANA. Es el motivo
+# principal para mover esto. assert_band_consistency existe para rechazar una
+# celda cuyo snapshot o cuyo IA vienen de otra banda, y rechazaba el snapshot y
+# admitia el IA. Medido en develop antes del arreglo: una celda declarando v227
+# -- la banda comparable con LAFA -- con el snapshot CORRECTO de
+# releases/2025-07-22, y a la que se le entrega el IA calculado sobre el grafo y
+# el corpus de 2022, era ACEPTADA. La causa es que
+# compute_information_accretion nombra IA.tsv todo artefacto que escribe
+# (ia_key_for), asi que los 17 conjuntos de IA del servidor comparten basename
+# mientras difieren en los tres ejes que definen una tabla de IA: instantanea,
+# corpus y regimen de evidencia. Ahora el token de un IA de la plataforma es su
+# ID DE CONJUNTO, que es la identidad de tres ejes, y los ficheros suministrados
+# (el IA.tsv propio de LAFA, el IA_cafa6.tsv historico) siguen yendo por nombre.
+# El mismo PR anade la banda v211, la validacion larga 211 -> 227, con
+# releases/2022-07-01 como OBO congruente -- que es la instantanea a la que el
+# conjunto de anotacion de 211 ya estaba atado -- y su IA de 43.558 terminos.
+# Esa banda es la unica ventana del registro que puede informar una decision sin
+# dispensa, porque termina EN la marca del tablero.
+#
+# #1019, UNA CONFIGURACION NO PODIA DECIR QUE NO TRUNCABA. max_length era
+# integer NOT NULL con 1022 por defecto, asi que toda configuracion afirmaba un
+# punto de truncamiento. Lo que importa para la maquina no es la columna sino el
+# tokenizador: se llamaba con truncation=True y max_length=config.max_length, y
+# Hugging Face NO lee max_length=None como "sin truncar", sino que cae al
+# model_max_length del propio punto de control, que en algunos codificadores es
+# 512 y en T5 es un centinela de quintillones. El punto de truncamiento vendria
+# de los pesos en vez de de la configuracion, y nada lo diria.
+#
+# #1020, LA ACTIVACION NO SE RECUPERA DE LOS PESOS. apply_learned_encoder elige
+# los top_k por magnitud CON SIGNO, y las cabezas dispersas del laboratorio
+# aplican ReLU antes. Medido sobre las 2.000 filas de evidencia de la cabeza de
+# 211: con la ReLU, 2.000 de 2.000 filas eligen los mismos 64 atomos; sin ella,
+# CERO de 2.000, y la seleccion se lleva 61,7 negativos de 64. Una activacion
+# declarada que no implementamos se RECHAZA en vez de ignorarse.
+#
+# EL ESQUEMA YA ESTA APLICADO. Las dos migraciones de este salto
+# (a7c3e91b4d26, las tablas de Swiss-Prot por release; b4e82f17c9a3,
+# max_length nulable) se corrieron en el servidor el 2026-10-27 a las 07:2x,
+# con la base en b4e82f17c9a3. Las dos son benignas por construccion: dos
+# tablas NUEVAS que no leen ninguna fila existente, y un ALTER que RELAJA una
+# restriccion sobre una tabla de 8 filas, todo en una transaccion. No tocan
+# protein_go_annotation.
+#
+# EL RESTO. #1016 el arnes de aceptacion del perfil de LAFA; #1017 el docstring
+# de la regla de union, que atribuia a democafa una regla que sus propios
+# ficheros desmienten; #1018 la membresia de Swiss-Prot por release, que es la
+# unica fuente para 227 y 230 porque el GAF dejo de llevar el nombre de entrada
+# en la release 179; #1021 la navegacion por ruta, que destapa seis superficies
+# con datos; #1023 el glosario unico de NK/LK/PK; #1024 la celda del resultado
+# imprimia fmax donde la cifra es f_micro_w; #1025 el selector de ventana del
+# grafo.
+#
+# POR QUE ESTE SALTO LLEGA DESPUES DEL REINICIO Y NO ANTES. Se intento el
+# despliegue sin mover la declaracion, y el guardia refuso los once
+# trabajadores con el mensaje correcto: el arbol iba por delante de lo
+# declarado. La flota volvio moviendo el arbol al commit declarado. Asi que el
+# salto de declaracion no es un tramite posterior al despliegue: es uno de sus
+# pasos, y faltaba en la nota de despliegue que se escribio esa noche.
+#
+# ---------------------------------------------------------------------------
+coordinator e4096a525cd500caa8e316d42e2e0f3a6a86bb3a
+schema-applied e4096a525cd500caa8e316d42e2e0f3a6a86bb3a
 
 
 
