@@ -1309,8 +1309,27 @@
 # no se mira ninguna tabla grande.
 #
 # ---------------------------------------------------------------------------
-coordinator e6b00579b7e617e86f8531919d305886c899a3e1
-schema-applied e6b00579b7e617e86f8531919d305886c899a3e1
+# 2026-10-28, madrugada: e6b00579 -> 3cb0d652. Un PR de PROTEA, sin migracion.
+#
+# #1059 EL MARCO NOMBRABA EL QUERY SET DE OTRA VENTANA. `build_frame` leia
+# `query_set` y `accretion` como `next(r for r in catalogue if r["in_use"])`,
+# que es la fila en uso mas antigua de TODO el registro y no la de la ventana
+# que se esta pidiendo. Medido en el grafo servido: la ventana 230->235
+# publicaba como suyo el IA 80bbc9e4, que es el del tramo 211->227; el suyo es
+# ed99dd14. `_one_under` acota los dos a los resultados de la ventana cabeza,
+# publica nulo CON su motivo cuando no hay, y rehusa cuando hay varios.
+#
+# NO HAY MIGRACION. El rango e6b00579..3cb0d652 no toca alembic: solo
+# _graph_reads.py, graph.py y tests/test_graph_endpoint.py. La base se queda en
+# d5a1c8e3f706, que es donde ya estaba.
+#
+# PUERTA COMPROBADA EN EL SERVIDOR ANTES DE MOVER: 0 jobs QUEUED o RUNNING, 0
+# prediction_set escribiendo en los ultimos diez minutos. Ninguna campana viva,
+# asi que el guardia del nodo no tiene ningun lote en vuelo que rehusar.
+#
+# ---------------------------------------------------------------------------
+coordinator 3cb0d652450fcec7c4aa407a17289a5f9c648548
+schema-applied 3cb0d652450fcec7c4aa407a17289a5f9c648548
 
 
 
