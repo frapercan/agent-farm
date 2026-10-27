@@ -1214,7 +1214,47 @@
 # pasos, y faltaba en la nota de despliegue que se escribio esa noche.
 #
 # ---------------------------------------------------------------------------
-coordinator e4096a525cd500caa8e316d42e2e0f3a6a86bb3a
+# ---------------------------------------------------------------------------
+#
+# VIGESIMOSEGUNDO SALTO, 2026-10-27. 0e659054c7fc075b1505fb9ff2d415ca9b9dae26
+#
+# QUE TRAE. Tres PR y NINGUNA MIGRACION, asi que schema-applied NO se mueve y
+# se queda en e4096a5, el commit cuyas migraciones estan aplicadas (la base
+# esta en la revision b4e82f17c9a3 de alembic, que es otra cosa: este campo
+# nombra un COMMIT y no una revision). La que importa para la maquina es una.
+#
+# #1029, EL GUARDIA DE BANDA NO VEIA EL IA QUE SE ACABABA DE RESOLVER.
+# _resolve_and_gate_ia resuelve la tabla desde information_accretion_set_id a
+# una ruta local y acto seguido le pasa al guardia p.ia_file: otro campo, vacio
+# siempre que se use el id del conjunto. La consecuencia era la contraria de lo
+# que los dos guardias buscan -- una celda que declara banda y fija su IA por la
+# via TRAZABLE, por fila y con su sha256 comprobado tras la descarga, no podia
+# pasar nunca, mientras que una que nombraba una ruta pelada si. Medido al
+# intentar puntuar la validacion larga con band v211:
+#   "Phantom-gap guard: cell declares band 'v211' but no IA artifact resolved
+#    (snapshot ia_url and payload ia_file are both unset)."
+# El guardia tenia razon sobre lo que veia y no sobre lo que habia pasado.
+# La omision era deliberada y su premisa cayo con el salto anterior: ia_token
+# devuelve ahora el id del conjunto para un artefacto de la plataforma, asi que
+# el registro distingue dos tablas que comparten nombre de fichero. El arreglo
+# es darle la referencia de ORIGEN y no el fichero temporal, que se llama
+# siempre ia.tsv y tokenizaria a ese nombre.
+#
+# EL RESTO. #1028 fija como prueba los tres empates exactos de la cabeza
+# dispersa de 227 (el valor 64 y el 65 iguales hasta 1e-6, que torch.topk y
+# argpartition rompen distinto) con la regla de tolerancia simetrica; #1026 es
+# la nota de despliegue corregida, que le faltaba el paso del salto de
+# declaracion y por eso el salto anterior tumbo los once trabajadores.
+#
+# COMPROBADO ANTES DE MOVERLA. El nodo de la tarjeta esta entrenando ocho
+# lectores con 10,6 GB de 12, y confirmo desde alli que su entrenamiento corre
+# en otro entorno y con otro interprete que el trabajador de PROTEA, asi que la
+# reinstalacion del sync no lo toca. Su trabajador esta activo pero en reposo y
+# sin contexto CUDA. Condicion suya que queda anotada: NO mandar trabajos de GPU
+# a ese nodo hasta las 16:00, que la tarjeta esta ocupada hasta entonces.
+#
+# ---------------------------------------------------------------------------
+coordinator 0e659054c7fc075b1505fb9ff2d415ca9b9dae26
 schema-applied e4096a525cd500caa8e316d42e2e0f3a6a86bb3a
 
 
