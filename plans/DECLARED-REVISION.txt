@@ -1254,8 +1254,63 @@
 # a ese nodo hasta las 16:00, que la tarjeta esta ocupada hasta entonces.
 #
 # ---------------------------------------------------------------------------
-coordinator e954d8f83b821e01c0fa8d48d6fa535ea6d345ee
-schema-applied e954d8f83b821e01c0fa8d48d6fa535ea6d345ee
+# 2026-10-27, noche: e954d8f -> e6b00579. Cuatro PR de PROTEA, y una migracion.
+#
+# #1055 LA LATENCIA DEL GRAFO. `producible` era un EXISTS correlado que el
+# planificador no puede estimar, asi que dimensionaba el filtro a la tabla
+# entera y hacia un barrido secuencial POR CONFIGURACION: diez pasadas,
+# 1.055.187 bloques leidos, para responder lo que el agregado de al lado ya
+# habia respondido en 37 ms. substrates 0,905 -> 0,059 s, query_sets 0,106 ->
+# 0,004 s, read_record 1,752 -> 0,409 s. `candidates` sigue en 0,36 s y es un
+# agregado real sobre 18,4 M de filas de go_prediction, o sea el siguiente.
+#
+# #1056 EL MARCO PUEDE DECIR LO QUE REPRODUCE. Tabla nueva
+# `reference_reproduction` y la migracion d5a1c8e3f706. La distincion que
+# introduce es la que faltaba: DECLARADO es que un lector no pueda malinterpretar
+# el marco, y FIEL es que calcule lo que calcula otra implementacion con las
+# mismas entradas. Lo segundo vivia en un test, que dice que la afirmacion se
+# cumplio en la maquina de alguien en algun commit y no se lo ensena a ningun
+# lector. Medido contra el contrato real: valid-211-227, commit del laboratorio
+# 654f241f090b, 34 contadores, 26 comparables, 26 de acuerdo, 0 discrepan, 8 que
+# una ventana no guarda y van listados con su motivo.
+#
+# #1057 EL EJE TEMPORAL EN LAS ARISTAS. Una fuerza es presente; una campana es
+# como llego a sostenerse. strength_of ya era una escalera, asi que cada escalon
+# cruzado tiene fecha en la fila que lo cruzo. CUALES se cruzaron se deriva de
+# los mismos campos que la palabra; CUANDO lo aporta el constructor, unico que
+# sabe de que filas salio su cuenta. Y al verificarlo aparecio un defecto:
+# retriever reportaba 5 niveles puntuados teniendo 3 instanciados, porque
+# contaba prediction_set_id distintos mientras un nivel son ocho campos. Bank
+# igual con annotation_set_id. Arreglado, y comprobado que no mueve ninguna
+# palabra en el registro vivo.
+#
+# #1058 UN BRAZO QUE LLEGA EN UN FICHERO TAMBIEN NECESITA UN JOB DETRAS. La
+# configuracion de la receta de corte 211, eb7c1b13, no tiene job: no hay
+# ninguna fila en `job` al minuto en que se creo, y su identificador no es
+# reproducible desde nada del repositorio. Todo numero publicado bajo ese brazo
+# esta atribuido a una fila cuya procedencia falta. La operacion 47,
+# register_ingested_method, es como lo evita el siguiente: identificador
+# derivado del nombre, idempotente con entrada identica, y un rechazo si el
+# nombre ya esta registrado en otro identificador, que es exactamente el caso de
+# cut211 y habria metido una SEGUNDA fila para un metodo.
+#
+# COMPROBADO ANTES DE MOVERLA, en el servidor y no en el nodo, que es donde dice
+# esta cabecera que hay que mirar: cero jobs en QUEUED o RUNNING y cero
+# prediction sets escribiendose. El nodo de la tarjeta sigue con T0chka en
+# PyBoost sobre septiembre de 2025, que corre en otro entorno y con otro
+# interprete que el trabajador de PROTEA, confirmado por ellos en el salto
+# anterior. La condicion de no mandarle GPU hasta las 16:00 era de esta manana y
+# ya expiro.
+#
+# LA MIGRACION, ensayada en seco con alembic upgrade --sql, que no toca nada:
+# c3f8a2e07d14 -> d5a1c8e3f706, CREATE TABLE reference_reproduction con su
+# unique y su indice, todo en una transaccion. Tabla NUEVA: ninguna fila
+# existente se lee ni se reescribe, no hay backfill, no hay UPDATE sobre datos y
+# no se mira ninguna tabla grande.
+#
+# ---------------------------------------------------------------------------
+coordinator e6b00579b7e617e86f8531919d305886c899a3e1
+schema-applied e6b00579b7e617e86f8531919d305886c899a3e1
 
 
 
