@@ -1254,8 +1254,8 @@
 # a ese nodo hasta las 16:00, que la tarjeta esta ocupada hasta entonces.
 #
 # ---------------------------------------------------------------------------
-coordinator ace2b3b049a3403239d20bd4bbb97e051188d03a
-schema-applied ace2b3b049a3403239d20bd4bbb97e051188d03a
+coordinator c0058375bcf1caea338452baecef33396c6fea54
+schema-applied c0058375bcf1caea338452baecef33396c6fea54
 
 
 
