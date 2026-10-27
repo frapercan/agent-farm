@@ -17,8 +17,8 @@ intentionally excluded because version histories legitimately contain
 bare `vN` tokens (schema versions, build numbers, semver-without-dot)
 unrelated to reranker shorthands. Six token classes are allowed:
 
-1. GOA snapshot identifiers: v160, v200, v210, v215, v220, v225, v226,
-   v227, v229, v230
+1. GOA snapshot identifiers: v160, v200, v210, v211, v215, v220, v225,
+   v226, v227, v229, v230
 2. Semver prefixes: any token immediately followed by ``.digit``
    (e.g. ``v0.3.0``, ``v2.1.13``).  These are package/tool release
    strings, not reranker shorthands.
@@ -61,7 +61,7 @@ from pathlib import Path
 # Exact GOA snapshot allowlist. Edits here propagate to every consumer
 # via the reusable workflow; do not duplicate elsewhere.
 GOA_ALLOWLIST: frozenset[str] = frozenset({
-    "v160", "v200", "v210", "v215", "v220",
+    "v160", "v200", "v210", "v211", "v215", "v220",
     "v225", "v226", "v227", "v229", "v230",
 })
 
