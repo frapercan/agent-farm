@@ -1365,8 +1365,36 @@
 # que es exactamente para lo que esta.
 #
 # ---------------------------------------------------------------------------
-coordinator 68f19ceebd1a06a9a44f30a45f376d798d7260f6
-schema-applied 68f19ceebd1a06a9a44f30a45f376d798d7260f6
+# 2026-10-28, madrugada: 68f19cee -> cc74a1ad. Un PR, SOLO FRONTEND.
+#
+# #1063 LA EVALUACION ESTRATIFICADA NO TENIA NOMBRE EN NINGUNA NAVEGACION. El
+# objetivo declarado de la campana es una evaluacion estratificada y la
+# superficie donde vive no estaba ni en la barra lateral ni en el sitemap: la
+# unica forma de llegar era escribir la URL a mano, y su clave de etiqueta ya
+# existia en los cinco idiomas. Entran los cuatro pilares y /annotate, sale el
+# /instrument/graph duplicado. Y dos superficies apagadas que ya tienen filas:
+# /instrument/benchmark con 8 evaluation_result y /instrument/scoring con 1
+# scoring_config, invisibles y vivas, que es la direccion que el comentario de
+# esa tabla llama la costosa.
+#
+# EL RANGO NO TOCA protea/. Solo apps/web, asi que la API y los doce
+# trabajadores no se reinician: siguen con el codigo de 68f19cee cargado y ese
+# codigo no cambia. Lo que se mueve es el arbol, y por eso la declaracion se
+# mueve con el: el guardia compara el ARBOL contra esta linea, no el proceso.
+#
+# EL FRONTEND SE DESPLIEGA CON scripts/deploy-frontend.sh Y NO A MANO. next
+# build borra y recrea .next, que es el directorio en el que esta de pie el
+# servidor que corre, y un build que falla deja al sitio sin nada: el 2026-10-07
+# un corte de red de dos minutos dejo protea.ngrok.app en 502 durante diez.
+# El script guarda el build que sirve, construye, reinicia, sondea cinco veces y
+# lo devuelve a su sitio si algo sale mal.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING, carga en 2,79
+# despues de que cerrara el brazo de recuperacion.
+#
+# ---------------------------------------------------------------------------
+coordinator cc74a1ab16b463ef4251fcc6417153129d724938
+schema-applied cc74a1ab16b463ef4251fcc6417153129d724938
 
 
 
