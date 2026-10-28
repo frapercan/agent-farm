@@ -110,8 +110,9 @@ not why it was decided.
 
 The root `CLAUDE.md` is per machine and is not tracked by any repository, which
 is why it did not survive the 2026-07-28 reinstall and had to be rebuilt from a
-seven-week-old snapshot. Until that changes, each machine's copy needs two
-things:
+seven-week-old snapshot. Since 2026-10-28 nothing authoritative lives only
+there (section 4, "Where the root CLAUDE.md lives"), so the loss would now cost
+a re-write and not a fact. Each machine's copy needs two things and no more:
 
 - **which of the two roles this machine has**, in one line, because nothing else
   on the machine says so
@@ -141,6 +142,48 @@ inside a payload or an event.** Anything sensitive is passed by reference, an
 identifier the server resolves against the secret surface, and is never inlined.
 An agent that needs a credential receives the name of one, not the value.
 
+### The path note, which is per machine and breaks silently
+
+**On the laptop the working directory is `~/Thesis-laptop/`, not `~/Thesis2/`.**
+Every farm script defaults its roots to `~/Thesis2/...`, which is where they
+live on the desktop, and on the laptop they are overridden by
+`agent-farm/farm.env`. It sets four variables and nothing else does:
+
+| variable | what it names |
+|---|---|
+| `THESIS_ROOT` | the working directory above both clones |
+| `AGENT_FARM_ROOT` | this repository's checkout |
+| `PROTEA_REPO` | the PROTEA checkout the stack is served from |
+| `DEPLOY` | the deploy slot |
+
+**`farm.env` is gitignored** (`.gitignore:64`), so it exists only as a loose
+file on each disk, and **72 scripts under `agent-farm/` reference a `Thesis2`
+path** that resolves through it. Losing that file does not raise: it sends every
+one of those scripts to a directory that does not exist, which is the failure
+mode this whole file exists to prevent, one level down.
+
+The variables are named here and their VALUES are not, because the values are
+per machine and a shared document that asserted one machine's paths would be
+wrong on the other half of the time.
+
+### Where the root CLAUDE.md lives
+
+**Decided 2026-10-28: its content lives here, in a tracked file, and the loose
+`CLAUDE.md` points at it.** Section 5 carried this as undecided, with the reason
+it mattered: that file is the highest-authority instruction file in the project,
+it existed only as a loose file on each disk, and it had already been lost once
+in the 2026-07-28 reinstall.
+
+What it said that this document did not is the path note immediately above. The
+rest of it was the two-machine split, which sections 1 to 3 already carry, so
+the move is a deduplication rather than a migration: nothing authoritative was
+only in that file except the paths, and now nothing is.
+
+The loose file stays in place rather than being deleted, because the harness
+reads instructions from the working directory and a pointer that nothing reads
+is worse than a duplicate that is marked as one. It now says where the source of
+truth is, which is the part that was missing.
+
 ### Memory is per agent
 
 See section 3. Recorded here as well, because it is the decision that makes
@@ -149,11 +192,6 @@ committing mandatory.
 ---
 
 ## 5. Still open
-
-**The root `CLAUDE.md` is tracked nowhere.** It is the highest-authority
-instruction file in the project, it exists only as a loose file on each disk, and
-it has already been lost once, in the 2026-07-28 reinstall. Tracking it would
-close that. Not decided.
 
 **Nothing pulls.** Both machines have checkouts that update only when somebody
 runs `git pull`, so an instruction committed on one can sit unseen on the other
