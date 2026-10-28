@@ -1545,8 +1545,45 @@
 # estratos b3a547b5 y sello 248bc78b.
 #
 # ---------------------------------------------------------------------------
-coordinator 3e5d922ac93fdf5e0e8fceed9fbb5ac15ca2d760
-schema-applied 3e5d922ac93fdf5e0e8fceed9fbb5ac15ca2d760
+# 2026-10-28, tarde: 3e5d922a -> 723c5542. Un PR, sin migracion.
+#
+# #1071 LA DIRECCION DEL ARTEFACTO SE ESCRIBIA DE DOS FORMAS. `put` devolvia
+# `self.url(key)` y `get` tomaba una clave, en los dos backends del almacen. Asi
+# que el camino obvio, guardar algo y leerlo por la direccion que te devolvieron,
+# era el que no podia funcionar: MinIO recibia `s3://bucket/key` como nombre de
+# objeto y contestaba XMinioInvalidObjectName sobre `/bucket/s3://bucket/key`,
+# con el esquema incrustado dos veces.
+#
+# Y el protocolo lo prometia por escrito: "URIs returned by put should be
+# persisted as-is in the database so consumers can resolve them without knowing
+# the backend". Era una frase y no un hecho.
+#
+# Medido por las malas: costo un apply_learned_encoder despachado, que murio en
+# 0,0 min porque su payload llevaba lo que `put` acababa de devolver. El campo se
+# llama encoder_artifact_uri.
+#
+# `get`, `exists` y `delete` aceptan ahora clave o uri de ESTE almacen. Lo que se
+# RECHAZA en vez de adivinarse: una uri de otro backend, una que nombre otro
+# bucket, y una `file://` fuera de la raiz. Las tres son errores de
+# configuracion, y una clave que empezara por `file://` se habria convertido en
+# un fallo silencioso sobre un objeto que nadie puede encontrar.
+#
+# IMPORTA PARA EL NODO DE CALCULO. Francisco ha fijado hoy que el sobremesa es
+# nodo de calculo de la plataforma, no laboratorio aparte, asi que las entradas
+# de un job viajaran por id y por sha entre las dos maquinas. Un almacen cuya
+# direccion se escribe de dos formas es exactamente lo que rompe eso: la maquina
+# que guarda y la que lee no son la misma.
+#
+# NO HAY MIGRACION. La base se queda en d5a1c8e3f706.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING. La cadena del
+# cabezal de corte 227 cerro antes: apply 84b58870, prediccion 4ba6cd7a,
+# puntuacion 4a288c1b, estratos 6a8685e1 y sello. El panel 230->235 tiene ahora
+# cuatro brazos y los cuatro comparten el marco f-c353408429d4871b759c1072.
+#
+# ---------------------------------------------------------------------------
+coordinator 723c55425800fa252d16e8432002a995c3fb11e0
+schema-applied 723c55425800fa252d16e8432002a995c3fb11e0
 
 
 
