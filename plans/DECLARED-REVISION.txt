@@ -1393,8 +1393,34 @@
 # despues de que cerrara el brazo de recuperacion.
 #
 # ---------------------------------------------------------------------------
-coordinator cc74a1ab16b463ef4251fcc6417153129d724938
-schema-applied cc74a1ab16b463ef4251fcc6417153129d724938
+# 2026-10-28, madrugada: cc74a1ab -> 003d07e1. Un PR, sin migracion.
+#
+# #1064 UN NAMESPACE DESCARTADO A PROPOSITO DABA UN 500. run_cafa_evaluation no
+# escribe en el grid por proteina un namespace cuyas filas no puede numerar
+# contra la celda agregada, y lo dice desde el principio: un evento
+# per_protein_grid_namespace_dropped con un code y un reason. El endpoint de
+# estratos era la mitad que no lo leia: un namespace ausente del grid dejaba un
+# DataFrame construido desde una lista vacia, que no lleva columnas, y el
+# primer acceso levantaba KeyError: 'protein_accession'. Tres de las nueve
+# celdas publicadas de la ventana 211->227 contestaban 500, una por estrato,
+# cada una con su motivo ya escrito.
+#
+# Ahora hay dos negativas: 404 cuando el productor registro el descarte, con su
+# code y su reason, diciendo que la celda agregada sigue en pie y que lo que no
+# se puede abrir es el detalle; y 409 cuando el grid no tiene filas y nadie
+# anoto por que, porque entonces el artefacto y el registro discrepan sobre lo
+# que se escribio, y eso es peor que cualquiera de los dos por separado.
+#
+# Modulo nuevo protea/api/routers/_stratum_drops.py: las tres negativas que
+# impiden abrir una celda, juntas y en orden de cuanto cuesta responderlas.
+#
+# NO HAY MIGRACION. La base se queda en d5a1c8e3f706.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING.
+#
+# ---------------------------------------------------------------------------
+coordinator 003d07e1acc728e158a842bc89fdfc5f34be7c07
+schema-applied 003d07e1acc728e158a842bc89fdfc5f34be7c07
 
 
 
