@@ -1419,8 +1419,60 @@
 # PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING.
 #
 # ---------------------------------------------------------------------------
-coordinator 003d07e1acc728e158a842bc89fdfc5f34be7c07
-schema-applied 003d07e1acc728e158a842bc89fdfc5f34be7c07
+# 2026-10-28, manana: 003d07e1 -> e61a26e4. Cuatro PR, sin migracion.
+#
+# #1065 LA CACHE DE VECINDARIOS CADUCABA ANTES DE TERMINAR DE CONSTRUIRSE. El
+# TTL eran 300 s y la consulta tarda 635,0 s medidos sobre el brazo de
+# 1.145.411 filas, asi que la entrada estaba rancia en el momento de
+# guardarse y no podia acertar ni una vez: cada visitante arrancaba una
+# reconstruccion de diez minutos y medio. La rejilla de 96 celdas estaba
+# calculada y guardada y nadie la podia ver. La clave nombra un prediction_set,
+# cuyas filas se escriben una vez y no se actualizan, asi que la vida sin
+# limite es correcta y no solo conveniente: la entrada no puede volverse falsa.
+#
+# #1066 LA COLUMNA DEL DONANTE DICE QUE PRODUJO LA FILA. go_prediction
+# .ref_protein_accession es NOT NULL y tres nodos del grafo publicaban que
+# "ningun candidato PUEDE llegar sin donante", que es cierto de la columna y
+# falso del registro: la columna admite una accesion de donante, una de InterPro
+# o el nombre de un metodo, y 18.415.500 filas llevan la tercera. Es la decision
+# F de Francisco, centinela legitimado por escrito en vez de columna nullable,
+# y por eso NO hay migracion donde el plan preveia una.
+#
+# #1067 UN CORTE POSTERIOR A LA VENTANA NO ES LIMPIO. El guardia de fuga
+# comparaba frame.start < corte <= frame.end, que trata el marco como un
+# intervalo del que se puede salir por los dos lados. Solo tiene uno. Un corte
+# posterior a t1 salia de ese intervalo y leia "clean" cuando es el peor caso
+# que hay: medido sobre la funcion real, corte 230 sobre la ventana 211->227
+# devolvia limpio, y ese cabezal ha visto todos los terminos que la ventana
+# puntua. No era alcanzable mientras los dos cortes de la campana eran 211 y
+# 227, porque 227 cae dentro; lo es desde que el segundo es 230. Las pantallas
+# ya enunciaban la regla correcta en prosa, "un metodo aparece solo en ventanas
+# cuyo t0 es igual o posterior a su corte", asi que eran dos enunciados de una
+# regla que discrepaban. Ahora t1 no entra en la comparacion.
+#
+# #1068 UNA POBLACION SIN DECLARAR NO ES LA MISMA POBLACION. query_set_id era
+# identidad de metodo pero no de presencia obligatoria. Medido sobre los once
+# prediction_set: nueve declaran su conjunto y en los nueve el recuento
+# declarado coincide con las accesiones realmente predichas; los dos que no
+# declaran nada son los brazos ingestados y llevan 40.531 y 20.854 proteinas.
+# Dos ausencias, dos poblaciones. La parte que sostiene el cambio no es anadir
+# el campo sino _recorded: la comprobacion leia meta.get para todos los campos
+# y este es una COLUMNA, asi que anadirlo sin mas habria dado por no registrados
+# los once conjuntos y habria refutado todas las comparaciones, incluidas las
+# nueve correctas.
+#
+# NO HAY MIGRACION. Ninguno de los cuatro toca alembic/, y la base se queda en
+# d5a1c8e3f706, que es la cabeza del grafo en este sha y lo que
+# alembic_version ya dice.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING y ningun
+# prediction_set escribiendose. El ultimo de la noche, 86c96ccc con 602.935
+# filas sobre la ventana 230->235, cerro con su puntuacion 1418b372 y su sello
+# antes de esta edicion.
+#
+# ---------------------------------------------------------------------------
+coordinator e61a26e4e666174bb0a59aaf8287d42d8bd5bd84
+schema-applied e61a26e4e666174bb0a59aaf8287d42d8bd5bd84
 
 
 
