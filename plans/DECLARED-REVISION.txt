@@ -1471,8 +1471,48 @@
 # antes de esta edicion.
 #
 # ---------------------------------------------------------------------------
-coordinator e61a26e4e666174bb0a59aaf8287d42d8bd5bd84
-schema-applied e61a26e4e666174bb0a59aaf8287d42d8bd5bd84
+# 2026-10-28, mediodia: e61a26e4 -> 58963104. Un PR, sin migracion.
+#
+# #1069 EL BANCO DE REFERENCIA PUEDE SER DISPERSO. El codigo aprendido estaba
+# almacenado, 684.048 vectores de 8192 dimensiones con exactamente 64 no nulos
+# por fila, y no se podia buscar sobre el. La razon no era la busqueda:
+# protea_method.knn_search acepta un csr_array tal cual y hasta tiene un
+# backend `sparse` escrito para codigos k-WTA. La razon era que PROTEA
+# densificaba el banco antes de llamar.
+#
+# disk_cache._derive_reference_views construye la copia f32 de forma
+# incondicional, antes del `if need_cos`, y solo la suelta en el return, asi que
+# sostenia f16 mas dos copias f32 a la vez: 11,21 + 22,41 + 22,41 = 56,0 GB
+# medidos, en una maquina de 30 GiB. Las mismas filas en CSR son 0,35 GB.
+#
+# No es un banco grande, es un banco con otra forma, y la distincion es del
+# PRODUCTOR y no de la dimension: un banco denso y ancho es caro y sigue siendo
+# denso. SPARSE_CODE_BACKENDS nombra hoy solo a `learned-code`.
+#
+# Se queda con backend="numpy" y no con el `sparse` de la libreria a proposito:
+# search_backend es campo de identidad de metodo, asi que elegirlo haria que el
+# brazo del codigo aprendido difiera del de ankh-base en dos campos declarados
+# en vez de uno y la comparacion perderia su eje.
+#
+# SIN CACHE DE DISCO para el banco disperso, declarado como alcance: el formato
+# es np.save, el modulo exige subir una constante cuando cambia el SIGNIFICADO
+# de lo cacheado y registra dos incidentes en que no se subio, y cualquier
+# desajuste se vuelve un MISS permanente silencioso. Cuesta 10,1 min cargar el
+# banco entero, medido a 0,88 ms por fila, contra 12,6 min del banco denso de
+# ankh-base que si se cachea.
+#
+# El guardia de olores lo tumbo primero con cuatro infracciones de tamano y
+# tenia razon: la logica vive ahora en su propio modulo, _sparse_bank.py, y el
+# fichero volvio de 832 a 767 lineas. No se toco --write-baseline.
+#
+# NO HAY MIGRACION. La base se queda en d5a1c8e3f706.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING y ningun
+# prediction_set escribiendose.
+#
+# ---------------------------------------------------------------------------
+coordinator 5896310414a265b82ea3b25fb896be7034e875a1
+schema-applied 5896310414a265b82ea3b25fb896be7034e875a1
 
 
 
