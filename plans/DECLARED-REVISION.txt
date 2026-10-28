@@ -1511,8 +1511,42 @@
 # prediction_set escribiendose.
 #
 # ---------------------------------------------------------------------------
-coordinator 5896310414a265b82ea3b25fb896be7034e875a1
-schema-applied 5896310414a265b82ea3b25fb896be7034e875a1
+# 2026-10-28, tarde: 58963104 -> 3e5d922a. Un PR, sin migracion.
+#
+# #1070 EL VECTOR LLEGA EN BINARIO. pgvector.psycopg.register_vector no se
+# llamaba en NINGUN sitio del repositorio, asi que psycopg no tenia adaptador
+# binario para vector ni halfvec y Postgres los mandaba como texto, el literal
+# [v1,v2,...], que el tipo de columna parseaba en Python con un float() por
+# dimension.
+#
+# Medido seguido en una maquina, 300 filas del banco de 8192 dimensiones:
+#   sin register_vector   str          12,74 ms/fila   fetch 3,589 s
+#   con register_vector   HalfVector    0,75 ms/fila   fetch 0,225 s
+# factor 17. Las dos con una prediccion corriendo, asi que lo que establecen es
+# la PROPORCION y no una estimacion de maquina en reposo.
+#
+# Afecta a CADA lectura de embedding de la plataforma, no solo al banco ancho.
+#
+# ES TIEMPO Y NO MEMORIA: una fila cuesta 16.985 bytes como texto y 16.384 como
+# array float16 denso. Lo que tiene un banco entero residente es un result set
+# bufferizado en el cliente, que es cuestion de cursor y sigue abierta.
+#
+# Los valores no se mueven: cinco filas verificadas, la columna tipada del ORM
+# devuelve HalfVector en los dos casos y los arrays son iguales bit a bit.
+#
+# El oyente va en `connect` y no una vez por engine, porque los adaptadores
+# viven en la conexion y un pool que recicle una serviria el mismo banco en dos
+# formas segun quien contestara.
+#
+# NO HAY MIGRACION. La base se queda en d5a1c8e3f706.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING. La cadena del
+# codigo aprendido cerro antes: prediccion 514d7e0c, puntuacion f652844e,
+# estratos b3a547b5 y sello 248bc78b.
+#
+# ---------------------------------------------------------------------------
+coordinator 3e5d922ac93fdf5e0e8fceed9fbb5ac15ca2d760
+schema-applied 3e5d922ac93fdf5e0e8fceed9fbb5ac15ca2d760
 
 
 
