@@ -1328,8 +1328,45 @@
 # asi que el guardia del nodo no tiene ningun lote en vuelo que rehusar.
 #
 # ---------------------------------------------------------------------------
-coordinator 3cb0d652450fcec7c4aa407a17289a5f9c648548
-schema-applied 3cb0d652450fcec7c4aa407a17289a5f9c648548
+# 2026-10-28, madrugada: 3cb0d652 -> 68f19cee. Tres PR de PROTEA, sin migracion.
+#
+# #1060 EL CAJON DE ESTRATOS PEDIA DONANTE PARA LEER UNA BANDA DE LONGITUD. El
+# endpoint respondia placed=0 sobre paneles de miles para cualquier brazo sin
+# donante, mientras stratify_evaluation colocaba el 100% de las mismas filas.
+# _join probaba el vecindario primero y dejaba el estrato entero en nulo, asi
+# que la banda de longitud, que es un hecho sobre la secuencia de la propia
+# consulta, se descartaba porque otro eje no se podia leer. Medido: 18.415.500
+# filas, el 86,5% de todos los candidatos, ilegibles por eso. no_donor sale de
+# unplaced y pasa a without_donor, porque esas filas SI estan colocadas.
+#
+# #1061 DOS CABEZALES DISTINTOS RESOLVIAN AL MISMO NOMBRE. El nombre del config
+# aprendido se componia sin el corte de entrenamiento, asi que los dos
+# cabezales sfjepa daban la misma cadena y el segundo apply saltaba todas las
+# secuencias con skip_existing, dejando al config del 211 afirmando ser los
+# codigos del 227. El corte entra DELANTE del id de la fuente, que tiene que
+# seguir siendo el ultimo segmento para que _base_config_prefix recupere el
+# padre. Y kind pasa a learned con su derived_from, que estaban en pretrained y
+# NULL para un codigo ajustado contra nuestras propias anotaciones.
+#
+# #1062 EL MARCO ESTABA EN LA COLUMNA Y NO LLEGABA A LA PANTALLA. frame_digest
+# era el unico campo del grupo de procedencia que el serializador no servia, y
+# es el unico que dice si dos numeros se pueden leer uno al lado del otro. La
+# identidad de la ventana pasa de dos columnas a las ocho de
+# uq_evaluation_set_identity. Y una colision de clave dentro del propio grafo:
+# _Q_RESULTS aliasaba er.frame_digest AS frame y _Q_PANELS AS frame_digest, y
+# frame es ademas la clave de la etiqueta del arnes en /v1/benchmark/matrix.
+#
+# NO HAY MIGRACION en el rango 3cb0d652..68f19cee. La base se queda en
+# d5a1c8e3f706.
+#
+# PUERTA COMPROBADA EN EL SERVIDOR ANTES DE MOVER: 0 jobs QUEUED o RUNNING.
+# Y esta vez en el orden correcto: la declaracion PRIMERO. En el salto anterior
+# se movio el arbol antes y el guardia de revision tumbo los doce trabajadores,
+# que es exactamente para lo que esta.
+#
+# ---------------------------------------------------------------------------
+coordinator 68f19ceebd1a06a9a44f30a45f376d798d7260f6
+schema-applied 68f19ceebd1a06a9a44f30a45f376d798d7260f6
 
 
 
