@@ -1642,9 +1642,62 @@
 # mano.
 #
 # ---------------------------------------------------------------------------
-coordinator 8ad6128eae6e0b5851302298d399db8b17b11947
-schema-applied 8ad6128eae6e0b5851302298d399db8b17b11947
-
-
-
-
+# ---------------------------------------------------------------------------
+#
+# 2026-10-29. El arbol servido sube a 3b7c4fb: las longitudes de 399.952
+# secuencias no caben en un solo IN.
+#
+# LO QUE MUEVE, de 8ad6128 a 3b7c4fb, un commit:
+#
+#   #1084  las longitudes se leen por trozos, y el techo de rechazo solo
+#          tambien pide leerlas
+#
+# POR QUE AHORA: el primer compute_embeddings declarado con los dos techos,
+# el job 48c500ac, murio en 2 segundos antes de despachar un solo lote.
+# load_lengths_for_isolation metia los 399.952 id de la poblacion en un unico
+# IN, y el driver rechaza por encima de 65.535 parametros. No fue un fallo de
+# la tarjeta ni del nodo: fue un fallo de la consulta que precede al despacho,
+# y su error_message pesa 10.290.160 bytes porque el IN entero viaja en el
+# texto de la excepcion.
+#
+# SON DOS DEFECTOS Y NO UNO. El segundo no se habia disparado todavia: el
+# cargador devolvia None salvo que isolate_above_residues estuviera puesto,
+# mientras que refuse_over_ceiling levanta si recibe un techo de rechazo sin
+# longitudes. Declarar solo refuse_above_residues, que es una peticion
+# perfectamente legitima, habria muerto igual por otra via. Ahora la puerta
+# lee los DOS techos, y no se emite recibo de aislamiento cuando solo se
+# rechaza, porque un recibo de algo que no se hizo es peor que ninguno. El
+# recibo gana chunks_read, asi que la proxima vez el troceado se lee en el
+# evento y no se deduce.
+#
+# NO HAY MIGRACION. 94 ficheros en alembic/versions a los dos lados, contados
+# por nombre. La base sigue en d5a1c8e3f706, asi que schema-applied acompana
+# al coordinador.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING, y las trece colas
+# de trabajo en 0 mensajes con un consumidor cada una. Las dos cosas, porque no
+# son la misma: las etapas .write corren como OperationConsumer y no tienen
+# fila en job, de modo que una cuenta de jobs no las ve. La senal de que nadie
+# esta escribiendo son las colas.
+#
+# CORRIJO LO QUE ESCRIBI AQUI AYER. Dije que el guardia de padre cancelado
+# descartaba los 18.750 mensajes de cbaba8bb "sin inferir nada". Lo segundo es
+# cierto y se midio: ni un vector nuevo. Lo primero no. Los RECHAZA, y
+# protea.dlx los enruta a protea.dead-letter, que tiene ahora 18.754 mensajes
+# parados. Los cuatro restantes son viejos y de protea.jobs: uno es el
+# extract_goa_universe f39cc2ca, cancelado el 2026-10-06, y los otros tres
+# llevan job_id que ya no existe en la base, asi que son de la campana borrada.
+# Nadie consume esa cola y no la purgo: 18.754 mensajes parados no estorban a
+# nada, y son el unico registro de que esos lotes existieron.
+#
+# LA VENTANA ES AHORA PORQUE EL NODO ESTA LIBRE. El propio nodo pidio que no se
+# declarara con un trabajo largo en vuelo, porque su temporizador solo aplaza
+# mientras un lote esta a medias y le pinaria una revision nueva en marcha. Su
+# cola esta en 0 con un consumidor. Se declara antes de despachar, no despues.
+#
+# LO QUE EL NODO HARA SOLO: su temporizador lee esta ref cada 3 min y se
+# sincroniza. Nadie lo arranca a mano.
+#
+# ---------------------------------------------------------------------------
+coordinator 3b7c4fb54ffa7291162974c702d8ea78d82770dd
+schema-applied 3b7c4fb54ffa7291162974c702d8ea78d82770dd
