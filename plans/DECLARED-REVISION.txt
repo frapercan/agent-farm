@@ -1582,8 +1582,68 @@
 # cuatro brazos y los cuatro comparten el marco f-c353408429d4871b759c1072.
 #
 # ---------------------------------------------------------------------------
-coordinator 723c55425800fa252d16e8432002a995c3fb11e0
-schema-applied 723c55425800fa252d16e8432002a995c3fb11e0
+# ---------------------------------------------------------------------------
+#
+# 2026-10-29. El arbol servido sube a 8ad6128: once PR de la noche, y el
+# predictor deja de estar en pausa.
+#
+# LO QUE MUEVE, de 723c554 a 8ad6128, doce commits:
+#
+#   #1072  una pasada sin truncar lo dice la cuenta, no el kwarg
+#   #1073  una pasada por residuo sirve a varios cabezales
+#   #1074  el ancho del codigo es un eje, no una propiedad del cabezal
+#   #1075  una secuencia imposible no debe condenar a las 63 vecinas
+#   #1076  lo que se sabe que no cabe no se despacha, y queda escrito
+#   #1077  corrige la hora de la medida y el criterio de que cuenta como fallo
+#   #1078  el lote muerto se lee de los huecos, y eso refuta lo que escribi
+#   #1079  una consulta sin vector tiene que decirse, no restarse
+#   #1080  el lote honra skip_existing antes de la pasada, no al escribir
+#   #1081  el sello del lote dice que codigo corrio, no solo que builds
+#   #1082  la pagina del conjunto daba por hecho que hubo un KNN
+#   #1083  el predictor deja de estar en pausa
+#
+# POR QUE AHORA, y no cuando se fusionaron: Francisco pidio que el sitio dejara
+# de decir que el predictor esta en pausa. El flag es una constante de
+# compilacion, asi que servirlo exige mover el arbol servido, y moverlo exige
+# declarar antes. No habia atajo: dejar el arbol por delante de la declaracion
+# es lo que tumbo los doce trabajadores la noche del 28, y tocar solo un fichero
+# del arbol lo deja SUCIO, que el guardia rechaza igual.
+#
+# #1080 IMPORTA PARA EL NODO DE CALCULO, y es la razon de que esta declaracion
+# vaya antes de reanudar el calculo y no despues. ComputeEmbeddingsBatchPayload
+# declaraba skip_existing, el mensaje de despacho lo transportaba, y el
+# trabajador de lote no lo leia: lo honraba store_group_rows al escribir, con la
+# pasada ya pagada. El job cbaba8bb se reencolo dos veces esta noche con el nodo
+# parado, asi que su cola llego a 18.750 mensajes que cubren tres veces las
+# mismas 399.952 secuencias. Con el codigo viejo, la mitad de un relanzamiento
+# habria pagado pasada completa: unas 7,6 h de tarjeta a los 4,38 s por lote que
+# la propia corrida midio. Con #1080 un duplicado cuesta una consulta.
+#
+# Y #1081 cierra el agujero que lo habria hecho invisible: el sello por
+# operacion emitia solo versiones de libreria, asi que un trabajador sustituido
+# entre dos lotes del mismo job escribia filas bajo el mismo job_id, con las
+# mismas librerias, desde codigo distinto. Ahora lleva code_revision, sellada al
+# importar, y de paso deja de pagar un subproceso git rev-parse por lote que
+# luego descartaba.
+#
+# NO HAY MIGRACION. Las listas de alembic/versions son identicas en 723c554 y en
+# 8ad6128, 94 ficheros a cada lado, comprobado por nombre y no por confianza. La
+# base sigue en d5a1c8e3f706, asi que schema-applied acompana al coordinador.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs QUEUED o RUNNING y 0 prediction_set
+# escribiendo. Y la puerta se abrio cancelando cbaba8bb, que estaba parado desde
+# la 01:33 por peticion de Francisco y a un barrido de FAILED: llevaba 2 de 3
+# reencolados y el tercero caia a las 14:04. Sus 284.096 vectores siguen en pie
+# y skip_existing los respeta; sus 18.750 mensajes encolados los descarta el
+# guardia de padre cancelado sin inferir nada.
+#
+# LO QUE EL NODO HARA SOLO: su temporizador lee esta ref cada 3 min y se
+# sincroniza, asi que su trabajador vuelve ya en 8ad6128. Nadie lo arranca a
+# mano.
+#
+# ---------------------------------------------------------------------------
+coordinator 8ad6128eae6e0b5851302298d399db8b17b11947
+schema-applied 8ad6128eae6e0b5851302298d399db8b17b11947
 
 
 
