@@ -1854,5 +1854,65 @@
 # 16 primeros hex SON el nombre de la clave.
 #
 # ---------------------------------------------------------------------------
-coordinator 1766b8a4f50418fdc3cf877dd9bb226e70859051
-schema-applied 1766b8a4f50418fdc3cf877dd9bb226e70859051
+#
+# 2026-11-03, tercer salto de la noche. El arbol servido sube a db8b9f8.
+# schema-applied lo acompana porque NO hay migracion: 95 ficheros en
+# alembic/versions a los dos lados, la base se queda en e3c9a7f15b20.
+#
+# QUE LLEVA, dos commits y tres ficheros, +54/-10:
+#
+#   #1091  el coordinador se queda RUNNING hasta la ultima escritura (deferred)
+#   #1090  ADR-D51: el limite de proteina larga, puesto por escrito
+#
+# EL PIN NO SE MUEVE. protea-backends sigue en 370f904, asi que el venv de este
+# servidor ya satisface la declaracion y no se reinstala nada.
+#
+# POR QUE IMPORTA #1091, Y LO VIMOS EN VIVO. El coordinador devolvia su
+# OperationResult sin deferred, asi que el trabajador marcaba el job SUCCEEDED
+# en el instante de publicar los lotes: el estado del job no decia nada sobre si
+# se habia escrito un solo codigo. El ensayo 3f07049d lo demostro, SUCCEEDED a
+# las 01:38:04 con cero filas todavia. El arreglo extrae el resultado a
+# dispatched_result y le pone deferred=True, de modo que store_residue_codes
+# avanza el padre una vez por lote y lo cierra en el ultimo, igual que
+# store_embeddings para compute_embeddings. Mismos campos, nada mas cambia.
+#
+# EFECTO DE SEGUNDO ORDEN, y es bueno: con deferred, un fragmento que se pierda
+# deja el padre en RUNNING hasta que el reaper lo corte a las seis horas, en vez
+# de un SUCCEEDED inmediato y falso. El fallo pasa de invisible a visible. La
+# senal precisa sigue siendo el delta de protea.dead-letter, pero ahora el
+# RUNNING es un sintoma honesto y no una mentira.
+#
+# EL ENSAYO VALIDO EL CAMINO ENTERO, medido en esta maquina mientras corria:
+#
+#     cartas muertas    18.775 -> 18.776, exactamente +1
+#     residue_code      872 filas, 7 fragmentos, 269.484 residuos
+#
+# El +1 es el primer lote, muerto por ReadTimeoutError al bajar el vocabulario
+# por el enlace del nodo, y las 872 filas son 1.000 menos las 128 de ese lote:
+# un lote justo. Asi que tarjeta, fragmento al almacen, mensaje, verificacion de
+# sha256, insercion y avance del padre funcionan de punta a punta, y la perdida
+# de un lote no deja estado parcial. Relanzar el coordinador debe despachar
+# exactamente 128.
+#
+# LO QUE FRENA EL CORPUS NO ES EL CODIGO, ES EL ENLACE DEL NODO. Medido desde
+# aqui: tailscale ping al nodo da 301 ms por la ruta DIRECTA de la LAN, donde
+# una hora antes daba de 4 a 11 ms, asi que no es un relay. El nodo informa de
+# wlo1 en HUAWEI-2.4G-Set3, 2,4 GHz, -68 dBm, 73,1 Mbit/s nominales y
+# "Power save: on", con 0,22 MB/s reales: un 2,4% de lo nominal, que es la firma
+# del ahorro de energia y no de la banda. A ese ritmo los ~87 GB de fragmentos
+# del corpus serian 109,8 h, 4,6 dias; a 20 MB/s serian 1,2 h.
+#
+# Este servidor ya esta corregido: Francisco quito el ahorro de energia de wlo1
+# esta noche y lo dejo persistente en NetworkManager, y el enlace esta en
+# HUAWEI-5G-Set3 a 160 MHz, -64 dBm, 864 Mbit/s. El mismo arreglo en el nodo es
+# un comando, y pasarlo a la SSID de 5 GHz es el otro medio. Mientras eso no
+# este, el corpus no se lanza.
+#
+# PUERTA COMPROBADA ANTES DE DECLARAR, las dos senales: 0 jobs en QUEUED o
+# RUNNING -- 3f07049d ya en SUCCEEDED -- y las trece colas en 0 mensajes y 0 sin
+# confirmar, incluida protea.embeddings.batch. protea.dead-letter en 18.776, que
+# no es trabajo en vuelo.
+#
+# ---------------------------------------------------------------------------
+coordinator db8b9f83aead0a56eb2835c25ab6e87c94310650
+schema-applied db8b9f83aead0a56eb2835c25ab6e87c94310650
