@@ -1699,5 +1699,67 @@
 # sincroniza. Nadie lo arranca a mano.
 #
 # ---------------------------------------------------------------------------
-coordinator 3b7c4fb54ffa7291162974c702d8ea78d82770dd
-schema-applied 3b7c4fb54ffa7291162974c702d8ea78d82770dd
+#
+# 2026-11-03. El arbol servido sube a 3794d31: tres mejoras calladas, y lo que
+# la plataforma calcula no se mueve.
+#
+# LO QUE MUEVE, de 3b7c4fb a 3794d31, tres commits:
+#
+#   #1085  el catalogo de centinelas decia tres formas y el arbol escribe seis
+#   #1086  la mutacion medía contra los tests de otro modulo
+#   #1087  el mapa se clavaba por el nombre del fichero y perdia un modulo que
+#          si tiene test
+#
+# POR QUE AHORA: Francisco ha fijado hoy que las mejoras que no son
+# funcionalidad ruidosa se llevan al frente sin esperar, y que mantener esta
+# plataforma estable es mio. Ninguna de las tres anade una capacidad: una pone
+# por escrito una lista que el arbol ya escribia, y las otras dos arreglan el
+# instrumento con el que el proyecto se mide a si mismo.
+#
+# NUEVE FICHEROS Y SOLO CINCO BAJO protea/. De esos cinco, cuatro cambian una
+# linea cada uno, y la cambian por otra de valor identico: el literal pasa a
+# ser la constante que lo nombra, NO_PRODUCER = "", CLASSIFIER = "classifier",
+# INTERPRO_GRAFT = "interpro", leidos en origin/develop. El quinto,
+# _graph_producer_column.py, solo cambia sus docstrings. Los otros cuatro son
+# CI, utillaje y tests, que ningun trabajador importa. Asi que el riesgo de
+# este despliegue no esta en lo que calcula, sino en el acto de mover el arbol.
+#
+# LO QUE ARREGLAN #1086 Y #1087, que es peor de lo que suena: la puerta de
+# mutacion reescribia el modulo a mutar y dejaba clavado el test con el que lo
+# mataba, de modo que medía un modulo contra los tests de otro. Y el mapa se
+# construia por el nombre del fichero en vez de por lo que el test importa.
+# Una puerta de calidad que mide la cosa equivocada es peor que no tenerla,
+# porque se cita.
+#
+# NO HAY MIGRACION. 94 ficheros en alembic/versions a los dos lados, contados
+# por nombre. La base se queda en d5a1c8e3f706, asi que schema-applied
+# acompana al coordinador.
+#
+# PUERTA COMPROBADA ANTES DE MOVER: 0 jobs en QUEUED o RUNNING, y las trece
+# colas en 0 mensajes. De las doce de trabajo, diez llevan un consumidor;
+# protea.embeddings.batch no lleva ninguno porque Francisco libero la tarjeta
+# del sobremesa el 30 y su trabajador sigue parado, y protea.analysis no tiene
+# unidad en esta maquina. protea.dead-letter sigue en 18.775, que son los lotes
+# rechazados de cbaba8bb y no trabajo pendiente.
+#
+# EL GUARDIA LEE UNA REF LOCAL, Y ESO ANADE UN PASO AL ORDEN. La declaracion
+# que protea-guard-revision.sh exige sale de
+# "git show origin/main:plans/DECLARED-REVISION.txt", es decir de la ref remota
+# ya traida A ESTE CLON, no de GitHub. Medido hoy: en esta maquina nada hace
+# fetch de agent-farm, ni timer de usuario ni cron, y el reflog de origin/main
+# solo se mueve cuando una persona o un agente lo trae; la ultima vez fue el 29
+# a las 11:30. De modo que fusionar el PR no basta. Entre la fusion y mover el
+# arbol hay que traer la ref aqui y comprobar que lleva el sha nuevo, porque si
+# no el guardia seguiria exigiendo 3b7c4fb con el arbol ya en 3794d31 y
+# tumbaria los doce trabajadores: exactamente el fallo que este fichero existe
+# para evitar. En el nodo no pasa, porque su temporizador si lee la ref cada
+# 3 min.
+#
+# IMPORTA PARA EL NODO DE CALCULO: ese mismo sync le arranca el trabajador al
+# sincronizar, asi que esta declaracion le devuelve la tarjeta que Francisco
+# libero el 30. Se lo digo al publicar. Si la tarjeta tiene que seguir libre,
+# la unidad se queda enmascarada en su maquina, no aqui.
+#
+# ---------------------------------------------------------------------------
+coordinator 3794d31e33a3028af46947ff81720bf2a417c2f3
+schema-applied 3794d31e33a3028af46947ff81720bf2a417c2f3
