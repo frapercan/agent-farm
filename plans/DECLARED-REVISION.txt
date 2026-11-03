@@ -1914,5 +1914,35 @@
 # no es trabajo en vuelo.
 #
 # ---------------------------------------------------------------------------
-coordinator db8b9f83aead0a56eb2835c25ab6e87c94310650
-schema-applied db8b9f83aead0a56eb2835c25ab6e87c94310650
+#
+# ---------------------------------------------------------------------------
+#
+# 2026-11-03 21:13 UTC. La pasada de codigos por residuo cerro: el coordinador
+# 15624da2 esta en SUCCEEDED con 5.329 de 5.329 lotes, de 01:54:33 a 20:34:15
+# UTC, leido de la base y no de un resumen. Se espero a que cerrara en vez de
+# declarar en mitad, por decision de Francisco. La objecion no era el guardia
+# de revisiones ajenas, que vive solo en la ruta de predicciones y no aparece
+# ni una vez en la cadena de residuos, sino la de arriba: que un conjunto de
+# salida no quede calculado por dos revisiones.
+#
+# PUERTA COMPROBADA ANTES DE DECLARAR, las dos senales: 0 jobs en QUEUED o
+# RUNNING -- los 636 en estado terminal, 608 SUCCEEDED, 23 FAILED, 5 CANCELLED
+# -- y las trece colas en 0 mensajes y 0 sin confirmar, incluida
+# protea.embeddings.batch, que conserva su consumidor atado y ocioso.
+# protea.dead-letter en 18.776, que no es trabajo en vuelo.
+#
+# LA MIGRACION YA ESTA APLICADA, y por eso schema-applied puede escribirse: la
+# linea es una afirmacion del servidor, no una lectura. a7d3f1c9e842 corrio
+# sobre e3c9a7f15b20, aditiva: la tabla model_weights, dos indices, la
+# restriccion unica de uri y la clave externa a annotation_set con ON DELETE
+# SET NULL. Comprobado contra la base despues de correrla, alembic_version en
+# a7d3f1c9e842 y la tabla presente con 0 filas. El ensayo previo se hizo en una
+# transaccion deshecha, y alli el UPDATE de alembic_version toco exactamente 1
+# fila, que era lo unico que podia fallar en silencio.
+#
+# EL HERMANO QUE SE MUEVE es protea-backends, de 370f9047 a 86e82605. Sale del
+# poetry.lock de este mismo commit, asi que no lleva linea de override.
+#
+# ---------------------------------------------------------------------------
+coordinator 6f7e18565786fa5383bf3bc14d1f33980bde3f45
+schema-applied 6f7e18565786fa5383bf3bc14d1f33980bde3f45
