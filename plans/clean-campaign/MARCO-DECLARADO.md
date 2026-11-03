@@ -1366,8 +1366,8 @@ leído la 235.
 
 **«Guardar los GAF ahorra 12,5 h.»** Falso. Ahorra 368 GB de tráfico y casi nada
 de reloj: la segunda descarga se esconde detrás de las cargas de la fase 2, que
-son 35 min por release contra 7 de descarga, y la fase 2 ya hace prefetch dentro
-de su bucle. Sigue valiendo la pena por el ancho de banda y porque nos cubre un
+son 123,5 min de media por release contra 37 de descarga en las grandes, y la
+fase 2 ya hace prefetch dentro de su bucle. Sigue valiendo la pena por el ancho de banda y porque nos cubre un
 día en que EBI vaya lento, pero no por el tiempo.
 
 **Dónde sí había horas:** la fase 1 bajaba y escaneaba EN SERIE, 423 s + 390 s por
