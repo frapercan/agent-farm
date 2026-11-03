@@ -1761,5 +1761,98 @@
 # la unidad se queda enmascarada en su maquina, no aqui.
 #
 # ---------------------------------------------------------------------------
-coordinator 3794d31e33a3028af46947ff81720bf2a417c2f3
-schema-applied 3794d31e33a3028af46947ff81720bf2a417c2f3
+#
+# 2026-11-03, segundo salto de la noche. El arbol servido sube a 1766b8a y
+# schema-applied se mueve con el, porque esta vez hay migracion.
+#
+# QUE LLEVA, un commit: PROTEA#1088, ADR-D51, los codigos por residuo de un
+# vocabulario congelado. 23 ficheros, +2310/-12. Tres operaciones nuevas en el
+# catalogo: el coordinador encode_residue_vocabulary, su lote de tarjeta, y
+# store_residue_codes.
+#
+# LA MIGRACION, y esta linea es una afirmacion y no una intencion. e3c9a7f15b20
+# sobre d5a1c8e3f706, 94 a 95 ficheros en alembic/versions. Aplicada en este
+# servidor ANTES de escribir esto, desde un worktree en 1766b8a para no mover el
+# arbol servido antes que la declaracion, y comprobada LEYENDO LA BASE y no la
+# palabra de alembic:
+#
+#     alembic_version   e3c9a7f15b20
+#     residue_code      existe, 9 columnas, 0 filas
+#     indices           ix_..._sequence_id, ix_..._embedding_config_id,
+#                       ix_..._shard_key, residue_code_pkey
+#     unico             uq_residue_code_sequence_config
+#
+# El ensayo en seco de alembic dio exactamente una CREATE TABLE, tres indices y
+# el UPDATE de alembic_version dentro de una transaccion. Nada mas.
+#
+# EL PIN DE protea-backends SUBE A 370f904, Y NO ES LA PUNTA DE develop. Es
+# 9b76719 -- lo que este servidor ya corria -- mas un solo commit, el camino
+# exacto por capas de #46. Verificado contra el repositorio y no contra el
+# resumen de nadie: un unico padre, 9b76719; ahead=1 behind=0; y tres ficheros
+# con CERO borrados, ankh/__init__.py +53/-0, ankh/exact.py y
+# tests/test_ankh_exact.py nuevos. El metodo nuevo importa su modulo de forma
+# diferida y lo unico que toca del modelo cargado es un atributo
+# _protea_exact_ankh que nadie mas lee: ExactAnkh.__init__ solo LEE el encoder,
+# la tabla de sesgo y las dimensiones, asi que embed_batch_per_residue no se
+# contamina en el mismo proceso.
+#
+# EL VENV DE ESTE SERVIDOR SE REINSTALO ANTES DE ESCRIBIR ESTO, como pide la
+# cabecera de este fichero, y hay una trampa que conviene dejar escrita: el
+# primer `pip install --no-deps` del commit nuevo devolvio exit 0 y NO CAMBIO
+# NADA, porque pip vio la misma version 0.1.0 ya instalada y se la salto. El
+# codigo de salida no era la senal. La senal es
+# site-packages/protea_backends-*.dist-info/direct_url.json, que seguia diciendo
+# 9b76719. Con --force-reinstall --no-deps dice ya 370f904, torch sigue en
+# 2.12.0+cpu y pip check esta limpio.
+#
+# POR QUE NO LA PUNTA, Y QUE CUESTA LLEGAR A ELLA. La punta 86e8260 lleva ademas
+# #44 y #45. Reproducido aqui inyectando la punta por PYTHONPATH sobre el venv
+# servido, sin tocarlo: cinco tests de PROTEA caen, en dos clases.
+#
+#   #45 cambio tokenizer.batch_encode_plus(...) por tokenizer(...). Los dobles
+#   que solo definen batch_encode_plus dan KeyError 'input_ids' en
+#   t5/__init__.py:390. Eso si es un doble que hay que adaptar.
+#
+#   #44 anade embed_chunks_multi, y eso NO es un doble caduco: es una costura
+#   que se mueve con el pin. shared_pass_emitter lo encuentra por getattr, asi
+#   que compute_embeddings.py:594 toma la ruta compartida y tres tests que
+#   parchean op._embed_batch dejan de interceptar y conducen el backend real con
+#   MagicMocks: ValueError invalid layer_indices, rango valido 0..-1. La
+#   docstring de compute_embeddings.py:590 promete que
+#   patch.object(op, "_embed_batch") cubre tambien la ruta de grupo, y esa
+#   promesa solo se cumple en la rama de reserva. Hoy se sostiene unicamente
+#   porque el backend pinchado no tiene el metodo.
+#
+# La subida a la punta, con #44, #45 y esas costuras arregladas, queda como
+# despliegue aparte y es mio. No entra aqui para no meter dos cambios ajenos
+# dentro de este.
+#
+# LA BASE LA ESCRIBE EL SERVIDOR Y NO LA TARJETA. store_residue_codes corre en
+# protea.embeddings.write: el lote de tarjeta sube un fragmento comprimido al
+# almacen y publica el mensaje pequeno; esta etapa comprueba el sha256, exige
+# que el mensaje y el fragmento coincidan en configuracion, en numero y en cada
+# posicion con sus dos contadores, inserta con on_conflict_do_nothing y avanza
+# el padre. Un lote que no llegue no deja fila ni estado parcial, asi que
+# relanzar el coordinador despacha solo las secuencias sin fila.
+#
+# LO QUE HAY QUE VIGILAR DURANTE EL RUN, y no es el estado del job. Si un
+# fragmento falla la verificacion la excepcion sale de execute, el lote se
+# nackea sin reencolar y acaba en protea.dead-letter MIENTRAS EL PADRE SIGUE
+# RUNNING SIN ERROR. La senal de perdida es el delta de esa cola, que arranca en
+# 18.775.
+#
+# PUERTA COMPROBADA ANTES DE DECLARAR: 0 jobs en QUEUED o RUNNING, y ninguna
+# cola de trabajo con mensajes. protea.dead-letter en 18.775, que son los lotes
+# rechazados de cbaba8bb y no trabajo en vuelo.
+#
+# EL NODO: su temporizador seguira esta ref y su propio vigilante tiene el
+# trabajador de lotes parado mientras corren las lecturas del generador sobre la
+# tarjeta, asi que el ensayo puede esperar en la cola. El artefacto del
+# vocabulario ya esta en el MinIO de este servidor, verificado por la API de S3:
+# residue-vocabulary/vocabulary-v1-06fed75ca76d17be.npz, 260.233.730 bytes,
+# sha256 06fed75ca76d17bea91639675b607987c43f031f4cdc09bc7442a4a97adeb301, cuyos
+# 16 primeros hex SON el nombre de la clave.
+#
+# ---------------------------------------------------------------------------
+coordinator 1766b8a4f50418fdc3cf877dd9bb226e70859051
+schema-applied 1766b8a4f50418fdc3cf877dd9bb226e70859051
