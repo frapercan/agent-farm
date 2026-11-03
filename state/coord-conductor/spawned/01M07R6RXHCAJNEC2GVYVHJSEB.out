@@ -1,0 +1,31 @@
+Done. The reply is on the ledger as `01M07SBFZEK3QW7ND2XR5MJ8VB`, and the claim is closed `done`.
+
+## What I found
+
+The highest-value move was checking whether a sibling had already answered — one had, at 11:40, with the decisive rebuttal (the monotone ordering was computed on a sample selected by which rows had a non-NULL `param_count`, and that column is NULL for exactly the largest models). I didn't repeat it.
+
+But that sibling's table placed `prot_t5` at the published **3B** — the exact number the desktop's own message had flagged two paragraphs earlier as wrong by ~2×, because the checkpoint is `prot_t5_xl_half_uniref50-enc`, encoder-only. The rebuttal inherited the error it was warning about.
+
+Correcting it makes the rebuttal much stronger. With encoder counts near 1.2B, the three largest models collapse onto one capacity point:
+
+| model | capacity | drop |
+|---|---|---|
+| ankh_large | 1.15B | −0.0012 |
+| prot_t5 | ~1.2B enc | −0.0062 |
+| prostt5 | ~1.2B enc | −0.0095 |
+
+That's a **7.9× spread at matched capacity**, and it accounts for 34% of the full eight-model range (0.0083 of 0.0246) among models separated by under 1% of the log axis. With the T5s out at 3B there was a defence available — saturation at the top end. Once they sit next to `ankh_large` there's no range left to saturate over: it stops being a broken ordering and becomes a controlled comparison.
+
+I checked the sensitivity so the argument doesn't wait on the measurement: on the 2.17-decade axis, the three sit 0.9% above `ankh_large` at a 1.2B encoder, 5.3% at 1.5B, and still only 19.2% even at the full published 3B. No plausible count reverses it.
+
+Two things I added beyond that: the capacity reading was formed *post hoc* from the same eight drops it was tested on (after the registered family prediction failed), so 1/120 is the frequency of a pattern found by looking — a second defect distinct from the selection effect, and nobody had named it. And I proposed a cheaper decisive test: `ankh_large` vs `prostt5` alone are matched on capacity under any encoder count, so a paired per-protein comparison of those two settles the axis with two models instead of eight, without waiting on the registry.
+
+I also amended `inventory/laptop.md` to record that filling the three NULLs is necessary but not sufficient — a bare integer can't distinguish a 1.2B encoder from a 3B encoder-decoder, which is precisely what caused this round's error, so the row needs the checkpoint id and the modules counted.
+
+## Caveats
+
+**I measured nothing.** PROTEA is outside this session's allowlist and `python3`/`psql` aren't runnable, so every number is arithmetic over figures already in the thread. My ~1.2B encoder figure is as unmeasured as the sibling's 3B — I stated that in the reply and gave the sensitivity analysis rather than leaning on it. Whether `prostt5`'s embedding path runs the decoder is a fact about the code that only the desktop can settle.
+
+## Mechanics
+
+The fence held (`laptop`, epoch 1), re-checked immediately before the push. The base moved twice while I worked and the first push was rejected non-fast-forward — the CAS working, not a failure. Each rebuild re-verified `diff-tree` against the freshly pinned base: exactly three additions and the one inventory modification, nothing deleted. Two sibling messages that landed mid-compose were on unrelated topics (PR 764 CI), so no duplication.

@@ -1,0 +1,1517 @@
+# The clean campaign: what is measured, what is decided, and what is still open
+
+Opened 2026-09-02. This file exists because the design phase was living in two
+session transcripts and a session limit stopped both machines at once. Nothing
+below was lost, but only because it was re-derivable; the second time it will
+not be. Everything the design phase establishes lands here as it is
+established, not when it is finished.
+
+**Status: the design phase is OPEN.** No arm of the clean campaign has been
+dispatched and none should be until D1-D8 below are closed. `CAMPAIGN.md`
+remains authoritative for what a run IS; this file is the record of the
+decision that produces the next one.
+
+Division of labour, set by the author on 2026-09-02: the laptop owns the
+platform and the instrument, sobremesa owns the lab and the map of every
+research front to date. See `TOPOLOGY.md` for why the split is what it is.
+
+---
+
+## 1. What was measured, so nobody measures it again
+
+All counts read from the live database on 2026-09-02 unless marked otherwise.
+`pg_stat_user_tables.n_live_tup` is an ESTIMATOR and reports 0 for several
+populated tables including `alembic_version`; every number here is a `count(*)`.
+
+### The substrate is rich and the experiment layer is thin
+
+    protein                616,846      go_prediction        38,246,372
+    sequence               528,294      sequence_alignment    4,442,430
+    go_term                432,070      protein_go_annotation 21,876,159
+    sequence_embedding   6,867,762      go_term_relationship    703,670
+
+    embedding_config  13     ontology_snapshot  9     annotation_set  4
+    scoring_config     8     information_accretion_set  6
+
+    prediction_set    19     evaluation_set     1     evaluation_result  93
+    experiment_run     0     reranker_model     0
+    interpro_annotation 0    interpro_go_mapping 0
+    term_cooccurrence   0    term_frequency      0
+
+Every `prediction_set` and every `evaluation_result` was created between
+**2026-08-27 and 2026-08-30**. The campaign wiped on 2026-08-27 left nothing
+behind, so no measurement predating that date is evidence about this window.
+
+### Zero nodes are `measured`, and the cause is mechanical
+
+`_graph_edges.strength_of` returns `MEASURED` only when a floor is declared AND
+the comparison separates. The only place in the schema where a floor can be
+declared is an `experiment_run` whose `config` holds `graph_node` and `floor`
+(`_graph_reads._Q_FLOORS`). **`experiment_run` holds 0 rows.**
+
+So: 19 prediction sets, 581 successful `run_cafa_evaluation` jobs, 93 results,
+and **zero declared comparisons**. Nothing here is a failure of science. It is
+that no experiment was ever declared to be one.
+
+A second consequence, and it is a defect in the vocabulary rather than in the
+record: `strength_of` returns `CHOSEN` both for "a floor was declared and the
+comparison did not separate" and for "no floor was ever declared". A
+well-powered null and a decision nobody took read identically. See D7.
+
+### There is no replication anywhere in the record
+
+With the arm named by every field it varies in, the 93 results hold **80
+distinct arms**. Per panel: **612 (level, panel) cells at n=1, 108 at n=2, none
+at n>=3**. Every one of the 108 duplicates has `count(distinct prediction_set_id) = 1`
+— it is the same prediction set evaluated twice. Evaluation is deterministic
+(117 of 117 metrics reproduce exactly), so those duplicates carry **no
+information about noise**.
+
+Consequence: the sigma floors the endpoint reports (`reporting` 0.081 n=129,
+`routing` 0.13 n=332) are imported. Nothing in this record could have produced
+them. See D2.
+
+### The surface was five days stale, and it under-named what exists
+
+`protea-api.service` had been up since **2026-08-28 16:14:45**.
+`_arm_identity.py`, which adds `self_exclusion` and `code_revision` to the
+fields an arm is named by, landed **2026-08-29 18:55** (PROTEA #893);
+`_graph_panels.py` changed again 2026-08-30.
+
+Restarted 2026-09-02 00:40. `/v1/graph` went from **30 distinct arm levels to
+80** in one step. The stale surface was committing the project's own recurring
+defect one level up: a level named by fewer fields than it varies in, so
+between-level spread rendered as within-level spread.
+
+**The check, before believing any screen:** compare
+`systemctl --user show protea-api.service -p ExecMainStartTimestamp` against
+`git log -1 -- <the routers that build that screen>`. The API and the workers
+are separate systemd units, so restarting the API cannot touch a running job.
+
+### Three confounds that stop the current record being a baseline
+
+1. **Depth is confounded with self-retrieval.** The depth-10 prediction sets
+   have `exclude_self_neighbour` unrecorded and the code default is `False`
+   (five call sites, all `getattr(p, "exclude_self_neighbour", False)`); the
+   depth-30 sets have it `true`. Under the temporal protocol the query retrieves
+   itself at distance ~0, which `strata.py` warns "measures the protocol rather
+   than the neighbourhood". Comparing 10 against 30 in this record is not a
+   depth comparison.
+2. **"Depth" names two different quantities.** The panel field coalesces
+   `max_sequence_rank` (rendered "30seq") with `max_k_position` ("10") with
+   `limit_per_entry`. Top-k candidates and top-N distinct sequences are not two
+   levels of one axis.
+3. **Code revision drifts inside the substrate sweep** (`bc7c423`, `d8bc801`,
+   `8d15893`), and the entire permissive family is `unrecorded`, which
+   `_arm_identity` documents as a level that "correctly refuses to share an axis
+   with" a sha.
+
+### The stratification instrument is built, ran 480 times, and lands nowhere
+
+`protea/core/strata.py` is complete: **seven axes** — category, aspect, length,
+homology, donor evidence, taxonomy, propagation — with reasoned cut points and
+a measurement of its own (of 1,920 protein-level combinations, 77 are
+populated). The author's five named axes are inside it, plus two more.
+
+`stratify_evaluation` has run **480 times successfully**. It writes
+`<setting>/strata.parquet` to the object store and **to no table**, and only
+**16 of the 93** `eval_artifacts` prefixes carry that file.
+
+`assert_stratified` and `reportable_strata` have **zero call sites** in
+`protea/`, `scripts/` and `apps/`. The guard against publishing a number with
+no stratum cannot fire.
+
+The four axes that are not yet crossed need no recompute: `go_prediction`
+carries `identity_nw`, `identity_sw`, `length_query`, `taxonomic_relation`,
+`distance` and `evidence_code` across all 38.2M rows.
+
+### The per-protein artifacts cannot reproduce the published metric
+
+All 93 results carry `per_protein.parquet` and `per_protein_grid.parquet` per
+category. Reconstructing micro-averaged `f_micro_w` from the per-protein
+sufficient statistics reproduces the published number **exactly in 3 of 9
+panels and fails in 6** (NK.BPO: rebuilt 0.1341, restricted to pred>0 0.1463,
+published 0.1466).
+
+The cause: `per_protein.parquet` is written at ONE tau (the best-F tau) while
+the published `f_micro_w` is at its own best tau — the artifacts carry
+`evaluation_best_f.tsv` and `evaluation_best_f_micro_w.tsv` separately.
+`per_protein_grid.parquet` carries weighted and unweighted counts but no tau
+column either.
+
+So a paired bootstrap over proteins is available **today at a fixed tau**, and
+is **not** available for Fmax or for f_micro_w-at-its-own-tau without a
+per-protein x tau producer that does not exist. See D2.
+
+---
+
+## 2. What the census found, verified here
+
+An eight-surface census ran on 2026-09-02 (10 agents, 787 tool calls). The
+load-bearing claims were re-checked against the database before being written
+down; the rest are marked.
+
+**Verified here:**
+
+- `compare_paired_panels` is registered (`operation_catalog.py:97`) and has
+  **never run** (0 rows in `job`). The operation that would produce a paired
+  interval exists and has never been dispatched.
+- **The features axis has exactly ONE level.** All 19 prediction sets carry the
+  identical `["compute_alignments", "compute_taxonomy", "compute_reranker_features"]`.
+  The catalogue offers three families; one combination was ever computed. An
+  earlier reading of "3 levels available" was wrong.
+- `expand_votes_to_ancestors` is `false` on **19 of 19** sets. It is the
+  cheapest second level the features axis can have: a payload flag, no
+  artifact, no checkpoint.
+- The bank node's `unpowered` is an artefact of counting. `_graph_nodes.py`
+  sets `instantiated` from policy levels and `scored` from
+  `distinct annotation_set_id`; one corpus in use forces `scored = 1 < 2`.
+- **No queue named `protea.embeddings.batch` is declared or consumed.** No new
+  representation can be embedded until a consumer exists. `protea.training`
+  HAS a live consumer, so `export_research_dataset` has somewhere to run.
+- 6 messages sit in `protea.dead-letter` with 0 consumers. Drain and read them
+  before the new campaign starts; a dead-lettered predict batch leaves a
+  prediction set silently short.
+
+**Reported by the census, not re-verified here** (settle before relying on):
+
+- 39 operations registered; 19 have `job` rows, 5 more ran only as ephemeral
+  children, **15 have never executed in any form**.
+- 78 of the 93 results were scored on a `neighbor_vote_fraction` that is not a
+  fraction, and that includes the entire sealed body. The input divergence is
+  measured; whether it moves a published `f_micro_w` is not.
+- `evaluation_result` rows have been deleted and nothing records it: 161
+  distinct prediction ids appear in job payloads against 19 surviving sets.
+- A 5-level sealed depth ladder exists and is ready for `compare_paired_panels`:
+  `9995651a`, composite, `max_sequence_rank` 2/5/10/20/30, all grid-carrying,
+  all under one frame digest.
+- `build_go_cooccurrence` has all its inputs in the database already (the
+  21,876,159 annotation rows). It is a dispatch, not an ingest, and it is the
+  only hard block on the `compute_association` feature level.
+- `load_interpro_go_mapping` reads a 3 MB EBI file and needs no binary. It is
+  the only generator prerequisite reachable today.
+
+---
+
+## 3. The datasets, which all converge on one missing thing
+
+The author asked on 2026-09-02 for three sets to be projected properly: a wide
+interval for adjusting configurations, the competitive set that goes to LAFA,
+and the reranker's exported dataset that iterates the longitudinal axis while
+changing the neighbourhood and the annotation set across the ontologies.
+
+**The competitive set is already defined, and it is not the one we use.**
+`split_registry.COMPARABLE_WINDOW` is **v226 -> v227**, and the module says why:
+it is the only point comparable to anyone else's number. Our single
+`evaluation_set` is **220 -> 227**, and `220` is **not in `RELEASES`** at all —
+the release table begins at v226. We hold **zero evaluations on the window that
+goes to LAFA**. Both corpora are loaded, so one `generate_evaluation_set` job
+builds it; the cost is then re-evaluating every arm against it.
+
+**The adjustment interval cannot be built today, and the registry says so.**
+`windows_for('adjustment')` raises `SplitUndecidedError` deliberately. Its
+recorded reason: nobody knows which windows are representative until additions
+and removals have been decomposed per release, and the obvious choice — the
+window ending at the board's mark — is one of the two roughly thirty percent
+corpus contractions. Our 220->227 set records exactly that contraction:
+**9,383 proteins and 115,435 annotations removed** against 14,032 delta
+proteins. We adjusted on the anomaly.
+
+`train` is undecided for a simpler reason, stated literally in the module:
+*"Ingest the releases preceding the base release, add them to the table, then
+partition freely."*
+
+**The reranker dataset hits the same wall.** `ExportResearchDatasetPayload` is
+exactly the longitudinal iteration the author described: `train_versions` (a
+list, validator `at_least_two_train`, forms pairs) x `test_versions` x `k` (the
+neighbourhood) x `ontology_snapshot_id` x the feature flags. But under the leak
+rule training may use only corpora strictly earlier than the board's mark, and
+we hold exactly **{220, 226}** — the bare minimum the validator accepts, one
+pair, no longitudinal room at all.
+
+Two payload notes: `compute_association` needs `term_cooccurrence`, which is
+empty, so `build_go_cooccurrence` comes first; and `search_backend` defaults to
+`"faiss"`, which contradicts the standing KNN-on-CPU rule and must be set
+explicitly.
+
+**All three needs converge on one action: ingest the GOA releases between 220
+and 226 and register them in `RELEASES`.** That opens the adjustment interval,
+opens the reranker's longitudinal axis, and leaves the competitive v226->v227
+window clean and untouched. It is the largest data gap in the project and it
+had not been named.
+
+Loaded today: goa 220 (2024-04-16), 226 (2025-05-03), 227 (2025-09-04), 230
+(2026-03-04). Known to the registry but not loaded: v228, v229, v231, v232,
+v233, v234 — all of which are validation, being at or after the mark.
+
+---
+
+## 4. The eight decisions, and where each stands
+
+None of these is closed. Each carries the laptop's position; sobremesa's
+answers are outstanding.
+
+**D1 - What binds from the previous campaign.** Position: nothing. Every row is
+27-30 August, no floor was ever declared, no node reached `measured`. The clean
+campaign starts with all ten nodes at `inherited`/`chosen`, and rungs 1, 2 and
+7 become prior work that is cited and does not bind.
+
+**D2 - How the floor is born inside instead of imported.** The pipeline is
+deterministic, so replication cannot mean re-running; the only real variance is
+cohort sampling, which asks for a paired bootstrap over proteins.
+`compare_paired_panels` already exists for this and has never run — but its
+verdict has nowhere to land (no `ci_low`/`ci_high`/`mde`/`n_resamples`/`seed`,
+and `_graph_reads` does not read them). And the per-protein artifacts only
+support a fixed tau (section 1). So the decision is: **(a)** declare the
+campaign's primary metric at a fixed declared tau, which makes the floor free
+and kills the undeclared max-over-tau selection, with Fmax reported as
+secondary; or **(b)** build the per-protein x tau producer and keep Fmax
+primary. Position: (a). This has thesis consequences because CAFA reports Fmax.
+
+**D3 - One seat of declaration.** An `experiment_run` row written BEFORE
+dispatch, carrying node, varying fields, held fields, floor and replication
+scheme, and a dispatcher that refuses an arm whose varying set contradicts it.
+This is `rungs.yaml`'s own lesson — *"the design was prose, and prose cannot
+refuse a job"* — ported to the graph. Open question: retire `rungs.yaml`, or
+keep it as the CI-checkable half? Position: one seat. Two declarations diverge,
+and the graph only knows how to read `experiment_run.config`.
+
+**D4 - Strata to a table.** A stratum-cell table plus a writer beside the
+existing `store.put` in `StratifyEvaluationOperation._write`, the guard made
+reachable, and the 77 uncovered results re-passed. Backfillable from artifacts
+already in MinIO. This is the precondition of the author's whole stated goal.
+
+**D5 - Where structure retrieval sits.** `flows.py` defines the same mechanism
+over another representation as the SAME flow configured differently, and a
+structural KNN enters as an `embedding_config` row, which is the **substrate**
+axis. `search_backend` is `numpy` on all 19 sets and carries nothing. Position:
+substrate. This is a modelling judgement, not a measurement. It costs the
+structure slice nothing once D1 is settled, because rung 2 stops binding.
+
+**D6 - Order of opening.** By measured cost: `reranker_model` at 0 blocks two
+nodes and one row unblocks both with no candidate recompute; InterPro at 0
+blocks three but needs an ingest and a second flow; structure needs four
+producers that exist nowhere. Sobremesa holds the card and the lab and may have
+a different order by interest.
+
+**D7 - A sixth strength value.** For a comparison that was declared, powered
+and did not separate. If we start declaring floors, most of our results land
+exactly there, so this is not cosmetic.
+
+**D8 - What only sobremesa can answer.** What in the lab is reproducible and
+what died with `storage/`; the real cost of structural acquisition in fetches,
+GB and card hours; which of the ~24 `plans/` directories are retired; whether
+the lab holds its own co-occurrence artifact; which GOA releases between 220
+and 226 are reachable and what each load costs; and whether the per-release
+decomposition of additions and removals that the adjustment split requires
+already exists in the lab.
+
+---
+
+## 5. The cheapest things that are true regardless of D1-D8
+
+These need no decision. They are read-only or single-dispatch, and each removes
+a reason the record cannot be read.
+
+- Drain and read the 6 dead-lettered messages.
+- `audit_per_protein_artifacts` (registered, never run, read-only) for an exact
+  recompute census instead of a hand walk.
+- `count_backend_parameters`, to fill `embedding_config.param_count`, NULL on 8
+  of 13 configs, which removes a NULL-is-a-family bias from any capacity-ordered
+  reading of the substrate sweep.
+- Fix the bank node's level counting, one line.
+- `seal_evaluation_frames`, which the census reports would seal 16 of 17
+  unsealed results; all 9 prior runs finished in under 0.05 min.
+
+---
+
+## 6. Norms this campaign is held to
+
+`COLLIDING-A-NUMBER.md` in full, and rule 4 in particular, which is what caught
+the two premises this design phase had to withdraw: a claim about rung 2 that
+rests on a wiped campaign, and a floor that no surviving row could have
+produced. A negative check counts only if you looked where the thing would be
+if it existed.
+
+`DECLARED-REVISION.txt` governs what the workers run. It does not move while a
+campaign is live, and the check before editing it is on the SERVER: no job in
+QUEUED or RUNNING, and no prediction set being written.
+
+---
+
+## 7. Closed on 2026-09-02, and what closing them uncovered
+
+Sobremesa answered D1-D7 and part of D8. What follows is the state after that
+exchange, plus what the laptop measured while executing its half of day one.
+
+### Decisions now closed
+
+**D1 - nothing binds.** Agreed. Sobremesa withdrew the rung-2 closure from its
+own structure-retrieval premise; the correction is in agent-farm #270.
+
+**D2 - primary metric at a fixed declared tau.** Agreed, with a condition and a
+warning, both sobremesa's. Condition: the thesis reports both, with Fmax
+secondary and explicitly labelled a maximum over a grid, because CAFA reports
+Fmax. Warning: sobremesa's calibration study found the optimal rule DIFFERS
+between `f_micro_w` and Fmax and the two disagree in direction, so choosing the
+primary changes which arm wins. This is a decision about the claim, not about
+the arithmetic.
+
+**And the tool does not implement it.** `compare_paired_panels` hardcodes
+`operating_point = "reselected_per_resample"` at two sites and exposes no knob.
+It re-selects the operating point on every resample, which is Fmax's selection
+semantics. Choosing (a) therefore requires a change to the operation, not only
+a declaration. Recorded because the decision reads as free and is not.
+
+**D3 - one seat of declaration.** Agreed. `experiment_run` is it, and
+`rungs.yaml` is retired. Two declarations diverge and the graph reads one.
+
+**D5 - structure retrieval sits on substrate.** Agreed and already withdrawn
+from the retriever axis in #270.
+
+**D6 - order of opening.** Agreed on cost order, with one change by interest:
+`build_go_cooccurrence` goes first. Not for its own value but because it is a
+pure dispatch whose inputs are already in the database, it unblocks the
+`compute_association` feature level, and it exercises the declaration loop end
+to end. Pipe-cleaner and lever at once.
+
+**D7 - a sixth strength value.** Agreed. "Nobody declared a floor" and "a floor
+was declared and it did not separate" are the difference between not knowing
+and knowing.
+
+**The distinction already exists one layer down.**
+`ComparePairedPanelsPayload.effect_of_interest` carries it: "a null is read
+against this and never against the observed difference; without it a panel
+whose interval covers zero is reported as `null_unread`". So the operation
+separates a read null from an unread one and `strength_of` does not. The sixth
+value is not a new idea, it is the graph catching up with its own kernel.
+
+### D8, partly
+
+Sobremesa's own front census died in the same session limit (18 agents, 0
+results), so **D8.1 (what in the lab is reproducible), D8.3 (which plan
+directories retire) and the per-release decomposition of additions and removals
+remain open**. They were not improvised, which is the right answer.
+
+**The GOA releases exist and the axis is not supply-limited.** 221 through 225
+are all present as `goa_uniprot_all.gaf.NNN.gz` on the EBI FTP:
+
+    221  17.40 GB  2024-06-14      (context: 220 = 19.03 GB)
+    222  18.87 GB  2024-08-01                226 = 21.09 GB
+    223  19.19 GB  2024-10-21                227 = 14.58 GB
+    224  19.51 GB  2024-12-21
+    225  20.62 GB  2025-03-08
+
+95.6 GB compressed for the five, against 179 GB free on the desktop, so they do
+not all fit at once without streaming. 150 releases are archived in total.
+
+A free cross-check falls out of this: **227 is 14.58 GB against 226's 21.09,
+so the roughly thirty percent contraction is visible in the file size before
+anything is loaded.** The non-monotonicity the split registry refuses to adjust
+on can be confirmed without ingesting a byte.
+
+**Structural acquisition is affordable and is not the blocker.** Measured by
+sobremesa 2026-09-02, after correcting its own first probe, which used
+`model_v4` against an API reporting `latestVersion: 6` and returned 0 of 30 —
+a tooling artefact read as absent coverage:
+
+    AFDB coverage on an NK sample   30 of 30
+    mean residues                   469
+    mean global pLDDT               77.3
+    latency per query               166 ms
+    mean cif                        416 KB
+
+Upper bound over the whole experimental bank: 89,263 fetches, about 37 GB, 4.1
+hours serially or roughly 30 minutes at eight-way. The API returns
+`globalMetricValue` and the pLDDT fractions without downloading the structure,
+so a disorder column costs 89,263 queries and no storage.
+
+**The blocker is that no queue named `protea.embeddings.batch` is declared or
+consumed.** Nothing new can be embedded until a consumer exists. Sobremesa owns
+it and has taken it as its first task.
+
+### A premise that has to be withdrawn from the record
+
+Sobremesa reports that per-residue embeddings ARE persisted on the desktop,
+with an accession index and provenance: `storage/probe/exp220.npy`
+(45,073,591 x 2 x 768, 276.9 GB), `pool60k_last.npy` (67.6 GB),
+`lafa_last.npy` (14.2 GB), `nk220.npy` (9.1 GB) and two more — 74,436,929
+positions, 369 GB total.
+
+This refutes gap 1 of `DESIGN-cross-encoder.md`, which states that per-residue
+embeddings are not persisted and therefore forces cross-attention to
+evidence-token granularity. The premise that shaped that design is false.
+
+**Not verifiable from the laptop**: `storage/` here holds only
+`evaluation_artifacts/` and `upstream_receipts/`, so this is sobremesa's
+measurement, attributed and not collided. Nothing should be built on it until
+it is, but the false premise should be withdrawn either way.
+
+---
+
+## 8. What day one produced, and where it stopped
+
+Three operations dispatched in-platform, all of which had been registered and
+never run.
+
+**`audit_per_protein_artifacts`** (job `bbe4918b`). Verdict over 93 results and
+279 result-by-setting cells: `both` 63, `grid` 3, `legacy` 213, `absent` 0.
+**22 results are fully readable, 71 are rejected.** So the grid-based path
+covers under a quarter of the record.
+
+**The six dead-lettered messages are one incident, and the guard held.** All
+six are the same job `cd7862b4`, `predict_go_terms_batch` over prot_t5 at depth
+30, rejected 2026-08-30 — the residue of the incident `DECLARED-REVISION.txt`
+already describes. Its prediction set `c53eda1e` survived SHORT (1,319,713 rows
+against its sibling's 2,216,376) but the job is `CANCELLED` and the set carries
+**zero evaluations**. No published number rests on it. This is a check that
+could have failed and did not, which is what makes it evidence. The messages
+were read without consuming them; purging them is a separate decision and they
+are currently the receipt.
+
+**`compare_paired_panels` refused, correctly, and that refusal is the finding.**
+Dispatched on the sealed five-level depth ladder (prediction set `9995651a`,
+composite, `max_sequence_rank` 2/5/10/20/30, verified here as sharing the digest
+`f-1c245d41f26ff70c3b0a9247`), it returned `PanelComparabilityError`:
+
+> the two evaluation results do not both declare ['frame', 'temporal_window'],
+> so they cannot be shown to share a frame. An unstamped marker is not a
+> matching one. This refusal is not waivable by `allow_frame_mismatch`, which
+> waives a DISAGREEMENT and not an absence.
+
+**`audit_evaluation_frames`** (job `3dc21cad`) then gave the exact state, and it
+is worse than the census reported:
+
+    93 rows, 0 carry a frame, 71 carry a temporal_window, 93 recomputable,
+    0 deletable-only
+    leakage_role: 90 'select', 3 'probe', 0 'test'
+
+Three things follow.
+
+1. **Not one of the 93 results carries a frame.** Nine successful
+   `seal_evaluation_frames` runs did not put one there. Whether sealing alone
+   can set it, or whether the audit's "93 re-framable by recompute" means a
+   recompute is required, is unresolved and is the next thing to settle — it
+   decides whether the census's "cheapest action" is one dispatch or a
+   re-evaluation of the whole body.
+2. **One window carries two frame digests**, `f-631427d3657ff6c5f71638b8` on 71
+   results and `f-1c245d41f26ff70c3b0a9247` on 5, with 17 carrying none. A
+   panel level cannot express which, so two arms under one panel name may not
+   share a frame.
+3. **Nothing in the record is external validation.** 90 of 93 are `select` and
+   3 are `probe`; there is no `test`. Everything we hold is selection material,
+   which is consistent with holding zero evaluations on the LAFA-comparable
+   window.
+
+Day one stopped here on purpose. Sealing or recomputing 93 published rows while
+two digests disagree inside one window is a design decision, not a chore, and
+the design phase is what this file exists to finish.
+
+### Day two, as agreed
+
+Laptop: `generate_evaluation_set` on v226->v227, and the first GOA load (221).
+Sobremesa: the `protea.embeddings.batch` consumer, the structural cohort of
+v226->v227, and gates 0 and 1 — real coverage over the whole cohort, and the
+positive control that recomputes the lost 66.6 / 20.7 rather than citing it.
+
+**The first declared `experiment_run`: `expand_votes_to_ancestors` false against
+true.** One varying field, artifacts that already exist, about seven minutes,
+and it exercises declaration, dispatch and read-back against a real paired
+floor. It is also the features axis's only reachable second level, which is
+`false` on 19 of 19 sets today.
+
+---
+
+## 9. The first measured interval, and what the frame turned out to be
+
+### `frame` was never unwritable. It was undeclared.
+
+Sobremesa established that `seal_evaluation_frames` writes `frame_digest` and
+not `frame`, that the two are different columns, and that the auditor's
+`re_framable = recomputable - with_frame` subtracts across two populations that
+do not speak to each other. All three verified here.
+
+One correction: sobremesa concluded that a recompute would return the same NULL
+because nothing in the evaluation path writes `frame`. **`run_cafa_evaluation`
+does.** It carries `frame` and `temporal_window` as payload fields with a
+validator on the vocabulary (`run_cafa_evaluation.py:242-302`) and returns them
+for stamping at line 507; `batch_rescore_evaluation.py:297` does the same. In
+581 evaluations nobody ever passed them.
+
+So the fix was neither a mutation of published rows nor a recompute of the
+body: **re-run the five ladder evaluations with the frame declared.** Five new
+rows through the normal path, additive, about half a minute each.
+`internal` is derived rather than chosen: `lafa` denotes the parity-locked
+leaderboard-comparable harness, and `COMPARABLE_WINDOW` is v226->v227, so a
+220->227 result cannot be that.
+
+### The two digests were one undeclared field
+
+After sealing, the partition is exact:
+
+    f-631427d3657ff6c5f71638b8   temporal_window '220-227'   76 rows
+    f-1c245d41f26ff70c3b0a9247   temporal_window NULL        21 rows
+    NULL                         unattributable               1 row
+
+The digest partition IS the `temporal_window` partition. The five re-run ladder
+rows declared the window and joined the majority frame. So "one window carries
+two frame digests" was never two harnesses; it was 21 rows that never declared
+which window they were in. The seal is over six fields
+(`evaluation_set_id`, `pivot_snapshot_id`, `information_accretion_set_id`,
+`temporal_window`, `max_terms`, `max_distance`), and a NULL in one of them
+makes a different address.
+
+The one unattributable row is `c5baecef`: its evaluation set or accretion set
+is missing, so it can be described and never reproduced.
+
+**And the "9 seals against 480 stratifications" is not a coverage gap.**
+`SealEvaluationFramesPayload` has no row selector — only `dry_run` and
+`max_examples` — and the operation loops over a table-wide select. One job
+seals the whole table, and `dry_run` defaults to true so a provenance rewrite
+has to be asked twice. Nine successful jobs are nine full sweeps over ~93 rows.
+`stratify_evaluation` takes a prediction set and a result and an axis list, so
+it is one job per result per crossing, hence 480. The two counts are not
+comparable and neither is evidence about the other.
+
+### The interval
+
+`compare_paired_panels`, 2000 resamples, BCa, seed 0, ia-weighted,
+`effect_of_interest` 0.02, against the deepest arm as baseline.
+
+    k=2 vs k=30                          k=10 vs k=30
+    panel    delta  [ci_low, ci_high]    delta  [ci_low, ci_high]    mde(10v30)
+    NK:MFO  +0.1234 [0.1037, 0.1442]   +0.0440 [0.0337, 0.0558]      0.0164
+    NK:BPO  +0.0692 [0.0581, 0.0805]   +0.0269 [0.0202, 0.0343]      0.0104
+    NK:CCO  +0.0767 [0.0603, 0.0929]   +0.0344 [0.0255, 0.0446]      0.0142
+    LK:MFO  +0.0931 [0.0732, 0.1149]   +0.0395 [0.0293, 0.0553]      0.0194
+    LK:BPO  +0.0712 [0.0585, 0.0840]   +0.0318 [0.0247, 0.0403]      0.0116
+    LK:CCO  +0.0866 [0.0662, 0.1068]   +0.0319 [0.0200, 0.0426]      0.0161
+    PK:CCO  +0.0582 [0.0507, 0.0675]   +0.0230 [0.0190, 0.0276]      0.0063
+    PK:MFO  not_computed                not_computed
+    PK:BPO  not_computed                not_computed
+
+    resolved 7, refused 0, null_unread 0, underpowered 0, null_with_power 0
+
+Every panel that computed says the shallower arm is greater, and the ordering
+is monotone: the gap at k=2 is roughly twice the gap at k=10 on every panel.
+The two PK panels were not computed because the artefact is absent for them on
+one side, which is the same 22-of-93 readability limit the artifact audit
+found, and the operation reports it as `absent` and never as a null.
+
+**This is the campaign's first result that could have come out otherwise.** It
+is also the first thing the retriever node could be `measured` on, once a floor
+for it exists as an `experiment_run` row.
+
+Two cautions travel with it. The comparison re-selects the operating point on
+every resample (`tau_a` 0.57 against `tau_b` 0.59 on PK:CCO, with 26.85 percent
+of proteins switching operating point between the two arms), which is exactly
+the selection D2 voted to remove; under a fixed declared tau these numbers will
+move. And the baseline is one arm of one prediction set, so this measures depth
+within `9995651a` and not depth in general.
+
+### Instrumentation owed, and it is the laptop's half
+
+1. `operating_point` must become a declared field on `experiment_run` rather
+   than a constant in `compare_paired_panels`, with re-selection as one
+   declarable option. Until then D2's decision cannot be expressed.
+2. `audit_evaluation_frames` must stop subtracting `with_frame` from
+   `recomputable`. The honest quantity is a single query over rows that both
+   lack a frame and have reachable parents — and it should not be called
+   "re-framable by recomputing", because a recompute only supplies a frame if
+   the payload declares one.
+3. `seal_evaluation_frames.description` says it stamps `evaluation_result.frame`
+   with a content digest. It stamps `frame_digest`, and a digest would violate
+   `frame`'s own CHECK. The docstring 130 lines above says so correctly.
+4. `frame_digest` has zero references in `protea/infrastructure/`. It is
+   reachable only through raw SQL in two files, which is how two operations came
+   to disagree about which column the seal lives in.
+
+---
+
+## 10. The first interval was withdrawn as a depth measurement
+
+Sobremesa challenged section 9 on the ground that `rungs.yaml` already warned
+this axis can produce "an arithmetic property rather than a finding", and asked
+two questions the database answers.
+
+**Question 1: does the ladder's scorer aggregate across neighbours?** Yes.
+`scoring_config` `e6beac15` ("composite", linear) carries
+`neighbor_vote_fraction: 0.2` alongside `embedding_similarity: 0.4`,
+`identity_nw: 0.2`, `identity_sw: 0.1`, `taxonomic_proximity: 0.1`. So it is
+branch B, not the zero-weight branch.
+
+**Question 2: is the ladder among the 78 with a broken vote fraction?** Yes,
+and barely. On `9995651a`: max 1.9333, **805 rows out of 2,441,584 above 1.0 —
+0.033 percent**. For scale, `8a75f84e` reaches 4.9 with 52,398 rows out of
+range and `d5b634b2` reaches 4.6 with 52,229. Three orders of magnitude apart.
+805 contaminated rows in 2.4 million cannot produce deltas of +0.12.
+
+**But the challenge holds anyway, for a stronger reason than the one raised.**
+
+    _leaf_record_builder.py:435   "neighbor_vote_fraction": vote_count / runner.k_limit
+    _base_frame_recount.py:84-87  max_sequence_rank -> DepthCut
+    scoring.py:270                reads the STORED neighbor_vote_fraction
+
+The vote fraction is computed **at prediction time**, over the full retrieval,
+divided by the retrieval's own `k_limit`, and stored on the row.
+`max_sequence_rank` is applied at evaluation time as a `DepthCut` — a filter,
+not a rescoring. **So a candidate's score is identical at every cut**, and every
+arm of the ladder carries scores that encode a thirty-neighbour neighbourhood.
+
+The five arms are therefore not five retrieval depths. They are one K=30
+retrieval, scored once, truncated at five points. Truncating earlier keeps only
+the top-ranked candidates, which raises precision at a fixed threshold. That is
+the arithmetic property `rungs.yaml` named, and the monotone factor-of-two
+pattern fits it exactly as well as it fits a depth effect.
+
+**The interval in section 9 is correctly computed and is withdrawn as a
+measurement of the retriever axis.** What it measures is the evaluation-time
+truncation of a fixed, fixed-scored candidate list. It is relabelled, not
+deleted: it is still the campaign's first paired interval, and the machinery it
+exercised — declared frame, seal, BCa intervals, a declared effect of interest,
+7 of 9 panels resolved with absences reported as absences — all worked.
+
+Sobremesa's proposed discriminator, matched candidate volume, does not apply
+here, because volume is the ONLY thing that differs between these arms. The
+real discriminator is two prediction sets built at different `limit_per_entry`,
+which is a different retrieval rather than a different cut. Those exist at 10
+and 30 and are confounded with `exclude_self_neighbour` and with donor policy
+(section 1). **The retriever axis remains unmeasurable in this record.**
+
+### The instrumentation this exposes, and it is the laptop's
+
+The graph's panel `depth` field coalesces three different quantities into one
+axis label:
+
+    COALESCE(er.max_sequence_rank || 'seq', er.max_k_position, ps.limit_per_entry)
+
+A retrieval depth, a per-protein rank cut and a per-sequence rank cut are not
+three levels of one axis; two of them are reporting cuts over a fixed
+retrieval and only the third changes what was retrieved. Rendering them under
+one name is the same defect as naming a level by fewer fields than it varies
+in, and it is what let a truncation ladder read as a depth ladder.
+
+Added to the laptop's instrumentation queue, now five items:
+
+1. `operating_point` as a declared field on `experiment_run`.
+2. `audit_evaluation_frames` must stop subtracting across two populations.
+3. `seal_evaluation_frames.description` names the wrong column.
+4. `frame_digest` is invisible to the ORM.
+5. The `depth` field must name which of the three quantities it carries, and a
+   comparison must refuse to cross them.
+
+---
+
+## 11. The population correction is itself a threshold count
+
+`ABLATION-ARCHITECTURE.md` re-derives the campaign's unit count as 5,674
+protein-aspect units against the 11,800-13,054 every earlier design assumed,
+and derives 0.913 aspects per protein from it. Sobremesa reproduced the
+arithmetic digit by digit from
+`plans/farm-platform/artefacts/knn_226_227_fmicrow.csv` and passed it on as a
+correction to every power calculation in the project.
+
+**The arithmetic reproduces here exactly, and the quantity is not a
+population.**
+
+    216 rows = 72 arms (8 plm x 3 k x 3 regime) x 3 aspects, 9 cells
+
+Within every cell, `n_proteins` takes exactly three distinct values, one per K:
+
+    cell      min    max   ratio   values
+    nk-bpo     84    354    4.21   [84, 145, 354]
+    nk-cco     37    161    4.35   [37, 60, 161]
+    nk-mfo     71    243    3.42   [71, 99, 243]
+    lk-bpo     77    307    3.99   [77, 124, 307]
+    lk-cco     45    181    4.02   [45, 69, 181]
+    lk-mfo     42    180    4.29   [42, 90, 180]
+    pk-bpo    621   2382    3.84   [621, 942, 2382]
+    pk-cco    239    809    3.38   [239, 308, 809]
+    pk-mfo    256   1057    4.13   [256, 401, 1057]
+
+    sum of the minima  1,472        sum of the maxima  5,674
+
+`n_proteins` is the count of proteins holding a prediction at that arm's
+threshold, and it grows with K. The 5,674 is the sum of the K=10 column. Pick
+K=3 and the same file yields 1,472. Neither is a cohort: a cohort does not
+change when you retrieve more neighbours.
+
+So `5,674 / 0.913 = 6,215` is a ratio between one arm's coverage and a cohort
+size, and "0.913 aspects per protein" is not an aspects-per-protein figure.
+The correction to previous designs is not established by this file, because
+this file cannot settle a cohort size at all.
+
+**The failure mode is the one the norm's rule 3 names.** The sum was collided
+and reproduced exactly; the population it was computed over was not. A correct
+arithmetic over the wrong quantity reproduces perfectly every time.
+
+This is the fourth appearance of a defect already recorded: `n_proteins` is a
+threshold count, not a cohort size, so a quantity derived from it has no
+reading as a population.
+
+### The laptop's interval is unaffected, and here is the collision that shows it
+
+`effect_of_interest = 0.02` is a declared threshold and was never derived from
+an assumed n. The minimum detectable effects reported per panel come from the
+paired population the operation actually measured. Those pairings agree exactly
+with the graph's panel `units`, by two independent routes — a BCa pairing over
+the per-protein parquets, and the graph's reconstruction from intersecting the
+intervals of stored rounded metrics:
+
+    panel    n_paired   graph units
+    NK:MFO      1129       1129
+    NK:BPO      1509       1509
+    NK:CCO      1116       1116
+    LK:MFO       943        943
+    LK:BPO      1214       1214
+    LK:CCO       821        821
+    PK:CCO      3201       3201
+    PK:MFO / PK:BPO  0     (artefact absent, not computed)
+
+Seven of seven agree to the unit. These are cohorts, measured, not assumed.
+
+**But the correction lands somewhere real: the competitive window.** Whatever
+its exact cohort, the v226->v227 window is small, and its smallest cells are
+very small — the K=10 coverage of NK:CCO is 161 proteins and of LK:MFO is 180.
+`reportable_strata`'s floor is 30 by default, and `stratify_evaluation`'s
+`min_population` likewise. A seven-axis crossing over a cell of 161 will
+withhold nearly everything. **The competitive window has to be sized before it
+is designed on**, and that sizing is a `generate_evaluation_set` job, not an
+inference from an arm's coverage column.
+
+## 12. The plan store cannot be dated by mtime, and the meta-documents are older than the wipe
+
+Verified here, and it is worse than reported. **17** files at the top level of
+`plans/` share the mtime `2026-07-28 13:41:37` to the second — the moment a
+snapshot was unpacked, not an edit. `git log` gives the real dates:
+
+    CATALOG.md        2026-06-22      ROADMAP-NEXT.md   2026-06-22
+    CONCEPT-MAP.md    2026-06-22      THESIS-FINISH.md  2026-06-16
+
+So the meta-documents are not merely pre-wipe. They are **roughly ten weeks
+older than the wipe**, and they describe a research state whose receipts were
+deleted on 2026-08-27. Anything they assert about measured results is prior
+work and does not bind this window, which is D1 applied to the documents rather
+than to the nodes.
+
+Sobremesa committed two unversioned documents (`ABLATION-ARCHITECTURE.md` and
+`LEARNED-REPRESENTATION-ABLATION.md`, 89 KB) in agent-farm #273. They were on a
+machine whose own CLAUDE.md says it holds no state and reboots without warning,
+and a `git clean` would have taken both. Committing them unedited was right;
+their content is pre-wipe and is preserved as reasoning, not as evidence.
+
+---
+
+## 13. The stratum space, measured on this window instead of argued
+
+Sobremesa put a checkable inconsistency on the table — `strata.py`'s docstring
+says the five protein-level axes admit 1,920 combinations, its own enums
+multiply to 1,800 — and derived from the pre-wipe "77 populated" that six of
+seven cells cannot report a five-axis crossing at the default floor.
+
+**The space: neither number. `all_strata()` produces 1,080.**
+
+    LengthBand 4, HomologyBand 5, DonorEvidence 3, TaxonomyBand 6,
+    PropagationBand 5      free product 1,800
+    all_strata()                              9,720 total
+    distinct protein-level combinations       1,080
+    9 category-aspect x 1,080                 9,720   (consistent)
+
+The free product overcounts because `all_strata()` couples the two: when
+homology is NONE the only admissible evidence is NONE, and otherwise it is
+EXPERIMENTAL or OTHER — never three. So homology x evidence is 1 + 4x2 = 9,
+not 15, and 4 x 9 x 6 x 5 = 1,080. **The docstring's 1,920 contradicts the
+docstring's own 9,720**, since 9,720 / 9 = 1,080. Sixth instrumentation item.
+
+**The populated count: measured here, not inherited.** `stratify_evaluation`
+dispatched on this window over the sealed ladder, floor 30.
+
+Five protein-level axes only (result `3b1ab7be`, k=20):
+
+    cat   populated   reportable   withheld   rows
+    LK        139          25         114     2,978
+    NK        136          34         102     3,754
+    PK        170          55         115    12,303
+    TOT       445         114         331
+
+All seven axes (result `0cb03569`, k=10):
+
+    cat   populated   reportable   withheld   rows
+    NK        340          33         307     3,754
+    LK        318          29         289     2,978
+    PK        416          79         337    12,303
+    TOT     1,074         141         933
+
+`rows_placed` equalled `rows_read` in all six runs, so nothing was dropped for
+a missing length, aspect or neighbourhood.
+
+**So the pre-wipe 77 is not this window's number.** Per category the five axes
+populate 136 to 170 cells, roughly double it. It was measured on prot_t5 at
+K=30, over an enumeration whose denominator the docstring gets wrong, and it
+should not be carried.
+
+**And the derivation that rested on it crosses two populations.** The claim
+compared 77 strata against per-PANEL cohorts (NK:CCO = 1,116). But
+stratification runs per CATEGORY over all three aspects at once: NK's
+`rows_read` is 3,754, which is exactly 1,509 + 1,129 + 1,116, its three panels
+summed. A per-panel cohort against a per-category strata count is the same
+mixing of populations as section 11, this time erring toward pessimism.
+
+**The seven-axis crossing is satisfiable, and it just ran.** What it does not
+do is report most of what it finds: 141 reportable of 1,074 populated, 87
+percent withheld. That is `reportable_strata` working as designed — "withheld
+cells are WRITTEN and flagged, never dropped: a table that prints only what
+survived looks identical to a table that covered everything."
+
+So the campaign standard CAN ask for the seven-axis crossing. Sobremesa's
+recommendation — declare two axes crossed and the rest marginal — remains a
+good choice about how much of the population stays visible, and it is a choice
+rather than a necessity. What the standard must not do is print the 141 without
+the 933 beside them.
+
+**One caution that does survive intact, and it is theirs.** These counts are on
+220->227, whose per-category populations are 2,978 to 12,303. The competitive
+v226->v227 window is far smaller. It has to be sized before anything is
+designed on it, and at the observed 25 percent reportable rate a category
+holding a few hundred proteins will clear very few cells. That sizing is a
+`generate_evaluation_set` job.
+
+---
+
+## 14. The competitive window is 227->230, and the laptop had it wrong
+
+The author corrected it and the record agrees, in three independent places.
+
+`plans/ROADMAP-THESIS-10.md` states the design throughout: **SELECT 220->227**
+(`window_role='valid'`), **FINAL 227->230** "sealed and untouched", "touched
+once", "externally validated on LAFA", under a "select-on-220->227 /
+touch-227->230-once gate".
+
+`plans/temporal-eval-alignment/PLAN.md` measured the horizons on 2026-06-26:
+
+    TEST 227->230  ~6 months     "TEST IS SOUND", "the champion frame is valid"
+    VALID 220->227 ~17 months    "the biased ~15-month frame, to demote", ~3x too wide
+    226->227       ~4 months     "close but short; only 215 new proteins vs the test's 325"
+
+and names the fix: a horizon-matched validation is ~6 months ending at 227,
+which is **225->227**, and "GAF 225 must be ingested (gap)". The bias it
+identifies is in MODEL SELECTION — thresholds and hyperparameters tuned on a
+wrong-horizon task — and not leakage.
+
+The floor census manifest (section 15) settles it from the artefact side:
+
+    window_release_pairs: 956ab4b3 220->230 | 8763acda 226->227
+                          c5c89dde 227->230 | 604c80d5 220->227
+
+**So `split_registry.COMPARABLE_WINDOW = v226->v227` is wrong**, and every
+statement this file made about "the competitive window" in sections 3, 11, 12
+and 13 named the wrong one. 226->227 is a short sub-window that 702 pre-wipe
+results happened to sit on, not the board's frame. Seventh instrumentation
+item, and the most consequential: the registry and the roadmap are two
+declarations that diverged, which is D3's argument arriving as a fact.
+
+Correction to section 3: the competitive window is **227->230**, both its
+corpora are loaded, and it has never been built here. The horizon-matched
+selection window is **225->227** and needs GAF 225, which is the single most
+valuable of the five uningested releases rather than one of five equals.
+
+### What the re-ranker actually trained on
+
+    bench-v1-K5-v226-lineage   13 train pairs v160->v226, eval v226->v230
+                               24.35M train rows, schema_sha 6d97a624b8a7
+                               9 v226full_lineage_<cell> RerankerModel rows
+                               cafaeval Fmax NK+LK selective avg 0.6215 +/- 0.0014
+    SDR                        "Leakage-clean: t0/v227 train/reference, 227-230 eval"
+
+**Thirteen window pairs spanning v160 to v226.** The longitudinal axis the
+author described is real and was once populated to that depth. This platform
+holds four annotation sets. So the re-ranker's training axis is not "load 221
+to 225": it is an order of magnitude more corpora than that, and the campaign
+has to decide how much of that depth it actually needs rather than inheriting
+the number.
+
+## 15. The floor census exists, it verifies, and it contains no noise floor
+
+Sobremesa found that D-09 — the decision that deleted the campaign's stored
+results — is **not in `DECISION-LOG.md` on main**. It lives on the unmerged
+branch `plan/decision-wipe-the-campaign-results`. A reader of the canonical
+store learns that the last thing that happened was 2026-07-28 and treats every
+pre-wipe number as live. Reported by sobremesa; the merge state is theirs to
+verify, the artefact below is verified here.
+
+D-09 recorded that three findings were materialised before anything was
+deleted, and the deletion was conditioned on reading them back and checking
+them against their manifest. **All three are present in this laptop's object
+store** under `floor_census/2026-08-26/`, and the check reproduces today:
+
+    bytes    431,446  = manifest      sha256  20f5ec36...b064e7  = manifest
+    rows      11,664  = manifest      results      1,296        = manifest
+    complete   8,100  = manifest
+
+11,664 = 1,296 results x 9 panels exactly: every result on every panel, not a
+sample. Fifty columns, thirteen conditioning fields, the metric beside them.
+
+**The wipe's own account of why**, from the manifest's `window_stamp`:
+
+> 594 of 1,296 results, 45.8 per cent, were evaluated on 220->230, which is the
+> UNION of the experimental window 220->227 and the competitive window
+> 227->230. Any decision taken on those rows is informed by the holdout. The
+> remaining 702 sit on 226->227, a sub-window of the experimental one, and are
+> clean in that respect. **NO result exists on either 220->227 or 227->230.**
+
+So the blind reserve had already been read when depth, preset and
+representation were chosen. D-09's binding line — no figure from those rows may
+seed a prior over the competitive cohort — applies to both machines, and both
+have already violated it once today: sobremesa opened its structure slice on
+rung 2's closure, and the laptop read a k=2 versus k=30 result as replicating a
+known finding.
+
+### It is not a noise floor, and here is why
+
+Of the 8,100 completely-conditioned rows there are **8,091 distinct
+conditioning groups**. Only 9 groups hold two rows, and in all 9 the range is
+**exactly 0.000000**. Consistent with a deterministic evaluator and metrics
+quantised to 1e-4, and it means the census carries no run-to-run variance.
+
+What it does carry is the material for paired contrasts. Pairs within one panel
+differing in exactly one conditioning field:
+
+    scoring_config_id      n=26,640   sigma_paired 0.0609   |median| 0.0156
+    max_terms              n=   639   sigma_paired 0.0231   |median| 0.0147
+    max_distance           n=   198   sigma_paired 0.0067   |median| 0.0025
+    protein_subset_label   n=    81   sigma_paired 0.0467   |median| 0.0221
+    ia_set_id              n=    45   sigma_paired 0.0128   |median| 0.0067
+    leakage_role           n=     9   sigma_paired 0.0000   |median| 0.0000
+
+**`embedding_config_id` and `k` yield zero single-field pairs.** Neither ever
+varied alone in 1,296 results: representation and depth never had a clean
+single-field contrast before the wipe either. The defect this campaign exists
+to fix is older than the campaign.
+
+And none of these reproduce the declared floors (`reporting` 0.081 at n=129,
+`routing` 0.13 at n=332), so those came from a different construction or a
+different file, and remain unattributed. Eighth instrumentation item: a floor
+the graph publishes should name the artefact and the pairing rule that produced
+it.
+
+**The line this file draws, for sobremesa to attack.** These sigmas are
+computed on rows whose window includes the holdout, so they may not seed a
+prior about the competitive cohort. A sigma is a statement about the
+measurement machinery rather than about the cohort, which is the argument for
+using it as a floor — but it is an argument, not a licence, and the campaign
+should re-derive its floors on its own window rather than inherit these.
+
+---
+
+## 16. The authoritative spec already exists, and it supersedes both of us
+
+`plans/E2E-CANONICAL-RUN.md`, authored by Francisco Miguel Perez Canales and
+fixed 2026-07-27, is "the authoritative specification for ONE clean end-to-end
+run". Neither machine had read it. It answers, in the author's own words, what
+this file spent a day deriving:
+
+> No prior result is preserved as a number; results are regenerated.
+> Trajectories -- the decisions, mechanisms, and their measured place -- are
+> what survives.
+
+### The temporal frame, section 3, FIXED BY THE AUTHOR
+
+> **TUNE window: 226 -> 227.** Every parameter, threshold and design decision is
+> selected here. Nothing after 227 informs a choice.
+> **COMPETE window: 227 -> forward, OPEN-ENDED.** The frozen system is scored on
+> everything that accrued after 227. **This supersedes the fixed 227 -> 230
+> test**: the test set GROWS as releases publish.
+> This supersedes both the June roadmaps (SELECT 220 -> 227) and the July
+> working assumption (VALID 225 -> 227).
+
+Every window this file argued about was superseded five weeks before the
+argument started:
+
+    226 -> 227   the TUNE window, not "the comparable window"   (section 3, wrong)
+    220 -> 227   superseded June roadmap                        (section 14, wrong)
+    227 -> 230   superseded by an open-ended series             (section 14, wrong)
+    225 -> 227   superseded July working assumption             (section 14, wrong)
+
+`split_registry.COMPARABLE_WINDOW = v226->v227` names the TUNE window as the
+comparable one, inverting the two roles. Ninth instrumentation item and the most
+serious: the registry that raises `SplitLeakError` to protect the holdout has
+the holdout and the selection set the wrong way round.
+
+**The corpus is not what either machine assumed.** Nine releases exist through
+v234, verified upstream by the author on 2026-07-27. The COMPETE series needs
+227 through 234; this platform holds **227 and 230**, so six are missing.
+**220 and 221-225 are not needed at all** — the "ingest 221 to 225" conclusion
+of sections 3 and 14, and the argument that 225 is the one that matters, are
+both void.
+
+The two contractions are located: **226 -> 227 is -30.9 per cent and it is the
+TUNE window**, and **231 -> 232 is -29.6 per cent, inside COMPETE**. The author
+took the tune-on-a-contraction decision knowingly.
+
+The series carries three binding conditions:
+
+1. ADDED and REMOVED decomposed per release and reported beside the metric, so a
+   dip at a contraction is separable from a prediction error. This is the
+   outstanding Q2, and it is a precondition rather than an extra.
+2. One point designated THE comparable number, the board's own window; every
+   other point is characterisation and must be labelled so.
+3. The series is a property of the FROZEN champion and may inform nothing.
+
+### The stratification is already fixed, section 4
+
+> category (NK/LK/PK) x aspect (MFO/CCO/BPO) x sequence length (buckets) x
+> homology band to the reference, split by evidence provenance. The 9 board
+> cells = category x aspect. Length and homology are the EXPLANATORY axes inside
+> each cell; the homology-x-evidence axis gives a coordinate to the
+> prior-knowledge wall.
+
+**Four axes, not seven**, and `stratify_evaluation`'s default is
+`["category", "aspect", "length", "homology"]` — already exactly this. The
+question of which axes to cross was answered before it was asked. Section 13's
+measurement stands; its framing as an open choice was wrong.
+
+### The ablations and the economy, section 5
+
+PLM (the 8-PLM matched grid at retrieval level), K, per-signal marginal
+contribution LOFO-style, and SOA against TransFew / DeepGO-SE, ranked at the
+retrieval gate first and taken to the board only for the champion. Plus the
+author's economy decision: **run the PLM x K x score grid on a representative
+stratified SUBSAMPLE, gate at retrieval, confirm the champion on the full set.
+Do not run the full factorial everywhere. Log every truncation, no silent caps.**
+
+### One staleness inside the spec
+
+Section 9 still lists "confirm VALID 225->227 / TEST 227->230" as an open
+decision, which section 3 of the same document supersedes. The open-decisions
+list was not updated when the frame was fixed.
+
+### What this changes about the plan
+
+The design phase does not need to invent a campaign. It needs to (a) execute the
+supersession the spec ordered and nobody performed — done in agent-farm #274 —
+(b) reconcile the code registries to the spec, `split_registry` first since it
+has the roles inverted, and (c) build the instruments the spec requires and that
+do not exist: the per-release ADDED/REMOVED decomposition, the
+signal-to-mechanism registry, and a landing place for paired intervals.
+
+---
+
+## 17. The TUNE window is smaller than the window it competes on
+
+The author asked whether 226->227 is too small to tune on. Measured from the
+annotation sets by the first-appearance rule, experimental evidence only.
+
+**A trap found on the way, and it must be written down.** `go_term_id` is
+snapshot-scoped: `go_term` holds 432,070 rows over 48,251 distinct `go_id`
+across 9 snapshots. A first-appearance diff computed on `go_term_id` therefore
+matches nothing across annotation sets and returns the ENTIRE later set as
+"new". The first run of this measurement did exactly that and reported 551,192
+new annotations for both 226->227 and 220->227 — identical, which is what
+exposed it. **Any window delta must join to `go_term` and compare `go_id`.**
+Tenth instrumentation item, and a silent one: the wrong answer looks like a
+large, plausible delta.
+
+### The three windows, first-appearance experimental
+
+    window            CCO anot/prot   MFO anot/prot   BPO anot/prot   total anot
+    TUNE 226->227      1,902 / 1,360   1,887 / 1,500   5,098 / 3,080      8,887
+    COMPETE 227->230   2,755 / 2,191   2,006 / 1,661   6,528 / 4,431     11,289
+    (June) 220->227    9,840 / 6,559   7,816 / 5,989  17,517 / 9,860     35,173
+
+**The TUNE window is smaller than the first stretch of the COMPETE window**, in
+every aspect, and it is a quarter of the superseded June window. Tuning on less
+material than the competition is scored on inverts the usual ratio.
+
+### The nine board cells of the TUNE window
+
+              CCO     MFO     BPO
+      NK      168     252     356
+      LK      184     187     317
+      PK    1,008   1,061   2,407      total 5,940 protein-aspect units
+
+**Six of the nine cells hold fewer than 360 proteins**, and the smallest,
+NK-CCO, holds 168.
+
+The spec fixes length x homology-split-by-evidence as the explanatory axes
+inside each cell. Length has 4 levels and homology x evidence has 9, so 36
+strata per cell. Against a floor of 30, a cell of 168 can populate at most 5
+strata even under a perfectly uniform split, and the split is not uniform. Six
+cells cap out below 12. **This is the author's concern, quantified: the frame is
+not too small to score, it is too small to stratify at the depth the same spec
+requires.**
+
+### A collision that lands, for a claim that did not
+
+These cohorts agree closely with the K=10 column of
+`knn_226_227_fmicrow.csv` — NK-BPO 356 against 354, NK-CCO 168 against 161,
+LK-BPO 317 against 307, PK-BPO 2,407 against 2,382 — seven of nine within about
+two per cent, computed by a completely independent route. So sobremesa's 5,674
+was empirically close to the cohort. Section 11's refutation of the derivation
+stands unchanged: a column that moves by a factor of four with K cannot
+establish a cohort, and being accidentally close is not the same as being
+established. Both things are true and both belong in the record.
+
+### What follows, and it revives something section 16 declared void
+
+The leak constraint the spec states is "nothing after 227 informs a choice".
+**It is not "only 226->227".** Every window that ends at or before 227 is
+leak-free with respect to an open-ended COMPETE series starting at 227.
+
+So the pre-227 releases come back, in a different role. They are void for the
+COMPETE series, which needs 228 through 234. They are the only way to widen the
+TUNE material without touching the holdout.
+
+Three options, with a recommendation:
+
+1. **Keep 226->227 as the primary tune window** — it is adjacent to the mark and
+   therefore most representative of the regime the frozen champion will meet —
+   **and declare a tune SET of several pre-227 windows beside it**, requiring a
+   design decision to hold across them rather than on one. This is the author's
+   own suggestion of using different sets over different intervals, and it costs
+   the ingestion of pre-227 releases and nothing else.
+2. Widen backwards to a single larger window. Both candidates were already
+   rejected by the author: 220->227 as biased and three times too wide, 225->227
+   as a superseded working assumption.
+3. Accept 226->227 alone and reduce the stratification depth inside the cells,
+   which contradicts section 4 of the spec.
+
+Recommendation: option 1. It preserves the fixed frame, satisfies the leak rule
+exactly as written, and turns the tune set into a robustness statement — a
+decision that survives several pre-227 regimes is better evidence than one
+selected on a single transition, and **226->227 is the -30.9 per cent
+contraction**, so a decision tuned only there is tuned on an anomaly.
+
+---
+
+## 18. Where the strata are actually thin, and a mechanism that fills them
+
+The author's correction: this file had been counting cells and never looking at
+the strata inside them. Read from the `strata.parquet` the platform wrote, over
+220->227, 19,035 protein-aspect units.
+
+**Homology is well balanced. Length is the bottleneck.**
+
+    length      proteins   %      stratum cells   reportable at floor 30
+    <=512        11,577   60.8        170              66
+    512-1024      5,464   28.7        138              33
+    1024-2048     1,647    8.7         85              13
+    >2048           347    1.8         52               2
+
+    NK homology x evidence      exp    other
+    <=30 (twilight)             854      155
+    30-60                       954      210
+    60-90                       765      286
+    >90                         384      146
+
+The twilight band, which is the scientifically interesting one, holds 854
+proteins under experimental evidence in NK alone. It is not the problem.
+`>2048` is: 1.8 per cent of the mass, 52 stratum cells, **2 reportable**.
+`HomologyBand.NONE` never appears at all — every query had a donor.
+
+**And the scarcity is multiplicative.** Length tail (1.8%) crossed with the
+non-experimental donor branch (about 21% of NK) puts the rarest strata near 0.4
+per cent of the mass. Filling one to 30 needs roughly 8,000 protein-aspect units
+IN THAT CATEGORY.
+
+### More data scales the strata. It does not balance them.
+
+Sequence length is a property of the proteome, not of the window. Drawing more
+releases multiplies every stratum by the same factor and leaves `>2048` at 1.8
+per cent for ever. A single window big enough to fill the rarest stratum
+oversamples the commonest by two orders of magnitude, which is waste, not
+balance.
+
+So the mechanism cannot be "use a wider window". The three obvious alternatives
+are all refused by the frame the project already has: resampling to balance is a
+reweighting of the population, which `pooled_mean` exists to forbid; lowering
+the floor for rare strata publishes thin numbers beside thick ones at equal
+visual weight, which is what `reportable_strata` exists to prevent; and dropping
+them silently is the failure its docstring names.
+
+### The mechanism: per-stratum accumulation to a declared floor
+
+Declare the strata and a floor. Walk the release history backwards from the
+mark — (226,227), (225,226), (224,225), ... For each window compute the
+first-appearance delta and place every protein-aspect on its stratum, resolving
+the homology band against **that window's own t0**. **A stratum stops drawing
+once it reaches its floor.** Record, as a field of the stratum, the window depth
+it needed and the releases it drew from. Stop when every stratum is filled or
+the history is exhausted.
+
+Three properties make it sound, and all three are already true of this project
+rather than assumed for the occasion:
+
+1. **First appearance partitions.** Each (protein, GO term) belongs to exactly
+   one window in the whole history, so accumulating windows is a partition and
+   never a resample. Nothing is double counted and nothing is reweighted.
+2. **Pooling across strata is already refused.** A stratum drawn from a deeper
+   history than its neighbour breaks only an operation the frame does not allow.
+   The heterogeneity is free precisely because the thing it would corrupt is
+   already forbidden.
+3. **Leak-free by construction**, since every window ends at or before the mark.
+
+What it produces that a window cannot: a stratum that cannot be filled is
+reported as **supply-limited with its maximum attainable n**, rather than thin,
+absent, or silently withheld. And the ingestion plan stops being a guess — the
+mechanism answers "these N releases, because stratum X needed depth N" instead
+of "load 221 to 225 and hope".
+
+**The cost, declared rather than hidden: depth is a confound.** A stratum drawn
+from eight releases spans a different biocuration regime than one drawn from
+one, and the two contractions sit inside that history. So `window_depth` is a
+field of the stratum, it is printed beside the number, and a comparison refuses
+to cross strata whose depths differ beyond a declared tolerance. Same shape as
+the frame digest: comparable if and only if the conditioning matches.
+
+### What it needs built
+
+1. An operation that performs the accumulation and emits a manifest: per
+   stratum, n, window depth, source releases, and the supply-limited list.
+   `generate_evaluation_set` is the natural host.
+2. `window_depth` and `source_releases` as fields on the stratum cell, which
+   needs the strata table of D4 to exist first.
+3. **The coverage-and-depth grid, which is the monitoring surface the author has
+   been asking for.** Strata down one axis, population against floor as one
+   channel, window depth as a second. It shows at a glance where the campaign is
+   thin and how far back it had to reach to stop being thin — and a
+   supply-limited stratum is visible as a cell that stayed short at maximum
+   depth, which is a finding rather than a gap.
+
+---
+
+## 19. The TUNE frame exists
+
+Built 2026-09-02 by `generate_evaluation_set`, the first artefact of the clean
+campaign on the frame the author fixed.
+
+    evaluation_set   f80b240a-34de-4d10-99a2-40e907ee873c
+    window           226 -> 227,  window_role 'valid'
+    pivot ontology   releases/2025-03-16  (36038118-...)
+
+    delta_proteins    6,216        NK   523   LK   622   PK 5,331
+    annotations      50,858        NK 9,860   LK 8,811   PK 32,187
+    removed_proteins 13,059
+    removed_annots   75,421
+    known_terms       3,652,485
+
+**The pivot was derived, not chosen**, and the derivation is recorded because
+getting it wrong produces the phantom gap the payload's own docstring warns
+about — a t0 propagated under a churned graph marks pre-window experimental
+annotations as new knowledge. Three supports agreed: `band_registry` binds band
+v226 to `releases/2025-03-16` with `t0_cutoff` 2025-05-03, which is GOA 226's
+publication date; `temporal-eval-alignment/PLAN.md` line 93 states it verbatim
+for this exact window, "VALID 226->227: donor = GOA 226 under OBO 2025-03-16";
+and the exclusion basis is what the protein knew at the window's START, so it is
+read under the start's ontology. The existing 220->227 set pivots on
+`releases/2025-07-22` instead, which is the END's band, and 220 has no band at
+all — consistent with its description elsewhere as the frame to demote.
+
+### Two collisions this number closes
+
+**`strata.py` was talking about this set all along.** Its `all_strata` docstring
+says "the evaluation set holds 6,216 proteins". The 220->227 set holds 14,032.
+The set just built holds **6,216**. So the module's own population figure was
+already the TUNE window's, written before the window existed as a row.
+
+**And it explains sobremesa's 0.913.** Section 11 refuted "5,674 protein-aspect
+units at 0.913 aspects per protein" on the ground that 5,674 is a K=10 coverage
+column that moves by a factor of four with K. The refutation stands, and the
+mechanism is now visible: 5,674 / 0.913 = 6,214.7, and the cohort is 6,216. The
+0.913 was not measured, it was **the ratio that makes a coverage column come out
+at a cohort size somebody already knew**. A quantity derived to reproduce a
+known answer reproduces it, which is why reproducing it proved nothing.
+
+### What the frame costs, in its own numbers
+
+**13,059 proteins and 75,421 annotations were REMOVED, against 6,216 and 50,858
+gained.** More than twice as many proteins leave the corpus as enter it. That is
+the -30.9 per cent contraction, and it is inside the window every parameter and
+threshold will be selected on. The author fixed it knowingly and section 17
+already records the exposure; this is the first time it is stated in the tune
+frame's own counts rather than in file sizes.
+
+It also makes the exclusion rule load-bearing rather than incidental. Withheld
+terms are the protein's full set at the window's START, "including terms the
+corpus has since withdrawn", and 75,421 annotations were withdrawn across this
+window. Intersecting with what still counts at the end would penalise the method
+for predicting something true at the start that the corpus later removed. On this
+window that is not a corner case; it is the dominant event.
+
+### What is now possible that was not
+
+Nothing has ever been scored on this frame — all 98 surviving results are on
+220->227, confirmed by joining every one to its evaluation set. So the campaign's
+next arms are the first numbers that exist on the fixed window. In particular the
+retrieval-depth axis, which section 10 established cannot be measured from
+evaluation-time cuts, becomes measurable: distinct `limit_per_entry` values are
+distinct retrievals, and they can now be run against a frame that is not
+superseded.
+
+---
+
+## 20. The stratum floor was never a power threshold, and the gap is fifty-fold
+
+Sobremesa derived the per-protein paired sigma from the seven BCa intervals of
+section 9, as half-width x sqrt(n) / 1.96, and the derivation reproduces here to
+the digit:
+
+    NK:MFO 0.3471   NK:BPO 0.2220   NK:CCO 0.2778   LK:MFO 0.3267
+    LK:BPO 0.2267   LK:CCO 0.2968   PK:CCO 0.2425      mean 0.2771
+
+This is the only per-protein paired variability measured anywhere in the
+project. From it, at 80 per cent power and 95 per cent confidence:
+
+    n        30      100     347    1,000   1,509   3,201
+    MDE   0.1417   0.0776  0.0417   0.0245  0.0200  0.0137
+
+    detecting the declared 0.02 needs n = 1,506
+
+**At the default stratum floor of 30 the detectable effect is 0.1417, seven
+times the effect the campaign says it cares about.** Crossing one axis makes it
+concrete: over the seven panels by length band, 22 of 28 cells clear the floor
+and **1 of 28 can detect 0.02** — and that one is PK:CCO in the commonest length
+band, the most inert cell in the grid. The floor admits 21 cells that are blind
+to the question they are being asked.
+
+That is not a defect in the value 30. A floor of thirty is a rule against
+printing the mean of three things. **It was never a power threshold, and it must
+stop being read as one.**
+
+### The consequence changes the standard rather than the numbers
+
+**Stratifying here is to EXPLAIN, not to DETECT.** Detection happens at the
+panel, the only population where the declared effect is visible. A stratum
+locates where an effect lives: it is a map, and a map does not need power to be
+true, it needs to be honest about what it does not resolve. Reading a stratum as
+a test is the error, and the standard should make that impossible rather than
+discourage it.
+
+Three of the six rules that follow are instrumentation, and they are the
+laptop's:
+
+1. **Every stratified number carries its detectable effect in the same row.** A
+   cell reporting 0.03 with a detectable effect of 0.08 is saying it does not
+   resolve its own number, and the reader should see that without doing
+   arithmetic.
+2. **A null in a stratum reports "no evidence at this power"**, which is the
+   sixth strength value of D7 applied one level down.
+3. **Depth enters the frame descriptor**, with the guard refusing a table whose
+   rows carry different depths unsealed — the same shape as a comparison already
+   refusing two results that do not declare the same frame.
+
+And one that composes with them: **every declared comparison publishes the
+per-protein paired sigma it observed.** It costs a column, and it means the next
+design is sized from a measurement rather than from this borrowed number.
+
+**The assumption everything above rests on, stated because it does.** That sigma
+came from ONE contrast, and depth is a large-effect contrast. The between-result
+spreads in the floor census (scoring config 0.0609, max_terms 0.0231) are a
+different object — dispersion of a metric across results, not of a paired
+per-protein difference — and the two are not substitutable.
+
+## 21. The first declared experiment, and the first arms on the fixed frame
+
+`experiment_run` held zero rows for the life of this platform, which is the
+mechanical reason no node could reach `measured`: `_Q_FLOORS` reads a floor only
+from a run whose `config` names `graph_node` and `floor`.
+
+It now holds one: **`8cbd5946-2c5b-488e-bb26-684dcf2c3b58`,
+`tune-226-227-retriever-depth`**, declared BEFORE dispatch as D3 requires,
+carrying the node, the varying field, the held fields, the levels, the window,
+the declared effect and the power caveat from section 20.
+
+Its hypothesis records a falsifiable prediction rather than an intention:
+
+> These three arms vary `limit_per_entry`, so each is a distinct retrieval,
+> scored independently. Prediction, recorded before dispatch: if the earlier
+> monotone result was truncation rather than depth, these arms will separate by
+> less than the truncation ladder did.
+
+The chain that made it possible, all built tonight and all on the fixed frame:
+
+    evaluation_set  f80b240a   226->227, window_role valid, pivot 2025-03-16
+    targets         6,216 sequences, 3.75 MB, sha256 38a01ce59bb3
+    query_set       c0c57e1f   tune-226-227-valid, 6,216 entries
+    arms            limit_per_entry 30, 10, 5   (jobs 4c5d17d0, 7a94b4de, 4b293423)
+
+Everything else is held: esm2_650m, GOA 226 as the donor bank, ontology
+releases/2025-03-16, `exclude_self_neighbour` true, cosine, numpy (KNN on CPU by
+standing rule), aspect-separated, ancestors not expanded, evidence-gated donors.
+
+The `floor` field currently carries a placeholder saying it must be reconciled
+with what `_level_name` actually renders once the arms are scored. That is
+honest and it is also a defect: a declaration that cannot name its own baseline
+until after the fact is half a declaration, and the level-naming change of
+PROTEA #925 landed after this run was written. Reconciling it is the first thing
+to do when the arms finish.
+
+---
+
+## 22. Three revisions on one queue, and the guard held
+
+The first arms of the declared run were refused. Two failed instantly with
+`ForeignRevisionError` and the third was cancelled before it could finish a
+short prediction set.
+
+    coordinator, this laptop   b0f164dc   PR #909, 2026-08-30
+    worker, the desktop node   a5de702    the DECLARED revision, correct
+    deploy tree                bfc97f9    three ahead of the declaration
+
+The laptop's worker processes had loaded their code on 30 August and never
+reloaded, so they opened prediction sets stamping `b0f164dc` — which is an
+ancestor of the declared revision, so they were three commits BEHIND, not ahead.
+The desktop node was in-sync at `a5de702` throughout and refused every batch it
+was handed.
+
+**No number was mislabelled and nothing reported success.** That is the exact
+counterpart of the 2026-08-30 incident, where two arms recorded a revision no
+process had ever held. And the commit the guard refused as foreign is
+`b0f164dc`, which is PR #909, *"a process declares what it loaded, not what the
+tree says now"* — the guard was refused by its own author.
+
+### The minimal action was not one step, because of reuse-in-place
+
+Sobremesa's diagnosis was right and its prescription was one step short. It
+proposed restarting the laptop's workers and leaving the tree and the
+declaration alone. But `farm.env` sets `DEPLOY` to the repository itself and the
+worker units set `WorkingDirectory` to it, **so a worker loads whatever the tree
+holds**. Restarting against a tree at `bfc97f9` would have produced a fourth
+revision rather than the declared one.
+
+The reconciliation was therefore two steps: put the tree at `a5de702`, then
+restart. Both done, with nothing in flight.
+
+**And that is the reuse-in-place hazard, demonstrated twice in one night.** The
+tree a worker loads is the tree development happens in, so it cannot be at the
+declared revision and on `develop` at the same time. Tonight it was left on a
+feature branch once and three commits ahead once. Development on this machine
+has to move to clones — which is what the second agent run was already told to
+do — and the deploy tree has to stay pinned at the declaration.
+
+### The guard that would have caught it does not exist
+
+`deploy/systemd/protea-guard-queue.sh` runs as `ExecStartPre` on every worker
+unit, and it checks exactly one thing: that no other worker is already serving
+that queue. It does not compare the tree against
+`plans/DECLARED-REVISION.txt`. A worker can therefore start on any revision the
+tree happens to hold and announce nothing.
+
+The node has this check and the server does not, which is backwards: the node
+holds no state and refuses rather than guesses, while the machine that owns
+every artefact will start a worker on whatever is checked out. Eleventh
+instrumentation item, and the cheapest of the eleven — the declaration is one
+`git show` away and the comparison is a string equality.
+
+### The three void prediction sets are annotated, not deleted
+
+    66c185b7   limit_per_entry 30   171,780 rows   SHORT
+    638048de   limit_per_entry 10             0
+    f8ddd1a6   limit_per_entry  5             0
+
+All three carry zero evaluation results and all three are recorded in the
+`findings` of experiment run `8cbd5946` as sets that must not be scored. They
+are annotated rather than deleted deliberately: section 15 found that the
+remediation of the last poisoned series was a deletion that nothing recorded,
+leaving five jobs reporting SUCCEEDED with no rows and no account. Repeating
+that to tidy up would be repeating the defect. When a retraction path exists,
+these are its first candidates.
