@@ -49,19 +49,35 @@ written: a branch was checked out in the server's deploy tree while a twelve arm
 sweep was live, the workers had loaded their code hours earlier and never
 reloaded, and two arms recorded a revision no process had ever held.
 
+## Every worker of the slot moves, in every environment it uses
+
+Every worker on a node runs out of the same deploy slot, so the units are
+derived rather than listed. They are every `protea-lab-worker@` instance whose
+working directory is the slot, named by the units the user manager has loaded
+and by the drop-in directories this node has configured. The running ones are
+stopped and started together, and the stopped ones stay stopped. Each unit's
+environment is its own `VIRTUAL_ENV`, or `PROTEA_VENV`, and each distinct
+environment is synced: with its pip, or with `uv pip` when it has none. Until
+2026-11-04 the script moved one unit and one environment. The other workers kept
+the code they had imported, under a tree that had moved, and the node's Python
+3.12 environment was synced by hand.
+
 ## It refuses rather than guesses
 
 Every step that changes the node is gated on the check in front of it, and a
 check that cannot run is a refusal. It refuses a sha that is absent from the
 clone, a sha that is not an ancestor of `origin/develop`, a dirty deploy slot,
-and a sha that changes `alembic/versions/` unless the declaration also carries a
-matching `schema-applied` line. It defers while any worker of the queue has a
-job or a batch in flight, reading the first worker's log and every extra's: a
-batch until its log has been silent for 1500 s, a job until it is 6 h old,
-because a job consumer writes nothing between dispatch and finish and a GOA
-release load is silent for close to two hours. If an install fails, leaves a sibling wrong,
-costs torch its CUDA build, or leaves the operation unimportable, **the worker
-stays down**: a silent wrong consumer is worse than no consumer.
+an environment with no installer, and a sha that changes `alembic/versions/`
+unless the declaration also carries a matching `schema-applied` line. It defers
+while any running worker of the slot has a job or a batch in flight, reading the
+first worker's log of each queue and every extra's: a batch until its log has
+been silent for 1500 s, a job until it is 6 h old, because a job consumer
+writes nothing between dispatch and finish and a GOA release load is silent for
+close to two hours. If an install fails or leaves a sibling wrong, if torch
+reads differently in any environment, if the card's environment loses CUDA, or
+if the operation does not import, **the workers stay down**: a silent wrong
+consumer is worse than no consumer. A worker that comes back on another revision,
+read from its own start line, is stopped.
 
 The migration check is a local git diff and never opens the database. Reading
 the applied revision off the live server is exactly the access a compute node
@@ -73,6 +89,7 @@ acknowledgement line is the server asserting the rest.
 ```bash
 bash -n scripts/services/protea-node-sync.sh
 PROTEA_SYNC_DRYRUN=1 ~/.local/lib/protea/protea-node-sync.sh
+PROTEA_DECL_FILE=/tmp/decl.txt ~/.local/lib/protea/protea-node-sync.sh   # rehearse an undeclared move
 systemctl --user list-timers protea-node-sync.timer
 ```
 
