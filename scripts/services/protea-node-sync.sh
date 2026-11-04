@@ -62,9 +62,15 @@ INFLIGHT_GRACE=1500
 # 2026-10-08. So for a job the measure is the age of the job, not the silence of
 # the log, and the bound is three times the longest job measured here.
 INFLIGHT_JOB_STALL=21600
-# How long a started worker has to write its own "Worker started" line. The
-# wrapper may hold it for up to 120 s on an unsynchronised clock, and the
-# taxonomy warm-up takes a few seconds more.
+# How long a started worker has to write its own "Worker started" line.
+# MEASURED on the compute node, 2026-11-04, from the wrapper's "starting" line
+# to the worker's start line: at most 4.9 s over 52 starts of the card's worker,
+# 2.9 s over 9 of predictions.batch, 2.4 s over 3 of training. The taxonomy
+# warm-up that precedes the line on predictions.batch, jobs and training took
+# under a millisecond, because the server's taxa dump is already local. The
+# bound covers what the measurement did not see: the wrapper's clock gate, up to
+# 120 s at boot, and a node without the dump, where the warm-up downloads about
+# 100 MB before the line is written.
 START_LINE_WAIT=240
 
 say() { echo "$(date -Is) node-sync: $*"; }
@@ -435,8 +441,11 @@ while (( ${#pending[@]} > 0 )) && (( $(date +%s) < deadline )); do
   for u in "${pending[@]}"; do
     f="${LOGDIR}/protea-lab-worker-$(queue_of "${u}").log"
     # Read into a plain variable first: a unit name used as a key inside $(( ))
-    # would be read as arithmetic.
+    # would be read as arithmetic. A log that is now SHORTER than it was before
+    # the start was rotated in between, and its new start line is somewhere in
+    # the new file, so it is read from the beginning instead of from past its end.
     from="${LOG_AT[${u}]}"
+    (( $(stat -c %s "${f}" 2>/dev/null || echo 0) >= from )) || from=0
     line="$(tail -c +"$(( from + 1 ))" "${f}" 2>/dev/null \
             | grep -ao 'Worker started\. queue=[^ "]* revision=[^"]*' | tail -1 || true)"
     if [[ -z "${line}" ]]; then still+=("${u}"); continue; fi
