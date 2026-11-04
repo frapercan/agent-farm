@@ -2050,5 +2050,56 @@
 # consigue. El #1115 lo toca, asi que esta vez toca.
 #
 # ---------------------------------------------------------------------------
-coordinator 96fa4aa50fbe578d42c7ba4081a34c821379132b
-schema-applied 96fa4aa50fbe578d42c7ba4081a34c821379132b
+#
+# ---------------------------------------------------------------------------
+#
+# 2026-11-04 22:50 UTC. Sube a 27b0959, dos commits, y es el salto mas simple
+# de los tres de hoy: SIN MIGRACION y SIN MOVER UN SOLO PIN. poetry.lock no
+# cambia ni una linea en el intervalo y alembic dice c5e9a1d3f720 (head) sobre
+# el arbol nuevo, asi que schema-applied se mueve con el coordinador porque la
+# base YA esta en cabeza para este commit, no porque se haya corrido nada.
+#
+# #1120, EL CURSOR BINARIO. El banco de referencia cruzaba el driver en TEXTO:
+# SQLAlchemy pide texto a psycopg y no ofrece forma de cambiarlo, asi que un
+# halfvec llegaba como el literal [v1,v2,...] y el tipo de columna parseaba un
+# float por dimension en Python. Medido sobre 20.000 filas de f3a7fe16: 0,307 ms
+# por fila en texto contra 0,027 en binario, 11,2x, y los arrays IDENTICOS BIT
+# A BIT con diferencia maxima 0,0 sobre 30,7 millones de float16. En el cable
+# decide el tamano: una fila densa de 1.536 dims son 17.992 bytes en texto y
+# 3.076 en binario, asi que el banco completo son 12,3 GB contra 2,1. Para el
+# nodo, cuyo enlace sostuvo 5,0 MB/s esta noche, eso es 41 minutos contra 7, y
+# es por lo que el primer brazo de la exploracion 1 nunca corrio: cuatro cargas
+# iniciadas y ninguna terminada.
+#
+# #1121, LA LINEA DE ARRANQUE. Sella la revision ANTES del calentamiento de
+# taxonomia. Lo que esa linea afirma esta decidido al importar, y detras del
+# calentamiento esperaba una descarga de ~100 MB y 2,9 millones de nodos en tres
+# colas. En el nodo NO estaba fallando -- el volcado ya esta en ~/.etetoolkit y
+# el calentamiento costo menos de 1 ms, con 4,9 s de peor caso en 52 arranques
+# -- y lo que estaba mal era el acoplamiento: la prueba de que codigo cargo un
+# proceso no debe depender de una red. Importa porque el protea-node-sync lee
+# esa linea, con espera acotada, como unico testigo de que un trabajador volvio
+# en la revision declarada.
+#
+# PUERTA COMPROBADA: 643 trabajos, todos en estado terminal (614 SUCCEEDED,
+# 23 FAILED, 6 CANCELLED) y 0 en QUEUED o RUNNING. Colas: 13 de 15 a cero;
+# protea.dead-letter en 18.776, que no es trabajo en vuelo, y
+# protea.predictions.batch con 40 mensajes del job ef356014, que esta CANCELADO
+# y cuyos lotes se descartan antes de cargar el banco (_batch_op.py:173 comprueba
+# el padre antes de _ensure_reference_cache en la 177).
+#
+# EL NODO NO VA A SEGUIR ESTA DECLARACION, y conviene saberlo al leer este
+# bloque dentro de un mes. La sesion del nodo paro y deshabilito
+# protea-node-sync.timer a las 21:55 porque el script INSTALADO es el viejo, y
+# el viejo ARRANCA la unidad de la tarjeta al seguir una declaracion aunque este
+# parada; con todos los trabajadores del nodo parados y deshabilitados desde el
+# 10-31 por decision de Francisco, seguir esta declaracion habria levantado la
+# GPU sin su palabra. El nodo se queda en 96fa4aa5 y no seguira hasta que entre
+# el #390 de este repositorio, se reinstale el script y se rehabilite el
+# temporizador.
+#
+# El frontend no se toca: ninguno de los dos commits entra en apps/web.
+#
+# ---------------------------------------------------------------------------
+coordinator 27b0959fe6aadc74c823c3f7d44ba3cc3b22ecda
+schema-applied 27b0959fe6aadc74c823c3f7d44ba3cc3b22ecda
