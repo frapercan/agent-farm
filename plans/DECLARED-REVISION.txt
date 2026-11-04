@@ -1944,5 +1944,55 @@
 # poetry.lock de este mismo commit, asi que no lleva linea de override.
 #
 # ---------------------------------------------------------------------------
-coordinator 6f7e18565786fa5383bf3bc14d1f33980bde3f45
-schema-applied 6f7e18565786fa5383bf3bc14d1f33980bde3f45
+#
+# ---------------------------------------------------------------------------
+#
+# 2026-11-04 15:29 UTC. Sube a 96354170, seis commits. Lo que trae, de abajo
+# arriba: #1107 (un trabajador cuya operacion pasa de la ventana del latido
+# sale en vez de quedarse colgado), #1109 (la identidad de embedding_config:
+# TODOS los campos se deciden antes del hash, no solo max_length), #1108 y
+# #1112 (ADR-D55 y sus cuatro tablas), #1110 (la escala de puntuacion por rango
+# percentil, y decir si un maximo es el borde del enrejado) y #1111 (el donante
+# puede exigirsele ser miembro del corpus al principio de la ventana).
+#
+# EL #64 ENTRA AQUI, y con palabra de Francisco dicha en la sesion del portatil
+# y no relatada por nadie: el pin de protea-method sube a 10490506, que lleva
+# el kNN acumulando en float64. Medido antes de pedirlo: sobre nuestro propio
+# banco el efecto a 300 consultas es nulo, asi que entra por correccion y no
+# por rendimiento, y cuesta entre 2,4 y 3 veces el producto de matrices.
+#
+# PUERTA COMPROBADA ANTES DE DECLARAR, las dos senales. Trabajos: 642, todos en
+# estado terminal -- 614 SUCCEEDED, 23 FAILED, 5 CANCELLED -- y 0 en QUEUED o
+# RUNNING. Colas: 14 de las 15 a 0 mensajes y 0 sin confirmar, con 13
+# consumidores atados y ociosos; protea.dead-letter en 18.776, que no es
+# trabajo en vuelo. Leido de la base y de la API del broker, no de un resumen.
+#
+# LA MIGRACION YA ESTA APLICADA, y por eso schema-applied puede escribirse: la
+# linea es una afirmacion del servidor, no una lectura. b2f6c3d8e154 corrio
+# sobre a7d3f1c9e842 y es aditiva: cuatro tablas nuevas (external_reference,
+# exploration, exploration_link, exploration_event), tres indices, una funcion
+# y un disparador. El ensayo con upgrade --sql, que no conecta, dio un solo
+# verbo no aditivo en todo el SQL: el UPDATE de alembic_version sobre si mismo.
+# Comprobado despues contra la base: alembic_version en b2f6c3d8e154 y las
+# cuatro tablas presentes. Se corrio desde un git worktree aparte, con la ranura
+# servida todavia clavada en 6f7e1856.
+#
+# UNA COSA QUE EL NOMBRE PROMETE Y EL ESQUEMA NO DA, anotada aqui porque la
+# migracion ya esta dentro: el disparador exploration_event_append_only tiene
+# tgtype 27, o sea BEFORE, FOR EACH ROW, DELETE y UPDATE. No cubre TRUNCATE,
+# que en Postgres necesita un disparador FOR EACH STATEMENT aparte. Asi que
+# "append only" vale contra un DELETE y contra un UPDATE, y no contra un
+# TRUNCATE de la tabla. No bloquea el despliegue, no hay filas todavia.
+#
+# LOS HERMANOS QUE SE MUEVEN son seis de los siete pineados, todos salidos del
+# poetry.lock de este mismo commit, asi que ninguno lleva linea de override:
+#   protea-backends     86e826055fbf -> 5fec3f594537
+#   protea-contracts    74d329ff22a7 -> dd335182a662
+#   protea-method       a120f613b9d2 -> 10490506ce2c   <- el #64
+#   protea-reranker-lab 6d4dc2d4b533 -> 434cc6db40e8
+#   protea-runners      ccd06fd80c12 -> fb8ae81b5674
+#   protea-sources      fc43ab942ebe -> fa42f5963c5a
+#
+# ---------------------------------------------------------------------------
+coordinator 96354170912dc7bef1d8e70e6d177c0e555a87fc
+schema-applied 96354170912dc7bef1d8e70e6d177c0e555a87fc
