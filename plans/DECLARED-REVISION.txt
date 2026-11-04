@@ -1994,5 +1994,61 @@
 #   protea-sources      fc43ab942ebe -> fa42f5963c5a
 #
 # ---------------------------------------------------------------------------
-coordinator 96354170912dc7bef1d8e70e6d177c0e555a87fc
-schema-applied 96354170912dc7bef1d8e70e6d177c0e555a87fc
+#
+# ---------------------------------------------------------------------------
+#
+# 2026-11-04 16:40 UTC. Sube a 96fa4aa5, seis commits, la cadena entera de la
+# exploracion evaluada (ADR-D55): #1113 las rutas y el servicio con sus siete
+# movimientos, #1116 job.started sellando maquina, interprete y revision, #1117
+# el registro negandose al TRUNCATE, #1114 el recibo y el informe generados de
+# las filas, #1115 la pagina, y #1118 el predicado de identidad comparando
+# dobles por sus bytes.
+#
+# POR QUE ENTRA EL #1118 EN ESTA MISMA TANDA Y NO DESPUES, que es una razon de
+# calendario y no de codigo: el informe de una exploracion se genera al final
+# con el codigo que este desplegado, asi que desplegar a mitad reinicia los
+# trabajadores y rompe la prueba que la exploracion 1 existe para hacer. Si no
+# entraba aqui, tenia que esperar a despues de ella. Lo que arregla: el
+# predicado decidia comparando distance::text, y eso depende de
+# extra_float_digits, un GUC de SESION. Probado aqui con el ajuste adversario
+# puesto: con extra_float_digits = 0, 0.3 y el doble siguiente imprimen los dos
+# "0.3" y el texto los confunde, mientras float8send los separa. Ahora decide
+# por float8send y array_send, en hex, sin GUC de por medio, y la primera
+# diferencia se sigue mostrando legible al lado de los bytes.
+#
+# PUERTA COMPROBADA ANTES DE DECLARAR, las dos senales. Trabajos: 642, todos en
+# estado terminal -- 614 SUCCEEDED, 23 FAILED, 5 CANCELLED -- y 0 en QUEUED o
+# RUNNING. Colas: 14 de las 15 a 0 mensajes y 0 sin confirmar, con 13
+# consumidores atados y ociosos; protea.dead-letter en 18.776, que no es
+# trabajo en vuelo.
+#
+# LA MIGRACION YA ESTA APLICADA. c5e9a1d3f720 sobre b2f6c3d8e154, un solo
+# disparador: exploration_event_no_truncate, BEFORE TRUNCATE FOR EACH
+# STATEMENT, sobre la misma funcion. El ensayo con upgrade --sql dio ese CREATE
+# TRIGGER y el UPDATE de alembic_version, nada mas. Comprobado despues contra la
+# base: alembic_version en c5e9a1d3f720, los dos disparadores presentes
+# (append_only ROW DELETE,UPDATE y no_truncate STATEMENT TRUNCATE), y un TRUNCATE
+# real sobre la tabla devuelve "exploration_event is append only: TRUNCATE
+# refused". Corrida desde un worktree aparte con la ranura clavada en 96354170.
+#
+# POR QUE HACIA FALTA, y es un hallazgo de este despliegue, no un extra: el
+# disparador que b2f6c3d8e154 instalo tiene tgtype 27, o sea ROW, BEFORE, DELETE
+# y UPDATE. Un disparador de fila NO se dispara en un TRUNCATE. Asi que el
+# registro llamado "append only" se negaba a un UPDATE y a un DELETE y dejaba
+# vaciar la tabla entera en una sentencia. Si el registro de una exploracion es
+# la procedencia de una afirmacion de la tesis, ese nombre prometia mas de lo
+# que el esquema daba.
+#
+# NINGUN HERMANO SE MUEVE: poetry.lock no cambia ni una linea en el intervalo,
+# asi que los siete pines siguen donde los dejo el salto anterior. Se verifican
+# igual antes de reiniciar, leyendo vcs_info.commit_id de cada direct_url.json,
+# porque el coste es cero y el fallo es invisible: en el salto anterior pip
+# devolvio 0 sin instalar nada.
+#
+# EL FRONTEND VA APARTE, solo por scripts/deploy-frontend.sh, que respalda el
+# .next que esta sirviendo, construye, exige un 200 y rueda atras si no lo
+# consigue. El #1115 lo toca, asi que esta vez toca.
+#
+# ---------------------------------------------------------------------------
+coordinator 96fa4aa50fbe578d42c7ba4081a34c821379132b
+schema-applied 96fa4aa50fbe578d42c7ba4081a34c821379132b
