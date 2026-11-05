@@ -344,16 +344,53 @@ a check that cannot run is a refusal. In order:
 | declared sha not an ancestor of `origin/develop` | refuses |
 | declared sha changes `alembic/versions/` | refuses unless the declaration also carries `schema-applied <same sha>` |
 | deploy slot has uncommitted changes | refuses |
-| a batch in flight on any worker of the queue, its log moved within 1500 s | defers a tick; past that the silence is a stall and the sync goes ahead |
-| a job in flight on any worker of the queue, dispatched less than 6 h ago | defers a tick; only past 6 h is it a stall |
-| an install fails, or leaves a sibling wrong | worker stays **down** |
-| torch loses CUDA, or the operation does not import | worker stays **down** |
+| an environment a worker of the slot uses has neither pip nor uv | refuses, before anything is stopped |
+| a batch in flight on any running worker of the slot, its log moved within 1500 s | defers a tick; past that the silence is a stall and the sync goes ahead |
+| a job in flight on any running worker of the slot, dispatched less than 6 h ago | defers a tick; only past 6 h is it a stall |
+| an install fails, or leaves a sibling wrong, in any environment | workers stay **down** |
+| torch changes in any environment, the card's environment loses CUDA, or the operation does not import | workers stay **down** |
+| a worker comes back on a revision other than the declared one | that worker is stopped, and the state says `failed start-revision` |
+| a worker writes no start line within 240 s | reported in the state as `no-start-line` |
 
-The last two are the point. A silent wrong consumer is worse than no consumer,
-because the queue drains into refusals or into answers nobody asked for, and
-both look like progress from the other machine.
+The install and verification rows are the point. A silent wrong consumer is
+worse than no consumer, because the queue drains into refusals or into answers
+nobody asked for, and both look like progress from the other machine.
 
-The two in-flight rows read every log of the queue: the first worker's and each
+### Every worker of the slot, in every environment it uses
+
+Every worker on a node runs out of the same deploy slot, so moving the slot
+moves all of them, whether they are restarted or not. Until 2026-11-04 the
+script stopped and started one unit, `protea-lab-worker@${PROTEA_QUEUE}`. The
+others kept the modules they had already imported and would have read any later
+import from the new tree, which is a revision nobody declared. That day a deploy
+left the methods worker on `6f7e1856` under a tree at `96354170`, and the
+predictions, evaluations and training workers were restarted by hand after both
+deploys.
+
+So the units are derived, not listed: every `protea-lab-worker@` instance whose
+`WorkingDirectory` is the slot. Instance names come from two places, because
+either alone misses workers: the units the user manager has loaded, and the
+drop-in directories under `~/.config/systemd/user`. After a reboot with the
+workers disabled, the manager has loaded none of them. The workers that were
+running are stopped together and started together. Those that were stopped on
+purpose stay stopped. That is a change too: the old script started its unit even
+when it had been stopped. On 2026-11-03 at 02:15 it started the card's worker,
+stopped since 2026-10-31 10:25, because the declaration moved.
+
+Each unit's environment is the `VIRTUAL_ENV` in its own environment, which is
+what the wrapper hands poetry, or `PROTEA_VENV` when it sets none. Every
+distinct environment is checked against the lockfile and synced, with its own
+`pip` when it has one and with `uv pip` when it does not. The node's Python 3.12
+environment was made with uv and has no pip. torch must read the same in every
+environment before and after, and the card's environment must keep CUDA.
+
+A unit that starts is not a worker on the new revision. Each worker stamps the
+revision it imported on its own `Worker started. queue=... revision=...` line.
+The sync reads that line, past where each log ended before the start, and
+stops any worker that came back on something else. The journal only says the
+unit started, not what it loaded.
+
+The in-flight rows read every log of each running queue: the first worker's and each
 extra's (see "More than one worker on a queue"). A log is in flight when its
 last `Dispatching job.` or `Dispatching operation.` line comes after its last
 end line: `Job finished.`, `Job failed.`, `Job will retry`, `Job re-published.`,
@@ -391,8 +428,20 @@ PROTEA_SYNC_DRYRUN=1 ~/.local/lib/protea/protea-node-sync.sh
 reports what it would do and touches nothing. It runs every check a real tick
 runs, the dirty slot, the migrations and the in-flight logs, and stops only
 where a real tick would act, so its answer is the tick's answer: refuse, defer,
-or the units it would stop. It writes no state past the drift check, because a
+or the units it would stop, the environments it would sync and the units it
+would leave stopped. It writes no state past the drift check, because a
 rehearsal is not the node's verdict.
+
+To rehearse a move nobody has declared, point `PROTEA_DECL_FILE` at a local
+file in the declaration's format:
+
+```bash
+printf 'coordinator <sha>\nschema-applied <sha>\n' > /tmp/decl.txt
+PROTEA_DECL_FILE=/tmp/decl.txt ~/.local/lib/protea/protea-node-sync.sh
+```
+
+A local declaration always runs as a dry run, and it never writes the state: a
+declaration nobody committed is not a declaration.
 
 `node-sync.state` in the log directory carries the last verdict, and it is
 written on every path of a real tick, including the ones that do nothing,
