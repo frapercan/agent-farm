@@ -2101,5 +2101,5 @@
 # El frontend no se toca: ninguno de los dos commits entra en apps/web.
 #
 # ---------------------------------------------------------------------------
-coordinator db85d4f818a2921604a01c91e24edb9ac8be168d
-schema-applied db85d4f818a2921604a01c91e24edb9ac8be168d
+coordinator 8d0a00cb8bb6f047e0183914242d27db82d46c8e
+schema-applied 8d0a00cb8bb6f047e0183914242d27db82d46c8e
