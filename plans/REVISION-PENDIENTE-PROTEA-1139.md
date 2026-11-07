@@ -143,9 +143,15 @@ Lo pongo porque son el tipo de cosa que cazas tu, y esta vez las cace yo:
    con aspecto del snapshot que se le pase) y lo he dicho en un comentario, pero
    **el rename es lo correcto y toca 15 sitios**: no lo cuelo en este PR. Es un
    PR mecanico aparte si te parece.
-5. **La comparacion (A)/(B) de ayer queda obsoleta para (A).** La decision ya la
-   tomo Francisco, pero los 31.801 contra 57.232 se mueven y habria que
-   rehacerla si alguien quiere volver a mirarla.
+5. **CORREGIDO: la comparacion (A)/(B) NO queda obsoleta.** Escribi que los
+   31.801 contra 57.232 se movian y habria que rehacerla. Lo medi despues y es
+   falso: `delta_proteins` de la (A) pasa de **31.801 a 31.871**, setenta
+   proteinas, un 0,22%, y la (B) se queda en **57.232 exactos**. El 44% de
+   reduccion que decidio la eleccion sigue siendo el 44%. Lo que se mueve es la
+   COMPOSICION dentro de (A): NK 10.948 -> 11.292, LK 4.726 -> 4.409, PK 18.225
+   -> 18.067 pero con 15.313 anotaciones mas, y removed 14.880 -> 14.425. Misma
+   poblacion, mejor clasificada y con mas verdad por proteina. La base de la
+   decision esta intacta.
 
 ## Y el orden que viene detras
 
