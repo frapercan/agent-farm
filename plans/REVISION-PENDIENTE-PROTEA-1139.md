@@ -165,11 +165,24 @@ Tambien sigue pendiente el salto de declaracion+despliegue de los tres PR de
 ayer: `develop` en `df42cc7` y el arbol servido en `8ab6487`. Un solo salto
 cuando entre #1139, en vez de dos.
 
-## Un fallo aparte, del canal
+## El canal del ledger esta OBSOLETO, y esto lo corrige
 
-No hay checkout de `farm-coord` en esta maquina y `farm.env` no fija
-`FARM_COORD_ROOT`, asi que `coord-send.sh` no puede enviar nada desde aqui. Es
-exactamente la "nota de rutas que se rompe en silencio" de TOPOLOGY seccion 4: el
-valor por defecto es `$HOME/Thesis2/farm-coord`, que en esta maquina no existe.
-No he clonado nada ni tocado `farm.env` por mi cuenta. Si el canal debe funcionar
-desde el portatil, hace falta la URL del remoto y la linea en `farm.env`.
+Arriba decia que el ledger "no funciona desde el portatil" y que para arreglarlo
+hacia falta la URL del remoto y una linea en `farm.env`. **Eso es un consejo
+equivocado y lo retiro.** Francisco, el 2026-11-07: "ese mecanismo esta
+obsoleto". No se clona `farm-coord`, no se fija `FARM_COORD_ROOT`, no se escribe
+`state/coord-machine` y no se llama a `coord-send.sh`.
+
+Lo que lo sustituye es ESTE fichero: uno versionado bajo `plans/`, que las dos
+maquinas clonan, mas `SendMessage` cuando la sesion del par esta viva. Cuando el
+par esta apagado, un registro vale mas que un canal.
+
+**Y la leccion, que es la parte que importa.** Yo tenia la evidencia de que ese
+canal estaba muerto y segui adelante: su ultimo commit es del **2026-09-14**, la
+fecha exacta del borrado de la campaña, `inbox/desktop` guarda **93 mensajes sin
+reclamar** de septiembre, no habia clon en esta maquina y no habia nombre de
+maquina. Lo imprimi todo, lo llame "el canal no funciona desde el portatil" y me
+puse a repararlo. Tres señales independientes de que algo esta en desuso no son
+un informe de fallo. Llegue a dejar montado un clon, la variable en `farm.env` y
+el nombre de maquina; esta todo revertido, el clon no tenia ni cambios ni commits
+locales y `farm.env` vuelve a sus cuatro variables.
