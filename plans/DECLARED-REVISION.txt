@@ -2101,5 +2101,64 @@
 # El frontend no se toca: ninguno de los dos commits entra en apps/web.
 #
 # ---------------------------------------------------------------------------
-coordinator 4572b4d8282177889dd29e861bf45906985948b7
-schema-applied 4572b4d8282177889dd29e861bf45906985948b7
+# 2026-11-07: 4572b4d8 -> 8ab6487f. La puerta del servidor que exige la cabecera
+# se corrio antes de editar: ningun trabajo en QUEUED ni en RUNNING, cero
+# mensajes en las trece colas de trabajo leidas con declaracion pasiva, ningun
+# prediction_set escrito en veinte minutos y ninguna go_prediction en cinco.
+#
+# QUE LLEVA. Dos commits, PROTEA#1136 y #1137.
+#
+# #1137 es el unico que toca codigo que se ejecuta:
+# protea/services/exploration_report.py. `_instrument` rechazaba todo lo que no
+# fueran exactamente dos brazos, que es por lo que la exploracion 3, con cuatro
+# brazos sobre una sola revision, volvio sin predicado y su lectura hubo que
+# escribirla a mano como un evento de trabajo. Ahora son N-1 comparaciones
+# contra un brazo de referencia, por transitividad de la igualdad exacta. Y la
+# atribucion va aparte en `_identity_classes`, porque las parejas contra la
+# referencia dan el veredicto y no la culpa: si el brazo que se mueve es la
+# referencia, las N-1 parejas dicen todas que difieren y un informe que se
+# quedara ahi acusaria a todos los demas. Lo encontro la sesion del sobremesa
+# leyendo el diff, no las catorce puertas.
+#
+# #1136 es solo documentacion: ADR-D56 fija los ocho nombres que lee el cargador
+# de sfjepa, declara el eje de terminos del pivote unico con lo que cuesta por
+# epoca y aspecto, y deja de contradecirse sobre el vector de texto. ADR-D55
+# dice ahora que un instrumento admite cualquier numero de brazos desde dos.
+#
+# LO QUE IMPLICA PARA LA EXPLORACION 3. Su informe pasa de no tener predicado a
+# tenerlo, asi que reconstruirlo da otro sha256. Cambio de estructura, no de
+# medida, y lo re-fija una decision de Francisco. No se reconstruye aqui.
+#
+# NINGUNA MIGRACION SE MUEVE: `git diff --name-only 4572b4d 8ab6487 --
+# alembic/versions/` esta vacio, asi que schema-applied sigue al coordinador y
+# ningun nodo necesita consultarlo en este salto.
+#
+# HERMANOS SIN CAMBIO: ni poetry.lock ni pyproject.toml entran en el diff, asi
+# que no hay paso de pip y no se toca ningun paquete hermano.
+#
+# El frontend no se toca: ninguno de los dos commits entra en apps/web.
+#
+# EL NODO SI SIGUE ESTE SALTO, al contrario que el bloque de arriba, y se
+# comprobo antes de empujar en vez de suponerlo. Su script INSTALADO,
+# ~/.local/lib/protea/protea-node-sync.sh, es byte a byte el de main
+# (sha256 252e7540c365ca79, verificado aqui contra
+# `git show origin/main:scripts/services/protea-node-sync.sh`), puesto el
+# 2026-11-05 tras el #390. El viejo arrancaba la unidad de la tarjeta al seguir
+# una declaracion aunque estuviera parada; el nuevo reinicia SOLO las unidades
+# que ya corrian, y eso tiene receipt: el salto a db85d4f del 11-05 salio con
+# "no worker of the slot was running, so none was started".
+#
+# protea-node-sync.timer esta enabled y active, cada tres minutos, y ya ha
+# seguido cuatro declaraciones con el script nuevo. El unico trabajador vivo
+# alli es protea-lab-worker@protea.evaluations.service, con CUDA_VISIBLE_DEVICES
+# vacio y disabled en el arranque, asi que este salto lo reinicia a el y nada
+# mas. LA TARJETA NO SE TOCA, que es la condicion que Francisco puso.
+#
+# Y PUEDE TARDAR UN CICLO O DOS. Hoy hubo tres "REFUSED, cannot reach
+# agent-farm origin" en el nodo, a las 12:45, 13:42 y 15:01, por su wifi. El
+# guardia reintenta en la vuelta siguiente, asi que una sincronizacion que no
+# aparece a los tres minutos no es un fallo todavia.
+#
+# ---------------------------------------------------------------------------
+coordinator 8ab6487f0c45a434e8589972fb9ef932ac502c13
+schema-applied 8ab6487f0c45a434e8589972fb9ef932ac502c13
