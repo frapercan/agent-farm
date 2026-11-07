@@ -2160,5 +2160,64 @@
 # aparece a los tres minutos no es un fallo todavia.
 #
 # ---------------------------------------------------------------------------
-coordinator 8ab6487f0c45a434e8589972fb9ef932ac502c13
-schema-applied 8ab6487f0c45a434e8589972fb9ef932ac502c13
+# ---------------------------------------------------------------------------
+# 2026-11-07, segundo salto del dia: 8ab6487f -> 637b3517, dos commits.
+#
+# LA PUERTA DEL SERVIDOR, comprobada y no supuesta, justo antes de empujar:
+# 0 trabajos en QUEUED o RUNNING, 0 prediction_set creados en la ultima hora,
+# 0 filas de go_prediction escritas en los ultimos quince minutos y 0
+# evaluation_result en la ultima hora. Nada esta escribiendo.
+#
+# df42cc7 (#1138) es solo documentacion: ADR-D56 fija los valores de `closure`
+# (pivot / native), que son derivados y 122 de 131, y dice que no son
+# `truth_profile`.
+#
+# 637b351 (#1139) ES CODIGO Y CAMBIA COMO SE CONSTRUYE LA VERDAD. El mapa de
+# sinonimos leia la tabla de alias del snapshot bajo el que se cargo el CORPUS
+# de cada lado en vez del que CIERRA ese lado. Un corpus esta siempre vivo en su
+# propia era, asi que la primera clausula de la regla respondia "vivo, dejalo"
+# para toda anotacion del conjunto: 0 alt_id y 0 replaced_by en los dos lados, y
+# los ids que el pivote no puede nombrar morian despues en
+# `closure & pivot_go_ids` sin contador. En una ventana que cierra sus dos
+# extremos bajo un pivote unico EL REMAPEO ERA UN NO-OP COMPLETO. Eran dos
+# anclajes: el mapa, y los aterrizajes de la proyeccion.
+#
+# LO QUE IMPLICA PARA CUALQUIER VENTANA QUE SE GENERE DESPUES DE ESTE SALTO.
+# `generate_evaluation_set` con perfil `projected` construye otra verdad en toda
+# ventana cuya era de corpus no sea su grafo que cierra. Medido ejecutando el
+# camino real sobre los dos arboles contra la misma base, y hasheando los seis
+# cubos de la verdad:
+#   - ea0f4334, la ventana de VALIDACION: identica al byte, los seis cubos,
+#     incluidos los 9 replaced_by y la proyeccion 2.610/3.821 del laboratorio;
+#   - e84dfec8, la gemela (B): identica al byte. Sus contadores del lado NOT se
+#     mueven (new_not_unmapped 14 -> 0) y la verdad no;
+#   - 3bd720c9, la (A) temprana: cambia, que es el defecto arreglandose.
+#     delta_proteins 31.801 -> 31.871, un 0,22%, asi que la eleccion de la
+#     construccion (A) no se mueve; lo que cambia es la composicion.
+# LAS 53 VENTANAS SE GENERAN DESPUES DE ESTE SALTO Y NO ANTES. Con el codigo
+# viejo cada una se construiria con el remapeo sin resolver nada.
+#
+# NINGUNA MIGRACION SE MUEVE: `git diff --name-status 8ab6487f..637b3517 --
+# alembic/` esta vacio, asi que schema-applied sigue al coordinador.
+#
+# HERMANOS SIN CAMBIO: ni poetry.lock ni pyproject.toml entran en el diff, asi
+# que no hay paso de pip y no se toca ningun paquete hermano.
+#
+# El frontend no se toca: ninguno de los dos commits entra en apps/web.
+#
+# UNA CORRECCION AL BLOQUE DE ARRIBA. Aquel describia el #1137 como parte del
+# salto a 8ab6487f y es cierto, pero por un orden que no era el que yo creia:
+# 1849aea (#1137) fusiono ANTES de 8ab6487 (#1136), no despues. Verificado
+# contra el codigo, `_identity_classes` ya esta en 8ab6487f. Asi que el arreglo
+# del instrumento llevaba sirviendose desde el salto anterior y no entra aqui.
+#
+# EL NODO ESTA APAGADO, por decision de Francisco a las 18:30. No sigue este
+# salto ahora: lo seguira al arrancar, porque protea-node-sync.timer sigue
+# enabled y lee esta declaracion cada tres minutos. Su unico trabajador,
+# protea-lab-worker@protea.evaluations.service, esta disabled en el arranque y
+# no atiende la cola hasta que Francisco lo diga, asi que la sincronizacion le
+# movera el arbol y no levantara nada. LA TARJETA NO SE TOCA.
+#
+# ---------------------------------------------------------------------------
+coordinator 637b3517e525a982694fa5ca4b4b6ed6d5b1ea81
+schema-applied 637b3517e525a982694fa5ca4b4b6ed6d5b1ea81
