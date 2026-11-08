@@ -2383,5 +2383,51 @@
 # ventanas. Las dos necesitan este codigo servido.
 #
 # ---------------------------------------------------------------------------
-coordinator c9e9fa1f7f8af7b677a2d7a22fa9c87a6279a153
-schema-applied c9e9fa1f7f8af7b677a2d7a22fa9c87a6279a153
+#
+# 2026-11-08, tercer salto del dia: c9e9fa1 -> 74d3cd0, dos commits, SIN
+# MIGRACION. Puerta del servidor corrida antes de editar: 0 jobs en QUEUED o
+# RUNNING, 0 prediction_set en los ultimos quince minutos (el ultimo es de
+# ayer, 2026-11-07 10:05 UTC).
+#
+# QUE LLEVA:
+#   f52b321 (#1165) la fila de la poblacion nace con su job. El CHECK que creo
+#           el salto anterior rechazo la primera ejecucion real de
+#           declare_corpus_population, porque la operacion asignaba row.job_id
+#           DESPUES de session.flush(). Doce tests verdes no lo vieron: ningun
+#           doble tiene las restricciones de la base. El test nuevo mira el
+#           valor EN el flush, y se comprobo que falla al reintroducir el
+#           defecto.
+#   74d3cd0 (#1166) fuera de eje NO es cero en query_state, y el comentario
+#           decia que si. Son 689.055 filas, el 1,54% de lo crudo, y se ordenan
+#           por la distancia de la ventana al pivote: 0,02% en 205->211 y 4,54%
+#           en 170->171. La causa es que query_state lee los DOS extremos, y el
+#           extremo t es una release anterior cuyo corpus nombraba terminos que
+#           la ontologia de 2022 ya no tiene ni puede renombrar por un alias.
+#           El error fue generalizar una medida de la era del corte a los dos
+#           extremos. El salto anade el corte por momento, para que la
+#           explicacion se pueda comprobar en vez de inferirse de un total.
+#
+# LA CONSECUENCIA PARA EL ENTRENAMIENTO, que es lo unico de este salto que no
+# es un arreglo: el estado en t es sistematicamente mas delgado en las ventanas
+# viejas que en las recientes, hasta un cuatro y medio por ciento, porque el
+# eje es una ontologia de 2022. Es una diferencia correlacionada con la
+# antiguedad de la ventana, y si los horizontes se mezclan el modelo la ve.
+# Queda escrito aqui porque toca una decision abierta de Francisco: que
+# ventanas entrenan el modelo minimo.
+#
+# SIN MIGRACION, y conviene decir por que y no solo que no hay. El diff no toca
+# alembic/versions, y el alembic_version del servidor ya esta en a4e91c0d5b83,
+# que es el que creo el salto anterior. Asi que schema-applied se mueve con el
+# coordinator por estar ya aplicado, no por traer nada nuevo. El orden de este
+# salto es el corto: mover el arbol y reiniciar, sin paso de alembic en medio.
+#
+# HERMANOS: ninguno se mueve. Ni pyproject.toml ni poetry.lock entran en el
+# diff, asi que no hay paso de pip. El frontend no se toca.
+#
+# LO QUE VIENE DETRAS DE ESTE SALTO, y no antes: declare_corpus_population, que
+# sigue sin haber completado NUNCA. Es la unica cosa de la lista que ha fallado
+# y no esta hecha, y #1165 es exactamente su arreglo.
+#
+# ---------------------------------------------------------------------------
+coordinator 74d3cd0b366560751ee334bb9561f2e7685772e8
+schema-applied 74d3cd0b366560751ee334bb9561f2e7685772e8
