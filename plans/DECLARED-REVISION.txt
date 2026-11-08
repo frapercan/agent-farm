@@ -2278,5 +2278,61 @@
 # code_revision y con los contadores. El holdout 227->230 NO esta entre ellas.
 #
 # ---------------------------------------------------------------------------
-coordinator d29129cae5890e5da6805b33d452dc53d5a11a89
-schema-applied d29129cae5890e5da6805b33d452dc53d5a11a89
+#
+# 2026-11-08, el salto de la atencion exacta: d29129c -> 1a492c7, tres commits.
+# Puerta del servidor corrida ANTES de editar este fichero, como pide la
+# cabecera: 0 jobs en QUEUED o RUNNING, 0 prediction_set escritos en los
+# ultimos 15 minutos. La ultima corrida, la tabla terms (job f547b5d2), habia
+# terminado ya.
+#
+# QUE CARRIES, los tres:
+#   3835d5e (#1158) gains: la verdad de una ventana, con su estrato y su
+#           cierre. Lleva closure_of derivado de comparar las dos nativas
+#           contra el pivote, que es lo que el ADR pide y lo que una version
+#           anterior hacia mal copiandolo de truth_profile.
+#   60a67e3 (#1159) ADR-D54 pasa a Accepted, con la excepcion del job escrita
+#           en el propio ADR: las dos escrituras del registro de pesos no pasan
+#           por POST /v1/jobs, y ahora eso es una decision y no un hueco.
+#   1a492c7 (#1161) el pin de protea-backends en la atencion exacta.
+#
+# NINGUNA MIGRACION SE MUEVE. `git diff --name-only d29129c 1a492c7 --
+# alembic/versions/` esta vacio, asi que schema-applied sigue al coordinator y
+# ningun nodo necesita consultarlo en este salto. El alembic_version del
+# servidor sigue en c5e8d1a30b72, el de query_set declara su poblacion.
+#
+# HERMANOS: UNO SE MUEVE, y es el motivo del salto. protea-backends pasa de
+# 5fec3f59 a 2cb6b479e5a2f2009915412b0e888676e4f9b199, el commit de fusion de
+# su #47, leido de GitHub con `gh pr view 47 --json mergeCommit` y no de un
+# mensaje: el aviso que anuncio la fusion traia el hash mal copiado, con los
+# ocho primeros caracteres correctos, que es justo el caso en que comprobar un
+# prefijo no sirve de nada. Ningun otro pin entra en el diff de pyproject.
+#
+# PARA QUE SIRVE ESTE HERMANO. 161 secuencias del corpus no tienen vector en el
+# banco f3a7fe16, y las 161 pasan de 8.259 residuos; por debajo de ese techo no
+# falta ninguna. #47 manda al camino de atencion exacta las que pasan de
+# EXACT_ABOVE_RESIDUES en los tres puntos de entrada de Ankh que corren el
+# forward de Hugging Face, y uno de los tres es embed_chunks, el camino del
+# banco por el que escribe compute_embeddings.
+#
+# EL PASO DE PIP ES OBLIGATORIO EN ESTE SALTO, al contrario que en el anterior:
+# pyproject y poetry.lock SI entran en el diff. Con los dos cuidados conocidos,
+# que en este fichero ya han costado una tarde: `poetry install` se lleva CUDA
+# por delante, y `pip --no-deps` a secas devuelve cero sin instalar un pin de
+# git cuya version no cambia, lo que dejaria una revision declarada que ningun
+# proceso tiene cargada. Hay que comprobar el commit instalado, no el codigo
+# de salida.
+#
+# EL NODO SIGUE ESTE SALTO Y HOY SI CONSUME. Su protea-lab-worker@protea.training
+# esta activo y es el unico consumidor de esa cola: aqui no hay unidad para
+# ella, a proposito. Asi que este salto le llega por su timer y tiene que tener
+# el pin nuevo instalado ANTES de que se encole el compute_embeddings de las
+# 161, o calcularia con la ruta vieja y volveria a rechazarlas. La sesion del
+# sobremesa lo comprueba cuando se le avise.
+#
+# LA TARJETA. Francisco autorizo la pasada de las 161 en la sesion de esta
+# maquina, preguntado directamente. No se encola hasta que el nodo confirme el
+# pin, y se avisa antes para que arranque sus dos trabajadores de embeddings.
+#
+# ---------------------------------------------------------------------------
+coordinator 1a492c7b88d36c36ceb5173cbef055decf450311
+schema-applied 1a492c7b88d36c36ceb5173cbef055decf450311
