@@ -373,3 +373,103 @@ memoria alrededor de una seleccion que puede no ser la buena.
 Empiezo por el 1, que es por donde dices. Lo que queda abierto de verdad es
 una sola cosa: si te vale el renombrado del manifiesto a `version_t` y
 `version_t_prime`, que es el unico cambio que he hecho sin que me lo pidas.
+
+## 9. `neighbour_state`: la forma de intervalo, y el nivel del vecino
+
+Escrito el 2026-11-08, **antes de escribir una linea**, que es lo que pediste.
+Lo que ya esta decidido va primero y lo que mediria despues va al final.
+
+### El nivel: la ACCESION, en las dos tablas
+
+No es una eleccion abierta. El banco de produccion se ordena por
+`(Protein.accession COLLATE "C", SequenceEmbedding.chunk_index_s)`, una fila
+por accesion, y su propio docstring dice que el 91 % de las consultas tienen
+vecinos a distancia ~0, "ellas mismas, o gemelas que llevan la misma
+secuencia". Las gemelas ya son donantes distintos en produccion, hoy.
+
+La union, que era la otra opcion, habria fundido hasta **115 organismos** en un
+donante: de 54.153 secuencias compartidas, 51.069 llevan accesiones de entradas
+UniProt distintas. Los numeros completos estan en
+`plans/ESTADO-Y-DECISIONES-ABIERTAS.md`.
+
+Asi que `neighbourhood.neighbour` y `neighbour_state.neighbour` llevan los dos
+la accesion, tu union por igualdad de valor funciona, y la pregunta de como
+pasa una secuencia con varias accesiones a un estado no se contesta: se
+disuelve, porque el donante nunca es una secuencia.
+
+### La forma: una fila por INTERVALO
+
+Clave: `(neighbour, go_id, evidence_code, qualifier, valid_from_version)`, mas
+`valid_to_version`. **Los dos extremos inclusive.** Tus cuatro campos de
+disjuntos son los cuatro primeros y el quinto es la release que abre la racha,
+asi que dos rachas de una ficha no pueden solaparse por construccion.
+
+`assigned_by` **no esta**, por lo medido en la nota de estado: el marcador de
+produccion no lo lee nunca, y dentro de la clave multiplica las fichas por
+1,177, que es exactamente el solape que te hace rechazar una tabla.
+
+La forma de una fila por `(vecino, ficha, release)` multiplica por las
+releases que una ficha sobrevive, que son 19,2 de 48 de media medidas. El
+intervalo es del orden de 19 veces mas pequeno y dice lo mismo.
+
+### El orden: remapeo, DISTINCT, rachas. En ese orden
+
+Los tres pasos quitan filas y **ninguna permutacion da el mismo resultado**:
+
+1. **el remapeo primero.** Una ficha se lee en el espacio de ids de SU release,
+   donde `go_term.id` es un subrogado por instantanea. Dos subrogados del mismo
+   termino en releases consecutivas parecerian dos fichas distintas y darian
+   **dos rachas en vez de una**. Tu lo midiste: 9.603 tuplas solapadas por
+   release si las rachas se construyen antes del remapeo, que es justo lo que
+   tu cargador rechaza;
+2. **el DISTINCT despues**, sobre la clave de la ficha y por release, porque el
+   GAF escribe la misma ficha mas de una vez: **26,7 %** medido sobre un
+   dieciseisavo de la release 211;
+3. **las rachas al final**, sobre la serie de fichas ya unicas por release.
+
+Los dos colapsos se declaran **aparte**, como en `query_state`, porque son dos
+hechos distintos: lo que el GAF escribio dos veces y lo que se hizo igual al
+nombrarlo el eje.
+
+### El barrido: hasta `cut_version` y ni una release mas
+
+Medido hoy en la base: **51 `annotation_set` entre 156 y 211**, y el unico
+hueco es **206 a 210**. Ese hueco no es nuestro: esas releases no estan en el
+archivo de GOA, asi que 205 y 211 son consecutivas y hay **311 dias** entre
+ellas.
+
+Esto tiene una consecuencia para el manifiesto y no para el codigo. Una racha
+de 205 a 211 es continua, y eso es correcto, pero un lector que crea que 206 a
+210 existen leera "sobrevivio seis releases" donde pasaron dos. Asi que el
+manifiesto lleva **`neighbour_state_versions`**: la lista de las releases
+barridas, en orden, con su cuenta. Una lista y no un rango, porque un rango no
+puede expresar el hueco.
+
+Y **192 y 193 son el mismo fichero**, byte a byte. Una racha no se rompe ahi,
+que es lo correcto, pero una cuenta de releases dentro de un intervalo cuenta
+ese tramo dos veces. Va dicho en el manifiesto al lado de la lista.
+
+### Las negativas que llevaria
+
+- una racha con `valid_to_version` mayor que `cut_version` se rechaza, igual
+  que `refuse_after_the_cut` rechaza una ventana posterior al corte;
+- dos rachas de la misma ficha que se solapan se rechazan al escribir, no solo
+  al leer: tu cargador es la segunda red, no la primera;
+- si `neighbourhood` y `neighbour_state` no comparten ni un vecino, se rechaza
+  (tu `a432305` hace lo mismo al leer);
+- un vecino sin estado **no es un error**: se cuenta como cobertura y se emite.
+
+### Lo que mediria antes de escribirlo, y por que espera
+
+Espera al kNN, porque su poblacion son los vecinos de `neighbourhood` y no el
+corpus entero, y sin esa tabla no se sabe cuantos son. Lo que medire en cuanto
+exista:
+
+1. **cuantos vecinos distintos** tiene el `neighbourhood` de un lote, que es lo
+   que fija el tamano de esta tabla;
+2. **las filas**, en las dos formas, para que el factor 19 sea una medida y no
+   una estimacion mia;
+3. **el colapso del remapeo** por separado del del GAF, con los contadores del
+   modulo, que es lo que te debo tambien en `query_state`.
+
+Ninguna de las tres la adelanto de memoria.
