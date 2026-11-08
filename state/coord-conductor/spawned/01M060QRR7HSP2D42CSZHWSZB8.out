@@ -1,0 +1,40 @@
+I read the prompt and traced it through the ledger. Two things first, then what it asks.
+
+## A twin is already running on this exact message
+
+The conductor spawned a headless agent on the same prompt at 21:28 and it is still alive:
+
+```
+timeout 1800 claude -p .../coord-1786908508-62c3/composed_prompt.md
+    --permission-mode acceptEdits --allowedTools Bash(git:*) --add-dir .../farm-coord
+```
+
+It can commit and push to `farm-coord`. So **nothing I do should touch the ledger until it exits** or we both write an outcome entry for claim epoch 1. The three previous runs (`state/coord-conductor/spawned/*.out`) all ended read-only, reporting and asking for approvals — so it will most likely write nothing, but that is a prediction, not a guarantee.
+
+## The message: desktop → laptop, priority 70, claim held here at epoch 1
+
+Four items, and one of them is ours to fix:
+
+1. **Evaluations consumer** — they brought one up, ours is reportedly already gone. Informational, worth confirming.
+2. **Their tokenisation hypothesis is dead**, killed by their own check on the checkout date. No action.
+3. **The real lead is the non-monotone `ankh_base` curve** (0.2589 → 0.1902 → 0.1810 → 0.2481). Their reading: not corruption but *collapse* — a neighbourhood too dense to discriminate at small k, informative only once k is large. Testable from stored data with no recompute: the distribution of the k nearest cosines per query, `ankh_base` against `ankh_large`. That is laptop work; we own the database.
+4. **The twenty vectors did not arrive**, and they want them in a branch with the commit in `ref`.
+5. **Ordering they propose for the two fixes:** coordinator treats a dead-lettered child as terminal for the parent *first* (that is what unblocks re-dispatch past the 409), completeness marker second. They also accept our row-count caution — the completeness check needs the job's terminal state, not just the count.
+
+## On the vectors, their guess is wrong and it is our defect
+
+They suspect the content gate. It isn't. The gate in `scripts/coord/coord-send.sh:125` is all-or-nothing — it `die`s and refuses the whole push, it never strips a body. If it had fired, no message would have been sent at all.
+
+What actually happened: the message we sent at 19:06 (`01M05ZF265YK3VHT1NYP6CGAE3`, ledger commit `7ebb715`) has a paragraph headed "WHAT I AM SENDING" describing the twenty vectors, and a `ref` block that is `{repo: null, commit: null, path: null, protea_job_id: null}`. The vectors were described and never attached. Their remedy is the right one and the flags already exist: `--ref-repo/--ref-commit/--ref-path`.
+
+## What I need approved to actually do any of it
+
+Everything past reading is gated in this session — the same wall the last three runs hit:
+
+- `docker exec protea-postgres-1 psql …` — extract the twenty `ankh_base` vectors, and compute the per-query k-nearest-cosine distributions for both cells
+- read/grep under `~/Thesis-laptop/PROTEA` — locate the coordinator's child-completion path and the completeness check
+- `bash scripts/coord/coord-fence.sh 01M060QRR7HSP2D42CSZHWSZB8 1` — required before the first push
+
+My recommended order, if you approve: the k-nearest-cosine distributions first, because it is read-only, needs no recompute, and either confirms or kills the collapse hypothesis in one query — and it makes the vector handoff more useful by telling desktop what to look for. Then the vectors on a branch with a real `ref`. The coordinator dead-letter fix is the highest-value change but it is a PROTEA code change and belongs in its own pass.
+
+Tell me whether to kill the headless twin or let it finish first.

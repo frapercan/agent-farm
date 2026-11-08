@@ -1,0 +1,31 @@
+Halt acknowledged and acted on. Outcome entry pushed to the ledger (`bd332d4..bd5ae0d`, first try).
+
+## What I did
+
+**Stopped this side's loop.** The desktop ended its own; the laptop still had a live one. I renamed `state/coord-conductor/ENABLED` → `ENABLED.halted-01M08B3KSH2FE6G21P5ER2NRY2` — brake 1 from the conductor's own header, which stops execution at the next tick without touching systemd. Renamed rather than deleted, so restoring is one `mv` back.
+
+Before disabling I verified no handoff would be stranded: every `message_id` in `results/*/handoff.env` has a marker in `spawned/`, so no orphan claim was created.
+
+**The keeper (`coord-tick.sh`) is still running** and is now the only live coordination component here. It claims and writes handoffs that nothing consumes, so anything arriving becomes an orphan claim. Nothing should arrive. Stopping it needs `systemctl` on the persistent server — that's your call, not one I took unilaterally.
+
+**No reply sent.** A sibling had already delivered the terminal ack at 17:17:58 (`01M08BNRV0PXK4MDR9VZBT7NHQ`, subject ends *NO REPLY NEEDED, halt acknowledged*). A second message to a board you're trying to read is noise, so everything went into the ledger entry and `inventory/laptop.md` instead.
+
+## The thing worth your attention
+
+**23 coordination messages were consumed today and never executed** — bigger than the eight orphan claims the desktop named. The conductor logs each as `FAIL exit=1 (124 = hit the 1800s timeout)`. That gloss is wrong: every one exited ~2 s after its `SPAWN` line, and the `.out` files read *You've hit your session limit*. Three bursts — 2 at 00:03, 8 at 08:17–08:19, 13 at 13:23–13:28 — one per five-hour reset.
+
+They can't be retried. Brake 3 writes the `spawned/` marker *before* the spawn (correct — a crash mustn't duplicate side effects), so a spawn that failed before doing anything looks identical to one that completed. 22 of the 23 hold a laptop claim with no ledger outcome. Recovery is deleting the marker by hand, safe only because the `.out` proves the failure was pre-execution.
+
+Repair is two lines: distinguish rc 124 from other rc in the log, and don't keep the marker on a non-zero exit below some duration floor.
+
+## Left deliberately untouched
+
+`git status` on `agent-farm` main is dirty and I did not clean it — you halted to read what we produced, and a tidied tree hides that. Nothing pushed, nothing lost:
+
+- `coord-tick.sh` — adds `COORD_WORK_ONLY`. **Same defect desktop PR 247 fixes with `COORD_BOXES` + `prefer`.** Two designs now exist for one defect; `COORD_BOXES` is the more general and this side has no attachment to its own. Worth choosing deliberately rather than hitting it as a conflict.
+- `bootstrap-fresh-machine.sh` — two real fixes (no longer repoints `/usr/bin/python3` at a uv-managed interpreter, which wedges apt; PEP 668 fallback for pipx).
+- **Untracked, and the largest gap:** the entire conductor (`coord-conductor-tick.sh`, `-supervisor.sh`, `.service`). It's the component that executes a claimed message — the reason today's exchange happened — and it's versioned nowhere, invisible to the desktop, erased by a disk loss. Committing it is a design decision with a systemd unit and a trust boundary in it, so I named it rather than took it under a halt.
+
+Two worktrees, both on pushed branches, neither holding uncommitted work.
+
+**Frame:** I could read and write the agent-farm checkout, so the conductor scripts, log and `.out` files were read, not remembered. `bash` on scripts, `systemctl` and `python3` were refused — hence the git-equivalent fence and the `mv`. PROTEA and the database were untouched; nothing scientific was measured.

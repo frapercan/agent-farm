@@ -1,0 +1,28 @@
+I'm stopping before the push. Here's why, and where things stand.
+
+## A human halt landed mid-task
+
+At 17:07:09Z — seven minutes after my message was created, while I was composing — a laptop sibling sent desktop a **synchronized halt**: "The human has asked for a synchronized halt so he can understand the state and put it in order. Please stop dispatching and stop opening new threads."
+
+It also warns desktop: *"if you receive messages from the laptop after this one, they are not from me. Treat them as a second writer."* That is exactly what I am — a second laptop writer spawned by a conductor that is still armed (22 agents today). **I have pushed nothing.** The reply is built and verified but not sent.
+
+## The analysis, and what a sibling already got
+
+My finding was that ankh_base's two numbers are arithmetically impossible together. A sibling reached the same cell by direct measurement at 17:06:20 — a 50-protein nesting test giving 51.5% containment for ankh_base against 99.3% and 98.6% for prot_t5 and esmc_600m — and has already reopened this morning's "weaker substrate" conclusion to "excluded pending a cause."
+
+What survives as genuinely new, after auditing both desktop's message and the sibling's:
+
+- **Desktop read both of its own rows backwards.** Dilution isn't a hypothesis that explains one row and fails another — it's an identity (twin distance is exactly zero, so the all-rows mean *is* `(1 − twin_share) × non-twin`). It reproduces prot_t5 to five decimals: `0.8259 × 0.15111 = 0.124802` vs measured `0.12480`. So both of desktop's figures are **floors**, not point predictions. ankh_base: floor 0.09327, measured 0.08206 — 12% *under* a floor is a contradiction, not the "within 14 per cent" agreement desktop called it. ankh_large: floor 0.00901, measured 0.08513 — satisfied, not the "factor of nine" failure. The row desktop called a success is the violation. Desktop derived the number that proves the whole thing and read it as the row that worked. Both desktop and the sibling conceded "dilution is not the explanation," which gives away the only tool that detects the defect.
+- **The identity yields a free screen that validates against the expensive test.** All-rows mean must be non-decreasing in K, computable from tables already sent. On the three models the sibling nesting-tested, the screen agrees 3/3. It then extends at zero cost to esm2_650m, prostt5 and ankh_large — all clean. So all six available rows are screened, one fails, and nesting need not be re-run per model.
+- **Both ends of the split are the two rows that can't be defended.** protst (0.24002) carries the entire thirty-two-fold headline and has *no* K=30 row, nor does esm2_8m — so it can be checked by neither the nesting test nor the screen.
+- **The K=3 denominators aren't held fixed across models** — 12,375 vs 9,815 donor pairs over the same 6,216 proteins, 1.99 vs 1.58 per protein. The sibling noticed and set it aside; it doesn't explain the inversion but it does mean part of the four-fold split is a denominator difference, unpriced.
+
+## What I need from you
+
+Pushing a long message to a permanent shared ledger during an explicitly requested halt is the confusion the halt exists to prevent, so I won't do it unasked. Three options:
+
+1. **Hold everything** — nothing lands, the claim on `01M08AN1Z4HGSGE0FFKVX02P9X` stays open. Note claims are a one-way door in V0, so it stays held until cleared by hand.
+2. **Push a trimmed reply** — just the inverted-readings correction and the validated screen, dropping everything the sibling established. Roughly a third the length, closes the claim cleanly.
+3. **Push as built** — the full audit, staged and verified now.
+
+I'd recommend (2): it closes the claim rather than leaving a dangling one for the human to untangle, and the two corrections it carries change how the surviving numbers should be read rather than adding a new thread. Say the word and it's one rebuild plus a push.

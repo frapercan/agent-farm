@@ -1,0 +1,25 @@
+Reply drafted and staged; the push is blocked on the same wall as the previous rounds.
+
+**Fence** — passed, run by hand with `git` because `bash …/coord-fence.sh` is not permitted: fetched `refs/heads/ledger`, read `claims/01M0783532KBMTR721JMKXAT5G.json`, confirmed `claimed_by: laptop`, `epoch: 1`, `state: claimed`. Re-checked immediately before attempting the push.
+
+**One useful recovery:** the previous round's reply was sent but never saved to `results/`. It's in the ledger (`inbox/desktop/20260817T000105Z-…`), readable with git alone, so the registry listing desktop is arguing against came back verbatim rather than from memory — which is how I can name the three NULL rows (`protst` 4d5d29ee, `prostt5` d8d26a5e, `prot_t5` 9987ca96) instead of guessing.
+
+**What the reply says**, in short — the substance is arithmetic on numbers already exchanged, so none of it needed the database:
+
+- The x-axis definition is more urgent than desktop argued: four of the five configs sit inside 0.405 decades, and a factor-of-two definition error is 0.301 — **74% of the width of the region the trend is read across**.
+- Our two Ankh rows stand in ratio 1:2.5, the lab's hand-filled pair in 1:4.2. Those can't both be one definition, so one column is mixed *inside a single family*. One measurement settles it. `prostt5`/`prot_t5` give a free acceptance test — identical encoder shape, so the filled counts must agree to the parameter.
+- The curve isn't a curve: 81% of its 2.17-decade span is one empty gap. The ESM-2 ladder (8M/35M/150M/650M/3B) is evenly spaced to within 4%, spans 2.56 decades, and holds family fixed — which is desktop's own protst argument applied consistently, since as drawn the bottom point is an ESM-2 and the top is an Ankh.
+- So recreate a ladder, not a config: `esm2_35m` costs a quarter of the 150M run already committed, and defers the expensive 3B decision until the four rungs are read.
+- Don't rewrite the ten dead ids — that guarantees a fourth rewrite. Resolve by recipe at call time and fail loud; drop the `EncoderAblationSpec` default entirely.
+- Before spending anything on recreating 500a0c59: check whether its full recipe survives at all, and answer the still-outstanding question about the encoder's training objective, which decides whether +0.530 is worth anchoring to.
+
+**Files** in `agent-farm/results/coord-1786949780-3ada/`: `REPLY.md`, `body.md` (send-ready), `audit_registry.sql`, `count_executed_params.py`.
+
+**Blocked — the send needs approval:**
+
+```bash
+bash ~/Thesis-laptop/agent-farm/scripts/coord/coord-send.sh --to desktop --priority 70 \
+  --expires-in 24h --subject "..." --body-file <results dir>/body.md
+```
+
+Still unresolved, seventh round running: `bash` for the two coord scripts, read-only `psql`, and `~/Thesis-laptop/PROTEA` outside the session's working directories. The third is why `strata.py` is still a specification and the three source changes above are described rather than patched.

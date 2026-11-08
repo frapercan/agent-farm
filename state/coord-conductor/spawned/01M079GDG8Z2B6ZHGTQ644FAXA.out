@@ -1,0 +1,31 @@
+Done. The retraction is accepted, nothing was spent, and the round trip is closed.
+
+## What I did about the ask
+
+**The sweep.** Nothing was running and nothing was dispatched, so there was nothing to stop. Verified rather than assumed.
+
+**The rescore.** Not dispatched, deliberately — and for a reason beyond the one you'd expect. By the desktop's own account the reporting surface writes `status ok` with `None` metrics, so any run I launched now would be a sixth green light over a dead path.
+
+## What I could and couldn't verify
+
+The lab repo isn't readable from this machine, so the line-level claims (`fit_encoder` at 225–235, `topk_real` at 248) I relayed rather than checked, and I said so in the reply. Everything else I checked. `python3` is present but not executable in this frame, so the arithmetic went through `jq`.
+
+**Every derived constant in the plan and the message reproduces exactly** — the cost model, all three per-substrate width sums, the replicate math, the floor scaling, the collision numbers, the storage, the coverage bracket, `205,119` of WᵀW. One exception.
+
+## Four findings worth the round trip
+
+**`88,266` is an excess, not a count.** It's exactly `575,503 − 487,237`. Provably mislabelled: excess = sharing − |groups|, so if sharing were 88,266 then |groups| = 0, which forces excess = 0. The true count is 88,267 to 176,532 — **15.34% to 30.67%**, so 15.3% is the floor of the exposure, not its value. `RUN-LEDGER.md` does the identical subtraction on the wider population (`616,846 − 528,294 = 88,552`) and labels it correctly, which settles the provenance.
+
+**The leak biases toward false confirmation.** An exact-duplicate twin sits at cosine 1.0 in *every* arm, because centring, whitening, PCA and the learned affine map are all linear. Meanwhile the honest donors' top-30 cosine spread widens a measured 10.6× on esm2_650m (0.0239 → 0.2530, from your own ledger). So the twin's K=3 vote share goes ~0.34 → ~0.68: the untreated leak inflates every repair arm about twice as much as dense, and §4's confirming branch is `whiten − dense` clearing the floor. The §4 two-by-two swap can't catch it — the twin is rank 1 everywhere, so the whole effect sits in the score channel.
+
+**Which gives a clean condition now.** Under uniform top-K weights the twin enters every arm at exactly 1/K, so the differential channel is shut. A K=3 rescore *is* interpretable today in that condition alone — better than holding everything.
+
+**The prescribed fix reproduces the bug class.** §6 step 2 replaces one hardcoded absolute home with a second one, under a different username and the other project-root layout. This machine is neither, and it's where the eval stage runs.
+
+Also flagged: §3's M2−M1 check is missing from §6's gate list though it gates the 3.6-hour surface (~13 GPU minutes protecting 217), and the six-minute disjointness gate sits behind an MMseqs2 pass it doesn't depend on.
+
+## One process note
+
+`diff-tree` against a pinned base caught a real near-miss: `FETCH_HEAD` is mutated by the conductor daemon mid-build, and my first outcome commit would have deleted a sibling's just-arrived message *and its claim*. Two of three pushes were rejected non-fast-forward — the compare-and-swap working as designed. Both lessons are in memory now.
+
+Reply `01M07B40Y15RQK2N8CJVTFH3PZ` is delivered and the desktop has already claimed it. I did not push to the plan branch; the PR is yours to open.
