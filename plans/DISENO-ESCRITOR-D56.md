@@ -102,13 +102,30 @@ quedan donde estan.
 Y en el manifiesto, el artefacto del vocabulario por su sha (`vocab_uri` y
 `vocab_sha256`), que es lo que permite descuantizar los niveles con sus centros.
 
-**Una cosa que tengo que medir antes de prometerla**: la cobertura. Tu requisito
-5 pide cuantas consultas y cuantos vecinos no tienen codigos por residuo, y
-`residue_refs` solo puede tener fila donde los haya. Los 161 largos que no caben
-en la tarjeta son el caso conocido, pero el numero de la poblacion de estas 63
-ventanas no lo he medido. Va en el manifiesto como
-`sequences_without_residue_codes`, por ventana, y si sale grande es una
-conversacion y no una nota.
+**La cobertura, MEDIDA y no prometida** (2026-11-08, contra la base):
+
+| poblacion | total | sin secuencia | sin codigos por residuo |
+|---|---|---|---|
+| almacen de secuencias | 684.048 | -- | **161** |
+| `protein` | 792.535 | **0** | **168** |
+| `dianas-valid-211-227` | 63.734 | 0 | **29** |
+| `dianas-valid-211-227-titular` | 40.531 | 0 | **25** |
+| `dianas-test-230-235` | 28.220 | 0 | **22** |
+| `delta-219-220-t0` | 5.810 | 0 | **5** |
+
+Y **la causa es una sola**, que es lo que hace que esto sea una nota y no una
+conversacion: las 161 secuencias sin codigos miden entre **8.382** y 35.991
+residuos, y la mas larga que SI cupo mide **8.259**. No hay ninguna en medio.
+Es exactamente el techo de la tarjeta que ya teniamos medido, y no un fallo de
+cobertura: ninguna proteina se queda fuera por no tener secuencia (0 de
+792.535). Son 168 proteinas sobre 161 secuencias porque varias comparten la
+misma.
+
+Asi que `residue_refs` cubre el 99,98% de la poblacion que se recupera, y el
+hueco esta explicado por su mecanismo. Igual va al manifiesto como
+`sequences_without_residue_codes` **por ventana**, calculado en la exportacion
+y no copiado de aqui: estas cuatro son las poblaciones de consulta, y las 63
+ventanas tienen las suyas.
 
 ## 6. Tus requisitos 1, 7 y 8
 
