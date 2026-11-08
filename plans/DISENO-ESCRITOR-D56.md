@@ -428,13 +428,31 @@ sobre `neighbour_state_versions`, que es la lista, y no sobre la aritmetica de
 los numeros de release.
 
 La forma de una fila por `(vecino, ficha, release)` multiplica por las releases
-que una ficha sobrevive. La media que manejamos es de **19,2 de 48**, que es
-una medida del laboratorio sobre el tramo 156 a 205 y no mia: no la he
-reproducido aqui, no esta apuntada con su poblacion en ningun fichero de este
-lado, e **incluye ya el corte de la 202** que se describe abajo. Asi que el
-"factor 19" es un orden de magnitud para decidir la forma, no un numero
-citable. Lo medire sobre la poblacion de esta tabla cuando exista el kNN, en
-las dos formas, y entonces sera un numero.
+que una ficha sobrevive. **Medido el 2026-11-08**, sobre las 300 accesiones de
+menor md5 de la tabla `protein` y las **50 releases** que hay entre la 156 y la
+205:
+
+    releases barridas                      50
+    filas en la forma por release     119.452
+    tuplas distintas                    5.931
+    factor                              20,14
+    persistencia maxima            50 de 50
+    tuplas en una sola release           4,5 %
+
+Asi que el intervalo es del orden de **veinte** veces mas pequeno y dice lo
+mismo. Dos avisos sobre ese numero, porque es mio y quiero que sea usable:
+
+- **incluye ya el corte de la 202** que se describe abajo, asi que no es el
+  ahorro de un regimen limpio sino el de esta serie;
+- su poblacion son 300 proteinas del corpus, no los vecinos de un
+  `neighbourhood`, que es la poblacion real de esta tabla. Vale para ELEGIR la
+  forma y no para declararla. El numero de la tabla lo daran sus contadores
+  cuando exista el kNN.
+
+Una version anterior de este parrafo decia 19,2 sobre 48 releases, y de paso lo
+atribuia al laboratorio. Las dos cosas estaban mal: el numero salio de una
+medida mia sobre otra muestra, y entre la 156 y la 205 hay 50 releases y no 48.
+Queda la medida de arriba, que sale de una consulta y no de un mensaje.
 
 ### El orden: remapeo, DISTINCT, rachas. En ese orden
 
