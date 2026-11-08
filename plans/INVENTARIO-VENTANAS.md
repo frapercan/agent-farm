@@ -1,6 +1,6 @@
 # Inventario de las ventanas de evaluacion: nombradas y descritas
 
-**144 ventanas, generadas desde la base el 2026-11-08** por `plans/genera_inventario.py`. No se escribe a mano: un inventario que alguien mantiene a mano es un inventario que miente en cuanto se genera una ventana mas.
+**87 ventanas, generadas desde la base el 2026-11-08** por `plans/genera_inventario.py`. No se escribe a mano: un inventario que alguien mantiene a mano es un inventario que miente en cuanto se genera una ventana mas.
 
 ## Por que hace falta nombrarlas
 
@@ -25,7 +25,7 @@ Colisiones ahora: **0** (la etiqueta identifica).
 | `227-230.viejo.28c785ca.B` | `cb46395a` | 227->230 | **test** | 0 | 21,996 | **EL HOLDOUT. Su pase se gasto el 2026-10-26 EN EL LABORATORIO** (0,4471 contra 0,2605), no aqui, por eso tiene cero resultados en PROTEA. El silencio de esta tabla no dice nada sobre el mundo. NO se reconstruye y NO se borra |
 | `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | **test** | 4 | 28,220 | **La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION` |
 
-## El marco vivo: 16 ventanas `campana`
+## El marco vivo: 83 ventanas `campana`
 
 | etiqueta | id | tramo | pivote | constr. | papel | delta | revision | dia | que es |
 |---|---|---|---|---|---|---|---|---|---|
@@ -34,155 +34,98 @@ Colisiones ahora: **0** (la etiqueta identifica).
 | `158-159.campana.15f002ea.A` | `e3639c55` | 158->159 | releases/2022-07-01 | A | - | 4,910 | `d5416224` | 2026-11-08 |  |
 | `159-160.campana.15f002ea.A` | `96646bb4` | 159->160 | releases/2022-07-01 | A | - | 8,469 | `d5416224` | 2026-11-08 |  |
 | `160-161.campana.15f002ea.A` | `983f3a65` | 160->161 | releases/2022-07-01 | A | - | 5,369 | `d5416224` | 2026-11-08 |  |
-| `160-177.campana.15f002ea.A` | `3bd720c9` | 160->177 | releases/2022-07-01 | A | - | 31,801 | `8ab6487f` | 2026-11-07 | La (A) de 160->177, construida con el remapeo ROTO (revision 8ab6487f). Su verdad es la vieja. **Pedirla otra vez NO da una nueva y tampoco falla**: `_maybe_reuse_existing` sirve ESTA fila bajo la misma identidad sin mirar `code_revision`, con un evento `idempotent_reuse` de nivel info. La restriccion unica no llega a rechazarla porque la operacion no llega a insertar. Yo escribi lo contrario y era falso |
 | `160-177.campana.15f002ea.B` | `e84dfec8` | 160->177 | releases/2022-07-01 | B | - | 57,232 | `8ab6487f` | 2026-11-07 | La (B) gemela de 160->177, para la comparacion (A)/(B). Su verdad es identica al byte con el arreglo del remapeo |
+| `160-177.campana.15f002ea.A` | `d3c8cd2e` | 160->177 | releases/2022-07-01 | A | - | 31,871 | `d5416224` | 2026-11-08 |  |
 | `161-162.campana.15f002ea.A` | `a5933668` | 161->162 | releases/2022-07-01 | A | - | 12,564 | `d5416224` | 2026-11-08 |  |
 | `162-163.campana.15f002ea.A` | `d82e9b2f` | 162->163 | releases/2022-07-01 | A | - | 5,127 | `d5416224` | 2026-11-08 |  |
 | `163-164.campana.15f002ea.A` | `fa7ea497` | 163->164 | releases/2022-07-01 | A | - | 7,580 | `d5416224` | 2026-11-08 |  |
 | `164-165.campana.15f002ea.A` | `c197ba4b` | 164->165 | releases/2022-07-01 | A | - | 7,148 | `d5416224` | 2026-11-08 |  |
 | `165-166.campana.15f002ea.A` | `b4533108` | 165->166 | releases/2022-07-01 | A | - | 6,769 | `d5416224` | 2026-11-08 |  |
 | `166-167.campana.15f002ea.A` | `40136294` | 166->167 | releases/2022-07-01 | A | - | 5,360 | `d5416224` | 2026-11-08 |  |
+| `167-168.campana.15f002ea.A` | `4a9f58ae` | 167->168 | releases/2022-07-01 | A | - | 5,374 | `d5416224` | 2026-11-08 |  |
+| `168-169.campana.15f002ea.A` | `72ea69b1` | 168->169 | releases/2022-07-01 | A | - | 6,378 | `d5416224` | 2026-11-08 |  |
+| `169-170.campana.15f002ea.A` | `56dfa71c` | 169->170 | releases/2022-07-01 | A | - | 5,189 | `d5416224` | 2026-11-08 |  |
+| `170-171.campana.15f002ea.A` | `522d02bc` | 170->171 | releases/2022-07-01 | A | - | 6,741 | `d5416224` | 2026-11-08 |  |
+| `171-172.campana.15f002ea.A` | `f845afdf` | 171->172 | releases/2022-07-01 | A | - | 4,942 | `d5416224` | 2026-11-08 |  |
+| `172-173.campana.15f002ea.A` | `f986e445` | 172->173 | releases/2022-07-01 | A | - | 5,793 | `d5416224` | 2026-11-08 |  |
+| `173-174.campana.15f002ea.A` | `2feada67` | 173->174 | releases/2022-07-01 | A | - | 5,103 | `d5416224` | 2026-11-08 |  |
+| `174-175.campana.15f002ea.A` | `2cd5f200` | 174->175 | releases/2022-07-01 | A | - | 5,775 | `d5416224` | 2026-11-08 |  |
+| `174-202.campana.15f002ea.A` | `899cba71` | 174->202 | releases/2022-07-01 | A | - | 41,863 | `8cc344b0` | 2026-11-08 |  |
+| `175-176.campana.15f002ea.A` | `73252908` | 175->176 | releases/2022-07-01 | A | - | 5,369 | `d5416224` | 2026-11-08 |  |
+| `176-177.campana.15f002ea.A` | `597715b2` | 176->177 | releases/2022-07-01 | A | - | 5,794 | `d5416224` | 2026-11-08 |  |
+| `177-178.campana.15f002ea.A` | `16e315b9` | 177->178 | releases/2022-07-01 | A | - | 4,979 | `d5416224` | 2026-11-08 |  |
+| `178-179.campana.15f002ea.A` | `7369e486` | 178->179 | releases/2022-07-01 | A | - | 8,131 | `d5416224` | 2026-11-08 |  |
+| `178-204.campana.15f002ea.A` | `2a74f7cb` | 178->204 | releases/2022-07-01 | A | - | 40,561 | `8cc344b0` | 2026-11-08 |  |
+| `179-180.campana.15f002ea.A` | `16a80269` | 179->180 | releases/2022-07-01 | A | - | 6,263 | `d5416224` | 2026-11-08 |  |
+| `180-181.campana.15f002ea.A` | `1a9148a0` | 180->181 | releases/2022-07-01 | A | - | 6,357 | `d5416224` | 2026-11-08 |  |
+| `181-182.campana.15f002ea.A` | `4220a313` | 181->182 | releases/2022-07-01 | A | - | 8,308 | `d5416224` | 2026-11-08 |  |
+| `182-183.campana.15f002ea.A` | `c5277415` | 182->183 | releases/2022-07-01 | A | - | 3,976 | `d5416224` | 2026-11-08 |  |
+| `183-184.campana.15f002ea.A` | `2337fd69` | 183->184 | releases/2022-07-01 | A | - | 6,866 | `d5416224` | 2026-11-08 |  |
+| `183-205.campana.15f002ea.A` | `1d61bbad` | 183->205 | releases/2022-07-01 | A | - | 34,974 | `8cc344b0` | 2026-11-08 |  |
+| `184-185.campana.15f002ea.A` | `d75e0e4d` | 184->185 | releases/2022-07-01 | A | - | 5,217 | `d5416224` | 2026-11-08 |  |
+| `185-186.campana.15f002ea.A` | `63218b38` | 185->186 | releases/2022-07-01 | A | - | 4,051 | `d5416224` | 2026-11-08 |  |
+| `186-187.campana.15f002ea.A` | `fa0ed627` | 186->187 | releases/2022-07-01 | A | - | 4,219 | `d5416224` | 2026-11-08 |  |
+| `186-202.campana.15f002ea.A` | `e448eef6` | 186->202 | releases/2022-07-01 | A | - | 26,913 | `8cc344b0` | 2026-11-08 |  |
+| `187-188.campana.15f002ea.A` | `76d9ada6` | 187->188 | releases/2022-07-01 | A | - | 3,612 | `d5416224` | 2026-11-08 |  |
+| `187-189.campana.15f002ea.A` | `1a915dca` | 187->189 | releases/2022-07-01 | A | - | 4,250 | `d5416224` | 2026-11-08 |  |
+| `189-190.campana.15f002ea.A` | `3351388b` | 189->190 | releases/2022-07-01 | A | - | 4,420 | `d5416224` | 2026-11-08 |  |
+| `189-204.campana.15f002ea.A` | `0c5f1b8c` | 189->204 | releases/2022-07-01 | A | - | 26,419 | `8cc344b0` | 2026-11-08 |  |
+| `190-191.campana.15f002ea.A` | `bdb3ceb4` | 190->191 | releases/2022-07-01 | A | - | 7,351 | `d5416224` | 2026-11-08 |  |
+| `191-192.campana.15f002ea.A` | `1f59f9f5` | 191->192 | releases/2022-07-01 | A | - | 8,206 | `d5416224` | 2026-11-08 |  |
+| `191-211.campana.15f002ea.A` | `7ada11d7` | 191->211 | releases/2022-07-01 | A | - | 37,950 | `8cc344b0` | 2026-11-08 |  |
+| `193-194.campana.15f002ea.A` | `9f1942d7` | 193->194 | releases/2022-07-01 | A | - | 4,265 | `d5416224` | 2026-11-08 |  |
+| `193-205.campana.15f002ea.A` | `56f21264` | 193->205 | releases/2022-07-01 | A | - | 22,076 | `8cc344b0` | 2026-11-08 |  |
+| `194-195.campana.15f002ea.A` | `cdbedf8b` | 194->195 | releases/2022-07-01 | A | - | 3,995 | `d5416224` | 2026-11-08 |  |
+| `195-196.campana.15f002ea.A` | `ae9809b3` | 195->196 | releases/2022-07-01 | A | - | 3,987 | `d5416224` | 2026-11-08 |  |
+| `195-202.campana.15f002ea.A` | `661950db` | 195->202 | releases/2022-07-01 | A | - | 14,623 | `8cc344b0` | 2026-11-08 |  |
+| `196-197.campana.15f002ea.A` | `23e42ae9` | 196->197 | releases/2022-07-01 | A | - | 4,728 | `d5416224` | 2026-11-08 |  |
+| `197-198.campana.15f002ea.A` | `2f4974f6` | 197->198 | releases/2022-07-01 | A | - | 4,910 | `d5416224` | 2026-11-08 |  |
+| `198-199.campana.15f002ea.A` | `6f00b1aa` | 198->199 | releases/2022-07-01 | A | - | 3,365 | `d5416224` | 2026-11-08 |  |
+| `198-204.campana.15f002ea.A` | `dad7a713` | 198->204 | releases/2022-07-01 | A | - | 11,654 | `8cc344b0` | 2026-11-08 |  |
+| `199-200.campana.15f002ea.A` | `7efccd22` | 199->200 | releases/2022-07-01 | A | - | 5,788 | `d5416224` | 2026-11-08 |  |
+| `199-202.campana.15f002ea.A` | `c3b83501` | 199->202 | releases/2022-07-01 | A | - | 10,336 | `8cc344b0` | 2026-11-08 |  |
+| `199-211.campana.15f002ea.A` | `bb3fabc4` | 199->211 | releases/2022-07-01 | A | - | 29,103 | `8cc344b0` | 2026-11-08 |  |
+| `200-201.campana.15f002ea.A` | `f74a3fe4` | 200->201 | releases/2022-07-01 | A | - | 3,993 | `d5416224` | 2026-11-08 |  |
+| `200-205.campana.15f002ea.A` | `ef4249b0` | 200->205 | releases/2022-07-01 | A | - | 14,447 | `8cc344b0` | 2026-11-08 |  |
+| `201-202.campana.15f002ea.A` | `f6a2c36a` | 201->202 | releases/2022-07-01 | A | - | 6,296 | `d5416224` | 2026-11-08 |  |
+| `201-204.campana.15f002ea.A` | `275c73bd` | 201->204 | releases/2022-07-01 | A | - | 8,050 | `8cc344b0` | 2026-11-08 |  |
+| `202-203.campana.15f002ea.A` | `ac49aad5` | 202->203 | releases/2022-07-01 | A | - | 2,866 | `d5416224` | 2026-11-08 |  |
+| `203-204.campana.15f002ea.A` | `02c5a33e` | 203->204 | releases/2022-07-01 | A | - | 6,169 | `d5416224` | 2026-11-08 |  |
+| `203-205.campana.15f002ea.A` | `e44d718b` | 203->205 | releases/2022-07-01 | A | - | 11,450 | `8cc344b0` | 2026-11-08 |  |
 | `204-205.campana.15f002ea.A` | `56225292` | 204->205 | releases/2022-07-01 | A | - | 6,882 | `637b3517` | 2026-11-07 | La primera construida con el remapeo ARREGLADO (revision 637b3517), para validar el despliegue de punta a punta y medir el coste real: 173 s |
+| `204-211.campana.15f002ea.A` | `f8d418e0` | 204->211 | releases/2022-07-01 | A | - | 20,722 | `8cc344b0` | 2026-11-08 |  |
+| `205-211.campana.15f002ea.A` | `b2606202` | 205->211 | releases/2022-07-01 | A | - | 16,159 | `d5416224` | 2026-11-08 |  |
+| `211-212.campana.15f002ea.A` | `227dcc1e` | 211->212 | releases/2022-07-01 | A | - | 1,695 | `d5416224` | 2026-11-08 |  |
 | `211-227.campana.15f002ea.A` | `ea0f4334` | 211->227 | releases/2022-07-01 | A | valid | 40,531 | `NULL` | 2026-10-27 | **LA ventana de validacion larga.** El laboratorio la reproduce al bit; sus 9 `replaced_by` y su proyeccion 2.610/3.821 son numeros publicados |
+| `212-213.campana.15f002ea.A` | `8ab5c889` | 212->213 | releases/2022-07-01 | A | - | 2,336 | `d5416224` | 2026-11-08 |  |
+| `213-214.campana.15f002ea.A` | `871366da` | 213->214 | releases/2022-07-01 | A | - | 3,409 | `d5416224` | 2026-11-08 |  |
+| `214-215.campana.15f002ea.A` | `26d21ed5` | 214->215 | releases/2022-07-01 | A | - | 1,638 | `d5416224` | 2026-11-08 |  |
+| `215-216.campana.15f002ea.A` | `f5658bd6` | 215->216 | releases/2022-07-01 | A | - | 3,618 | `d5416224` | 2026-11-08 |  |
+| `216-217.campana.15f002ea.A` | `74402a31` | 216->217 | releases/2022-07-01 | A | - | 2,545 | `d5416224` | 2026-11-08 |  |
+| `217-218.campana.15f002ea.A` | `f43e8e3b` | 217->218 | releases/2022-07-01 | A | - | 6,007 | `d5416224` | 2026-11-08 |  |
+| `218-219.campana.15f002ea.A` | `f1e9ee88` | 218->219 | releases/2022-07-01 | A | - | 2,685 | `d5416224` | 2026-11-08 |  |
+| `219-220.campana.15f002ea.A` | `d12540d6` | 219->220 | releases/2022-07-01 | A | - | 3,996 | `d5416224` | 2026-11-08 |  |
+| `220-221.campana.15f002ea.A` | `0f617b2c` | 220->221 | releases/2022-07-01 | A | - | 2,963 | `d5416224` | 2026-11-08 |  |
+| `221-222.campana.15f002ea.A` | `5d905a76` | 221->222 | releases/2022-07-01 | A | - | 3,014 | `d5416224` | 2026-11-08 |  |
+| `222-223.campana.15f002ea.A` | `d128db33` | 222->223 | releases/2022-07-01 | A | - | 3,809 | `d5416224` | 2026-11-08 |  |
+| `223-224.campana.15f002ea.A` | `06b58140` | 223->224 | releases/2022-07-01 | A | - | 4,200 | `d5416224` | 2026-11-08 |  |
+| `224-225.campana.15f002ea.A` | `a9685579` | 224->225 | releases/2022-07-01 | A | - | 3,498 | `d5416224` | 2026-11-08 |  |
+| `225-226.campana.15f002ea.A` | `5d44f0aa` | 225->226 | releases/2022-07-01 | A | - | 11,683 | `d5416224` | 2026-11-08 |  |
 | `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | releases/2026-01-23 | A | test | 28,220 | `NULL` | 2026-10-27 | **La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION` |
 
-## El marco superado: 128 ventanas `viejo`
+## El marco superado: 4 ventanas `viejo`
 
 Construidas del 8 al 11 de octubre con el codigo que tardaba **74 minutos por ventana**, cada una pivotando en **su propia era** en vez de en un pivote comun, con `as_closed` (un termino que el pivote no puede nombrar lo tira el cierre) y `not_codes = any` (un `NOT|IBA` quita verdad a positivos experimentales).
 
-**Ninguna corrida de la campana debe nombrar una de estas.** De las 128, **124 no tienen ni resultados ni papel** y serian las candidatas si alguna vez se decide limpiar. Borrarlas es una decision aparte: deja sus parquets huerfanos en MinIO y cuesta unas 6 horas deshacer con el codigo de hoy.
+**Ninguna corrida de la campana debe nombrar una de estas.** De las 4, **0 no tienen ni resultados ni papel** y serian las candidatas si alguna vez se decide limpiar. Borrarlas es una decision aparte: deja sus parquets huerfanos en MinIO y cuesta unas 6 horas deshacer con el codigo de hoy.
 
 | etiqueta | id | tramo | pivote | papel | resultados | delta | dia |
 |---|---|---|---|---|---|---|---|
-| `156-157.viejo.625863f5.A` | `df9a9dd2` | 156->157 | releases/2016-05-31 | - | 0 | 1,646 | 2026-10-08 |
-| `157-158.viejo.25c5015d.B` | `435f8fa8` | 157->158 | releases/2016-08-31 | - | 0 | 9,750 | 2026-10-08 |
-| `157-158.viejo.625863f5.B` | `5c66d592` | 157->158 | releases/2016-05-31 | - | 0 | 7,962 | 2026-10-11 |
-| `158-159.viejo.c15c24bb.B` | `3c812e86` | 158->159 | releases/2016-09-30 | - | 0 | 3,365 | 2026-10-08 |
-| `158-159.viejo.25c5015d.B` | `83796b3e` | 158->159 | releases/2016-08-31 | - | 0 | 1,562 | 2026-10-11 |
-| `159-160.viejo.c15c24bb.A` | `ed6338eb` | 159->160 | releases/2016-09-30 | - | 0 | 10,902 | 2026-10-08 |
-| `160-161.viejo.e803c5a0.B` | `6e3f7bf9` | 160->161 | releases/2016-10-29 | - | 0 | 4,976 | 2026-10-08 |
-| `160-161.viejo.c15c24bb.B` | `25f4f0aa` | 160->161 | releases/2016-09-30 | - | 0 | 4,631 | 2026-10-11 |
-| `161-162.viejo.0a497d38.B` | `bc8e810b` | 161->162 | releases/2016-12-24 | - | 0 | 21,970 | 2026-10-08 |
-| `161-162.viejo.e803c5a0.B` | `35a8e07b` | 161->162 | releases/2016-10-29 | - | 0 | 21,196 | 2026-10-11 |
-| `162-163.viejo.40e3b5f4.B` | `b8d11a2c` | 162->163 | releases/2017-01-31 | - | 0 | 4,570 | 2026-10-08 |
-| `162-163.viejo.0a497d38.B` | `a24f4f0f` | 162->163 | releases/2016-12-24 | - | 0 | 4,127 | 2026-10-11 |
-| `163-164.viejo.49ff92da.B` | `d28df026` | 163->164 | releases/2017-02-28 | - | 0 | 12,639 | 2026-10-08 |
-| `163-164.viejo.40e3b5f4.B` | `3b0734ae` | 163->164 | releases/2017-01-31 | - | 0 | 11,793 | 2026-10-11 |
-| `164-165.viejo.8affb525.B` | `fb15a431` | 164->165 | releases/2017-03-31 | - | 0 | 9,711 | 2026-10-08 |
-| `164-165.viejo.49ff92da.B` | `faab8d9e` | 164->165 | releases/2017-02-28 | - | 0 | 4,097 | 2026-10-11 |
-| `165-166.viejo.59fbb483.B` | `4d7890be` | 165->166 | releases/2017-04-28 | - | 0 | 18,451 | 2026-10-08 |
-| `165-166.viejo.8affb525.B` | `cd60f96f` | 165->166 | releases/2017-03-31 | - | 0 | 15,840 | 2026-10-11 |
-| `166-167.viejo.8447d1b3.B` | `d134786a` | 166->167 | releases/2017-05-30 | - | 0 | 8,108 | 2026-10-08 |
-| `166-167.viejo.59fbb483.B` | `3087c906` | 166->167 | releases/2017-04-28 | - | 0 | 7,790 | 2026-10-11 |
-| `167-168.viejo.b374c2c5.B` | `df4d598d` | 167->168 | releases/2017-06-29 | - | 0 | 3,673 | 2026-10-10 |
-| `167-168.viejo.8447d1b3.B` | `13f42d98` | 167->168 | releases/2017-05-30 | - | 0 | 2,828 | 2026-10-11 |
-| `168-169.viejo.a5499f63.B` | `f9247408` | 168->169 | releases/2017-07-31 | - | 0 | 4,205 | 2026-10-08 |
-| `168-169.viejo.b374c2c5.B` | `1be1487b` | 168->169 | releases/2017-06-29 | - | 0 | 3,595 | 2026-10-11 |
-| `169-170.viejo.f2f32356.B` | `6af476a1` | 169->170 | releases/2017-08-31 | - | 0 | 2,053 | 2026-10-08 |
-| `169-170.viejo.a5499f63.B` | `3cb40b83` | 169->170 | releases/2017-07-31 | - | 0 | 2,027 | 2026-10-11 |
-| `170-171.viejo.1585f60b.B` | `5c67eefe` | 170->171 | releases/2017-09-30 | - | 0 | 13,531 | 2026-10-08 |
-| `170-171.viejo.f2f32356.B` | `3e9f717b` | 170->171 | releases/2017-08-31 | - | 0 | 4,190 | 2026-10-11 |
-| `171-172.viejo.93654a02.B` | `6a7b4c8b` | 171->172 | releases/2017-10-31 | - | 0 | 6,788 | 2026-10-08 |
-| `171-172.viejo.1585f60b.B` | `6d9018fd` | 171->172 | releases/2017-09-30 | - | 0 | 2,913 | 2026-10-11 |
-| `172-173.viejo.82fb8001.B` | `6a67bc43` | 172->173 | releases/2017-11-30 | - | 0 | 13,243 | 2026-10-08 |
-| `172-173.viejo.93654a02.B` | `e24773ed` | 172->173 | releases/2017-10-31 | - | 0 | 12,364 | 2026-10-11 |
-| `173-174.viejo.b74eabc2.B` | `f9ed812a` | 173->174 | releases/2017-12-29 | - | 0 | 2,792 | 2026-10-10 |
-| `173-174.viejo.82fb8001.B` | `82f6a6b1` | 173->174 | releases/2017-11-30 | - | 0 | 2,792 | 2026-10-11 |
-| `174-175.viejo.4548ea99.B` | `dab841bd` | 174->175 | releases/2018-02-01 | - | 0 | 2,192 | 2026-10-08 |
-| `174-175.viejo.b74eabc2.B` | `27bdeabd` | 174->175 | releases/2017-12-29 | - | 0 | 2,192 | 2026-10-11 |
-| `175-176.viejo.f2c4928a.B` | `433266a9` | 175->176 | releases/2018-03-10 | - | 0 | 8,829 | 2026-10-08 |
-| `175-176.viejo.4548ea99.B` | `b0e13c98` | 175->176 | releases/2018-02-01 | - | 0 | 7,712 | 2026-10-11 |
-| `176-177.viejo.2d2ca421.B` | `7c60135d` | 176->177 | releases/2018-04-02 | - | 0 | 4,986 | 2026-10-08 |
-| `176-177.viejo.f2c4928a.B` | `598bb27f` | 176->177 | releases/2018-03-10 | - | 0 | 4,049 | 2026-10-11 |
-| `177-178.viejo.2d2ca421.A` | `ef5f62cf` | 177->178 | releases/2018-04-02 | - | 0 | 2,356 | 2026-10-08 |
-| `178-179.viejo.f385071a.B` | `997d4089` | 178->179 | releases/2018-06-01 | - | 0 | 6,215 | 2026-10-08 |
-| `178-179.viejo.2d2ca421.B` | `708fabb0` | 178->179 | releases/2018-04-02 | - | 0 | 5,628 | 2026-10-11 |
-| `179-180.viejo.788833da.B` | `45c0b1b7` | 179->180 | releases/2018-07-02 | - | 0 | 2,885 | 2026-10-08 |
-| `179-180.viejo.f385071a.B` | `4265a3f9` | 179->180 | releases/2018-06-01 | - | 0 | 2,852 | 2026-10-11 |
-| `180-181.viejo.e2cb08ca.B` | `b8b89de3` | 180->181 | releases/2018-09-05 | - | 0 | 5,992 | 2026-10-08 |
-| `180-181.viejo.788833da.B` | `014fc4a6` | 180->181 | releases/2018-07-02 | - | 0 | 5,276 | 2026-10-11 |
-| `181-182.viejo.6dd1c8e7.B` | `f952e961` | 181->182 | releases/2018-10-01 | - | 0 | 5,243 | 2026-10-08 |
-| `181-182.viejo.e2cb08ca.B` | `75bdbf9d` | 181->182 | releases/2018-09-05 | - | 0 | 5,224 | 2026-10-11 |
-| `182-183.viejo.2194b0ea.B` | `91bac32d` | 182->183 | releases/2018-10-08 | - | 0 | 694 | 2026-10-08 |
-| `182-183.viejo.6dd1c8e7.B` | `0623c713` | 182->183 | releases/2018-10-01 | - | 0 | 666 | 2026-10-11 |
-| `183-184.viejo.425e2853.B` | `92ee5561` | 183->184 | releases/2018-11-15 | - | 0 | 4,158 | 2026-10-08 |
-| `183-184.viejo.2194b0ea.B` | `7140f9dc` | 183->184 | releases/2018-10-08 | - | 0 | 4,153 | 2026-10-11 |
-| `184-185.viejo.77c3b385.B` | `9906633c` | 184->185 | releases/2019-01-01 | - | 0 | 3,628 | 2026-10-08 |
-| `184-185.viejo.425e2853.B` | `ef190d51` | 184->185 | releases/2018-11-15 | - | 0 | 3,332 | 2026-10-11 |
-| `185-186.viejo.efa7e4df.B` | `11a94bdb` | 185->186 | releases/2019-02-01 | - | 0 | 704 | 2026-10-10 |
-| `185-186.viejo.77c3b385.B` | `8835c008` | 185->186 | releases/2019-01-01 | - | 0 | 683 | 2026-10-11 |
-| `186-187.viejo.d28cec7f.B` | `2148e8be` | 186->187 | releases/2019-03-19 | - | 0 | 3,962 | 2026-10-08 |
-| `186-187.viejo.efa7e4df.B` | `e4230f33` | 186->187 | releases/2019-02-01 | - | 0 | 3,957 | 2026-10-11 |
-| `187-188.viejo.47771a52.B` | `26417c3c` | 187->188 | releases/2019-04-17 | - | 0 | 1,265 | 2026-10-08 |
-| `187-188.viejo.d28cec7f.B` | `9f34963e` | 187->188 | releases/2019-03-19 | - | 0 | 1,195 | 2026-10-11 |
-| `187-189.viejo.3e1c99c6.B` | `bc60cc3a` | 187->189 | releases/2019-06-01 | - | 0 | 5,261 | 2026-10-08 |
-| `187-189.viejo.d28cec7f.B` | `4c27c2f3` | 187->189 | releases/2019-03-19 | - | 0 | 3,797 | 2026-10-11 |
-| `189-190.viejo.97d1cfc5.B` | `a1a2a212` | 189->190 | releases/2019-06-10 | - | 0 | 2,265 | 2026-10-08 |
-| `189-190.viejo.3e1c99c6.B` | `9cdb01ce` | 189->190 | releases/2019-06-01 | - | 0 | 2,264 | 2026-10-11 |
-| `190-191.viejo.d3a7dc9e.B` | `a63b7331` | 190->191 | releases/2019-07-01 | - | 0 | 5,119 | 2026-10-09 |
-| `190-191.viejo.97d1cfc5.B` | `a0b19d78` | 190->191 | releases/2019-06-10 | - | 0 | 4,826 | 2026-10-11 |
-| `191-192.viejo.d3a7dc9e.A` | `697845e7` | 191->192 | releases/2019-07-01 | - | 0 | 5,904 | 2026-10-09 |
-| `193-194.viejo.4710dc13.B` | `ff2fab77` | 193->194 | releases/2019-11-02 | - | 0 | 88,666 | 2026-10-10 |
-| `193-194.viejo.d3a7dc9e.B` | `872447ae` | 193->194 | releases/2019-07-01 | - | 0 | 4,772 | 2026-10-11 |
-| `194-195.viejo.b8cc7515.B` | `d9b69958` | 194->195 | releases/2019-12-09 | - | 0 | 3,232 | 2026-10-09 |
-| `194-195.viejo.4710dc13.B` | `822c4c3e` | 194->195 | releases/2019-11-02 | - | 0 | 3,068 | 2026-10-11 |
-| `195-196.viejo.07802c38.B` | `a2095e46` | 195->196 | releases/2020-01-01 | - | 0 | 2,183 | 2026-10-09 |
-| `195-196.viejo.b8cc7515.B` | `9fb7399f` | 195->196 | releases/2019-12-09 | - | 0 | 1,338 | 2026-10-11 |
-| `196-197.viejo.ffa050f7.B` | `12ed0793` | 196->197 | releases/2020-03-23 | - | 0 | 17,737 | 2026-10-09 |
-| `196-197.viejo.07802c38.B` | `6272c7d5` | 196->197 | releases/2020-01-01 | - | 0 | 17,609 | 2026-10-11 |
-| `197-198.viejo.1640e0fb.B` | `a2db101c` | 197->198 | releases/2020-06-01 | - | 0 | 5,795 | 2026-10-09 |
-| `197-198.viejo.ffa050f7.B` | `60749252` | 197->198 | releases/2020-03-23 | - | 0 | 5,476 | 2026-10-11 |
-| `198-199.viejo.e7d5d24b.B` | `ef18a458` | 198->199 | releases/2020-07-16 | - | 0 | 5,303 | 2026-10-09 |
-| `198-199.viejo.1640e0fb.B` | `6375575a` | 198->199 | releases/2020-06-01 | - | 0 | 5,303 | 2026-10-11 |
-| `199-200.viejo.2cbd5df7.B` | `9676a2c8` | 199->200 | releases/2020-09-10 | - | 0 | 4,903 | 2026-10-10 |
-| `199-200.viejo.e7d5d24b.B` | `ce32256b` | 199->200 | releases/2020-07-16 | - | 0 | 4,441 | 2026-10-11 |
-| `200-201.viejo.4d9c4783.B` | `42edc25e` | 200->201 | releases/2020-11-18 | - | 0 | 15,884 | 2026-10-09 |
-| `200-201.viejo.2cbd5df7.B` | `6025bc8c` | 200->201 | releases/2020-09-10 | - | 0 | 10,766 | 2026-10-11 |
-| `201-202.viejo.a1f5f5a4.B` | `d5c1d837` | 201->202 | releases/2021-02-01 | - | 0 | 7,554 | 2026-10-09 |
-| `201-202.viejo.4d9c4783.B` | `c1af2e1c` | 201->202 | releases/2020-11-18 | - | 0 | 7,517 | 2026-10-11 |
-| `202-203.viejo.a1f5f5a4.A` | `ba9c763b` | 202->203 | releases/2021-02-01 | - | 0 | 2,618 | 2026-10-09 |
-| `203-204.viejo.4ce8c11c.B` | `aee6aecf` | 203->204 | releases/2021-05-01 | - | 0 | 17,302 | 2026-10-10 |
-| `203-204.viejo.a1f5f5a4.B` | `bf5a36a3` | 203->204 | releases/2021-02-01 | - | 0 | 17,176 | 2026-10-11 |
-| `204-205.viejo.28db4cd1.B` | `b8af9fc1` | 204->205 | releases/2021-10-26 | - | 0 | 15,550 | 2026-10-09 |
-| `204-205.viejo.4ce8c11c.B` | `d24d982a` | 204->205 | releases/2021-05-01 | - | 0 | 12,038 | 2026-10-11 |
-| `205-211.viejo.15f002ea.B` | `22f603da` | 205->211 | releases/2022-07-01 | - | 0 | 22,764 | 2026-10-09 |
-| `205-211.viejo.28db4cd1.B` | `f90f0b53` | 205->211 | releases/2021-10-26 | - | 0 | 22,508 | 2026-10-11 |
-| `211-212.viejo.d0e53de5.B` | `4fad58ba` | 211->212 | releases/2022-11-03 | - | 0 | 8,921 | 2026-10-09 |
-| `211-212.viejo.15f002ea.B` | `b3a44819` | 211->212 | releases/2022-07-01 | - | 0 | 8,727 | 2026-10-11 |
 | `211-227.viejo.15f002ea.B` | `ea94e57e` | 211->227 | releases/2022-07-01 | valid | 2 | 63,734 | 2026-10-27 | **NO BORRAR**
 | `211-227.viejo.15f002ea.A` | `7aa37929` | 211->227 | releases/2022-07-01 | valid | 0 | 39,885 | 2026-10-27 | **NO BORRAR**
-| `212-213.viejo.0e1cba96.B` | `d4a0acc4` | 212->213 | releases/2023-01-01 | - | 0 | 9,375 | 2026-10-09 |
-| `212-213.viejo.d0e53de5.B` | `6dfa3203` | 212->213 | releases/2022-11-03 | - | 0 | 9,310 | 2026-10-11 |
-| `213-214.viejo.fb1f20f5.B` | `4d0acd56` | 213->214 | releases/2023-03-06 | - | 0 | 7,747 | 2026-10-09 |
-| `213-214.viejo.0e1cba96.B` | `6f59f509` | 213->214 | releases/2023-01-01 | - | 0 | 7,222 | 2026-10-11 |
-| `214-215.viejo.046e0d03.B` | `e2829c97` | 214->215 | releases/2023-05-10 | - | 0 | 7,015 | 2026-10-09 |
-| `214-215.viejo.fb1f20f5.B` | `f97a040e` | 214->215 | releases/2023-03-06 | - | 0 | 7,011 | 2026-10-11 |
-| `215-216.viejo.cc0c572b.B` | `16c12b05` | 215->216 | releases/2023-06-11 | - | 0 | 4,504 | 2026-10-09 |
-| `215-216.viejo.046e0d03.B` | `8f019b8c` | 215->216 | releases/2023-05-10 | - | 0 | 4,005 | 2026-10-11 |
-| `216-217.viejo.07e72843.B` | `966676b9` | 216->217 | releases/2023-07-27 | - | 0 | 18,260 | 2026-10-10 |
-| `216-217.viejo.cc0c572b.B` | `383cd830` | 216->217 | releases/2023-06-11 | - | 0 | 18,213 | 2026-10-11 |
-| `217-218.viejo.b0745ea0.B` | `793a69e9` | 217->218 | releases/2023-10-09 | - | 0 | 6,572 | 2026-10-09 |
-| `217-218.viejo.07e72843.B` | `03590591` | 217->218 | releases/2023-07-27 | - | 0 | 6,221 | 2026-10-11 |
-| `218-219.viejo.2ba77c97.B` | `57ad2cdc` | 218->219 | releases/2024-01-17 | - | 0 | 11,055 | 2026-10-09 |
-| `218-219.viejo.b0745ea0.B` | `4d308764` | 218->219 | releases/2023-10-09 | - | 0 | 8,636 | 2026-10-11 |
-| `219-220.viejo.bca3e800.B` | `cd5d2a70` | 219->220 | releases/2024-03-28 | - | 0 | 9,258 | 2026-10-09 |
 | `219-220.viejo.2ba77c97.B` | `c35ee267` | 219->220 | releases/2024-01-17 | - | 3 | 5,810 | 2026-10-11 | **NO BORRAR**
-| `220-221.viejo.f813b31c.B` | `94a7561e` | 220->221 | releases/2024-06-10 | - | 0 | 7,878 | 2026-10-09 |
-| `220-221.viejo.bca3e800.B` | `4adc03df` | 220->221 | releases/2024-03-28 | - | 0 | 7,806 | 2026-10-11 |
-| `221-222.viejo.6e44e1b6.B` | `5a39b763` | 221->222 | releases/2024-06-17 | - | 0 | 2,233 | 2026-10-09 |
-| `221-222.viejo.f813b31c.B` | `b841d275` | 221->222 | releases/2024-06-10 | - | 0 | 2,233 | 2026-10-11 |
-| `222-223.viejo.950ff8af.B` | `db9cd64e` | 222->223 | releases/2024-09-08 | - | 0 | 5,258 | 2026-10-09 |
-| `222-223.viejo.6e44e1b6.B` | `23bc252f` | 222->223 | releases/2024-06-17 | - | 0 | 5,146 | 2026-10-11 |
-| `223-224.viejo.3b8d6831.B` | `5d4772ae` | 223->224 | releases/2024-10-27 | - | 0 | 10,020 | 2026-10-09 |
-| `223-224.viejo.950ff8af.B` | `26c67e7d` | 223->224 | releases/2024-09-08 | - | 0 | 9,785 | 2026-10-11 |
-| `224-225.viejo.a748634a.B` | `880688c8` | 224->225 | releases/2025-02-06 | - | 0 | 4,782 | 2026-10-10 |
-| `224-225.viejo.3b8d6831.B` | `e945ad04` | 224->225 | releases/2024-10-27 | - | 0 | 3,781 | 2026-10-11 |
-| `225-226.viejo.6a7453c1.B` | `81fb0a18` | 225->226 | releases/2025-03-16 | - | 0 | 11,713 | 2026-10-09 |
-| `225-226.viejo.a748634a.B` | `30298ed2` | 225->226 | releases/2025-02-06 | - | 0 | 11,594 | 2026-10-11 |
-| `226-227.viejo.28c785ca.B` | `3a8776b9` | 226->227 | releases/2025-07-22 | - | 0 | 12,540 | 2026-10-09 |
-| `226-227.viejo.6a7453c1.B` | `2f5ec8dd` | 226->227 | releases/2025-03-16 | - | 0 | 12,132 | 2026-10-11 |
 | `227-230.viejo.28c785ca.B` | `cb46395a` | 227->230 | releases/2025-07-22 | test | 0 | 21,996 | 2026-10-27 | **NO BORRAR**
 
 ## Y lo que el inventario no puede decir
 
-**130 de 144 ventanas no dicen con que codigo se construyeron.** El sello de revision aterrizo en el trabajador despues del 27 de octubre, asi que para esas la unica via es casar su fecha contra los bloques de `DECLARED-REVISION.txt`, que es arqueologia. PROTEA #1140 anade la columna y rellena las que se pueden rellenar; las demas se quedan NULL en vez de inferirse de la fecha, porque una fecha mapea a una declaracion y no a un proceso.
+**6 de 87 ventanas no dicen con que codigo se construyeron.** El sello de revision aterrizo en el trabajador despues del 27 de octubre, asi que para esas la unica via es casar su fecha contra los bloques de `DECLARED-REVISION.txt`, que es arqueologia. PROTEA #1140 anade la columna y rellena las que se pueden rellenar; las demas se quedan NULL en vez de inferirse de la fecha, porque una fecha mapea a una declaracion y no a un proceso.
