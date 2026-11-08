@@ -2219,5 +2219,64 @@
 # movera el arbol y no levantara nada. LA TARJETA NO SE TOCA.
 #
 # ---------------------------------------------------------------------------
-coordinator 637b3517e525a982694fa5ca4b4b6ed6d5b1ea81
-schema-applied 637b3517e525a982694fa5ca4b4b6ed6d5b1ea81
+# ---------------------------------------------------------------------------
+# 2026-11-08: 637b3517 -> d5416224, tres commits, Y LA PRIMERA MIGRACION
+# DESDE QUE EXISTE ESTE FICHERO QUE MUEVE schema-applied.
+#
+# LA PUERTA DEL SERVIDOR, comprobada y no supuesta, justo antes de empujar:
+# 0 trabajos en QUEUED o RUNNING, y 0 prediction_set creados en la ultima hora.
+#
+# 6bc55ae (#1140) ANADE UNA COLUMNA Y UN CONTADOR, los dos cantidades que se
+# computaban y no se registraban. `evaluation_set.code_revision` dice con que
+# codigo se construyo una ventana: las tres reglas dicen lo que el delta es por
+# DECLARACION y nada lo decia por IMPLEMENTACION, y no son la misma cantidad
+# porque el 2026-11-07 el arreglo del anclaje cambio el delta de toda una clase
+# de ventanas con los ocho campos de identidad intactos. Y la regla de union a
+# proteinas devolvia cuantas proteinas pierden su lado F entero -- unas 26.000
+# por ventana, medidas -- y el sitio de la llamada tiraba el valor.
+#
+# 56aca53 (#1141) ENSENA A LA EXPORTACION A NOMBRAR SU VENTANA. El par de
+# conjuntos de anotaciones dejo de identificar una: 62 de 69 pares distintos
+# llevan mas de una, asi que la exportacion se negaba en 62 de 69. Y el
+# resolutor del par de TEST seguia llamando a one_or_none, que es el incidente
+# LB.1 del 2026-05-12 sin reparar en su gemelo: ahora hay un solo resolutor.
+#
+# d541622 (#1142) ANADE LA PUERTA DE LOS CONJUNTOS, en MODO INFORME. Imprime
+# que conjunto no esta declarado, descrito, verificable o producido-por, y sale
+# 0. Hoy los seis fallan algo y cero cumplen los cuatro. Con --strict devuelve
+# 1, y eso lo encendera la ultima de las migraciones que cierren el hueco.
+#
+# LA MIGRACION, Y POR QUE ESTE ORDEN ES SEGURO. a7d3e9b1c604 anade
+# evaluation_set.code_revision, NULLABLE, y rellena desde job.started las filas
+# cuyo job lo estampo. El despliegue mueve el arbol, corre alembic y DESPUES
+# reinicia: entre alembic y el reinicio los trabajadores vivos corren codigo
+# viejo sobre una base ya migrada, y eso es correcto porque una columna
+# nullable y aditiva no la ven ni la necesitan. Con una migracion destructiva
+# el orden seria al reves y haria falta parar. QUE NADIE COPIE ESTE ORDEN AL
+# CASO QUE NO APLICA.
+#
+# El relleno COPIA SOLO LO QUE ESTA ESCRITO: 3 de 133 filas se pueden rellenar
+# y 130 no, porque el sello de revision aterrizo en el trabajador despues del
+# 27 de octubre. Las 130 se quedan NULL en vez de inferirse de la fecha: una
+# fecha mapea a una declaracion, no a un proceso. Entre las 130 estan la
+# ventana larga de validacion y la banda prospectiva.
+#
+# HERMANOS SIN CAMBIO: ni poetry.lock ni pyproject.toml entran en el diff, asi
+# que no hay paso de pip. El frontend no se toca: nada entra en apps/web.
+#
+# EL NODO SIGUE ESTE SALTO AL ARRANCAR, y hoy eso importa mas que de costumbre.
+# Sigue apagado por decision de Francisco desde el 2026-11-07 a las 18:30. Su
+# protea-node-sync.timer lee esta declaracion cada tres minutos y le movera el
+# arbol; su unico trabajador, protea-lab-worker@protea.evaluations.service,
+# esta disabled en el arranque y no atiende la cola hasta que Francisco lo diga.
+# PERO SU BASE ES LA DE ESTA MAQUINA, asi que la migracion ya estara aplicada
+# cuando el nodo llegue: no corre alembic y no le hace falta. LA TARJETA NO SE
+# TOCA.
+#
+# LO QUE VIENE DETRAS, para que el orden quede escrito: las 63 ventanas (A) que
+# faltan se generan DESPUES de este salto y no antes, para que nazcan con
+# code_revision y con los contadores. El holdout 227->230 NO esta entre ellas.
+#
+# ---------------------------------------------------------------------------
+coordinator d54162248eba37ee9d5e4c6fb961f749763f257e
+schema-applied d54162248eba37ee9d5e4c6fb961f749763f257e
