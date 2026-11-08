@@ -1,3 +1,84 @@
+# Estado al volver, 2026-11-08 01:50
+
+**Sobremesa: lee ESTO primero.** Lo de abajo se escribio ayer a las 19:00 y
+describe el #1139 cuando era un borrador. Desde entonces ha pasado un dia
+entero. El resumen, y despues lo de ayer intacto por si quieres el detalle.
+
+## Lo que ha entrado y esta DESPLEGADO
+
+El arbol servido esta en `d5416224`, declarado en agent-farm #402, con
+`coordinator` **y `schema-applied`** al mismo sha. Cuatro PR de PROTEA, en este
+orden:
+
+| PR | que hace |
+|---|---|
+| **#1139** | el mapa de sinonimos se ancla al grafo que cierra. En una ventana (A) el remapeo era un NO-OP completo |
+| **#1140** | `evaluation_set.code_revision` + el contador de la regla de union. **Lleva migracion**, `a7d3e9b1c604` |
+| **#1141** | la exportacion nombra su ventana. El resolutor del par de TEST seguia en `one_or_none`: el LB.1 sin reparar en su gemelo |
+| **#1142** | la puerta de los conjuntos, `scripts/check_sets.py`, en MODO INFORME |
+
+Tres saltos de despliegue, los tres con el guardia a mano a exit 0 antes de
+reiniciar nada, y el ultimo con `alembic upgrade head` verificado **contra la
+base** y no contra su salida.
+
+## Lo que CORRIJO de lo que dice la nota de abajo
+
+Tres cosas, y las tres las medi despues de escribirla:
+
+1. **La (B) `e84dfec8` SI es identica al byte.** Abajo dice que su lado NOT
+   cambia, y es cierto en los CONTADORES (`new_not_unmapped` 14 -> 0) y falso
+   en la VERDAD: los seis cubos hashean igual. Esos 8 negativos extra no quitan
+   nada del cierre experimental.
+2. **`projected_binding_mixed` de 0 a 83 NO era el punto mas debil del PR, y lo
+   lei al reves.** `drop_binding_only_mfo` solo vacia el lado F cuando TODOS
+   los F de la proteina estan en el subarbol, asi que una entrada mixta es el
+   caso BENIGNO. El dañino es el que tiene todos los aterrizajes dentro, y
+   **baja de 28 a 2** con el arreglo. `mixed` sube precisamente porque "todo
+   dentro" baja.
+3. **El canal del ledger esta OBSOLETO, no roto.** Ver la seccion al final, ya
+   corregida.
+
+## Lo nuevo que no estaba cuando te apagaste
+
+**El inventario de las 133 ventanas**, `plans/INVENTARIO-VENTANAS.md` (#401),
+generado por `plans/genera_inventario.py` y no escrito a mano. Cada una con una
+etiqueta unica `<t0>-<t1>.<perfil>.<pivote>.<construccion>`, cero colisiones.
+
+Y el motivo de que exista: yo habia dicho que **126 ventanas eran borrables**
+por tener cero resultados y el perfil superado. **Entre ellas estaba el
+holdout** `cb46395a`, que tiene cero resultados en PROTEA porque su unica
+mirada se tomo en el LABORATORIO. El recuento de resultados no sirve para
+decidir si una ventana es desechable. Las candidatas reales son 124, y las
+cuatro `viejo` con papel o evidencia estan marcadas NO BORRAR.
+
+**Una regla nueva de Francisco, del 2026-11-08:** *"cada conjunto que aparece
+en nuestro proyecto debe estar declarado, descrito, y con altisima calidad."*
+El #1142 es su puerta, en informe. Hoy **cero de seis conjuntos cumplen los
+cuatro criterios**, y `load_evaluation_data_for_set` lee el parquet de la
+verdad sin verificar nada porque no hay sha que verificar.
+
+## Lo que esta PENDIENTE y donde discrepar
+
+- **Las 63 ventanas (A) no se han lanzado.** Fichero de pares derivado y
+  lanzador en serie listos; 173 s cada una, unas 3 h. Van detras de este salto
+  a proposito, para que nazcan con `code_revision` y los contadores. **El
+  holdout 227->230 NO esta entre ellas.**
+- **El guardia de revision sigue fuera de `protea-api`.** Es la unica unidad de
+  nueve sin el. Cambia el modo de fallo del servicio publico.
+- **`query_set` no tiene NINGUNA clave ajena.** Su procedencia vive en la
+  prosa de `description`, y una de sus cinco filas no tiene descripcion:
+  identifique su ventana casando el recuento. Propuse
+  `evaluation_set_id` + `population_rule` + `content_sha256`, y que las cuatro
+  filas existentes las rellene Francisco a mano, porque rellenar procedencia
+  por coincidencia de tamaño es la clase de inferencia que me ha salido mal dos
+  veces.
+- **`_terms_of_interest` sigue leyendo las dos eras del corpus** y no los
+  grafos que cierran. Lo deje a proposito: TOI solo RESTRINGE la ganancia.
+- **El rename de `_load_pivot_term_universe`**, que recibe snapshots que no son
+  el pivote. Toca 15 sitios y no lo cole en ningun PR.
+
+---
+
 # Lectura pendiente: PROTEA #1139, el anclaje del mapa de sinonimos
 
 **Para sobremesa, escrito el 2026-11-07 por el portatil.** Esta aqui y no en un
