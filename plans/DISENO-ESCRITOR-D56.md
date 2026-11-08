@@ -319,6 +319,33 @@ Es el mismo patron que el invariante de las ganancias: dos tablas que se
 escriben por separado y se leen juntas necesitan una afirmacion que mire las
 dos, porque compartir la funcion que las produce no es suficiente.
 
+## 6 quinquies. El tamano de `gains`, medido, y por que espera
+
+Medido el 2026-11-08 sobre las **49** ventanas admisibles con `cut_version`
+211 (las 64 menos las quince que terminan despues del corte):
+
+    filas de gains        4.031.791
+    la ventana mayor        532.940
+    media por ventana        82.281
+
+Cuatro millones de filas de seis columnas cortas son manejables, pero **no
+construyendo una tupla por fila**: son las seis listas paralelas directamente,
+o 24 millones de punteros en 4 millones de objetos. Esa es la unica decision
+tecnica que el tamano impone, y esta anotada aqui para no redescubrirla.
+
+**Y por eso esta tabla espera una decision y no un rato de trabajo.** El numero
+de arriba es una funcion de QUE VENTANAS entrenan, que es lo que esta abierto:
+las 49 consecutivas que hay generadas tienen horizontes de 16 a 73 dias salvo
+dos, contra los 0 a 3 anos que pide D30. Si la seleccion cambia a ventanas
+largas, cambia el numero de filas, cambia si el escritor puede acumular en
+memoria o tiene que ir por grupos de filas, y cambia si la pasada puede decidir
+sobre todas antes de escribir nada -- que es la disciplina que el resto del
+escritor ya tiene y que una escritura en flujo rompe.
+
+Asi que el orden correcto es: Francisco elige las ventanas, y entonces `gains`
+se escribe sabiendo su tamano. Escribirla antes seria disenar su perfil de
+memoria alrededor de una seleccion que puede no ser la buena.
+
 ## 7. Lo que NO voy a hacer, y quiero que lo discutas
 
 - **No escribo el bundle.json** de tu K12. Lo monta tu nodo en solo lectura a
