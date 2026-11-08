@@ -84,10 +84,30 @@ En el sobremesa están en `Thesis2/storage/sf-jepa/runs-world/subset-rapido/exam
   - un vocabulario registrado (`model_weights`, kind `residue_vocabulary`);
   - las dos poblaciones de examen con sus conceptos;
   - el vocabulario de referencia contra el que se compara.
-- **Los códigos de las proteínas de examen.** Si están en el banco, los de v1 ya
-  existen (`residue_refs`). Para un vocabulario nuevo hace falta una pasada de
-  `encode_residue_vocabulary` restringida a esas 7.562 proteínas, que hoy no
-  admite una población. Hay que medir cuántas de las 7.562 están en el banco.
+- **Los códigos de las proteínas de examen.** Medido el 2026-11-08 desde el
+  sobremesa, con una consulta de solo lectura por accesión:
+
+  | examen | proteínas | en `protein` | con vector en `f3a7fe16` | con códigos de v1 (`43193409`) | secuencia de hoy distinta de la del examen |
+  |---|---|---|---|---|---|
+  | sitios v2 | 3.335 | 3.335 | 3.335 | 3.335 | **10** (0,30 %) |
+  | dominios | 4.227 | 4.227 | 4.227 | 4.227 | **40** (0,95 %) |
+
+  - **Examinar v1 no necesita ninguna pasada:** sus códigos existen para las
+    7.562. La pasada restringida solo hará falta para un vocabulario futuro que
+    no cubra el corpus, y entonces sobre proteínas que ya estén en el banco.
+  - **Las 50 de secuencia distinta son un problema de posiciones, no de
+    cobertura.** Los conceptos de examen son posiciones en la secuencia de
+    Swiss-Prot 2022_03 (`proteins.parquet` lleva esa secuencia). La plataforma
+    guarda la de hoy (`resolve_protein_sequences`), y sus códigos están
+    calculados sobre ella; hay casos de 377 residuos frente a 1.751. En esas 50,
+    un concepto apuntaría a residuos que no son. La población de examen debe
+    declararse como pares (accesión, md5 de la secuencia del examen). El examen
+    solo usa las proteínas cuya secuencia en la plataforma coincide, y cuenta y
+    nombra las demás.
+  - **Por eso la aceptación no puede ser contra los números de D37 tal cual,**
+    que incluyen las 50. Habrá que hacerla contra el examen del laboratorio
+    corrido sin ellas, con las mismas elecciones de rasgo calculadas sin
+    ellas.
 - **Salidas:**
   - una fila por (vocabulario, examen, concepto) y otra por medias;
   - los volcados para el remuestreo emparejado;
