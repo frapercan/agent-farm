@@ -158,13 +158,32 @@ Y en el manifiesto, el artefacto del vocabulario por su sha (`vocab_uri` y
 | `dianas-test-230-235` | 28.220 | 0 | **22** |
 | `delta-219-220-t0` | 5.810 | 0 | **5** |
 
-Y **la causa es una sola**, que es lo que hace que esto sea una nota y no una
-conversacion: las 161 secuencias sin codigos miden entre **8.382** y 35.991
-residuos, y la mas larga que SI cupo mide **8.259**. No hay ninguna en medio.
-Es exactamente el techo de la tarjeta que ya teniamos medido, y no un fallo de
-cobertura: ninguna proteina se queda fuera por no tener secuencia (0 de
-792.535). Son 168 proteinas sobre 161 secuencias porque varias comparten la
-misma.
+**CORRECCION, de la noche del 2026-11-08.** Escribi aqui que la causa era una
+sola y que era exactamente el techo de la tarjeta. Lo verifique contra los
+eventos del job y **son DOS**, lo que cambia que se puede hacer al respecto.
+
+Las 161 secuencias sin codigos miden entre **8.382** y 35.991 residuos, y la
+mas larga que SI tiene vector mide **8.259**. No hay ninguna en medio, pero eso
+es una propiedad del CORPUS y no un techo: el techo declarado era otro numero.
+
+| mecanismo | cuantas | longitudes |
+|---|---|---|
+| rehusadas por el techo declarado (`refuse_above_residues` 8.524) | **154** | 8.525 a 35.991 |
+| por DEBAJO de ese techo y sin vector igualmente | **7** | 8.382 a 8.515 |
+
+Las 154 las rehuso la operacion a proposito y lo dejo escrito, con el techo
+atribuido a su sitio: `{"device": "cuda", "attention": "eager bf16",
+"transformers": "4.48.1"}`. Las 7 son otra cosa: estaban permitidas, se
+aislaron (`isolate_above_residues` 8.044) y no produjeron vector, en un job que
+termino FAILED.
+
+**Lo que esto cambia:** las 7 son recuperables sin tocar ningun techo, y las
+154 necesitan otra tarjeta u otra ruta. Que es informacion distinta de "el
+techo lo explica todo", que es lo que yo habia escrito.
+
+Lo que NO cambia es la cobertura: ninguna proteina se queda fuera por no tener
+secuencia (0 de 792.535), y son 168 proteinas sobre 161 secuencias porque
+varias comparten la misma.
 
 Asi que `residue_refs` cubre el 99,98% de la poblacion que se recupera, y el
 hueco esta explicado por su mecanismo. Igual va al manifiesto como
