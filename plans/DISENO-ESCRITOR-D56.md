@@ -400,17 +400,41 @@ disuelve, porque el donante nunca es una secuencia.
 ### La forma: una fila por INTERVALO
 
 Clave: `(neighbour, go_id, evidence_code, qualifier, valid_from_version)`, mas
-`valid_to_version`. **Los dos extremos inclusive.** Tus cuatro campos de
+**`valid_until_version`**. **Los dos extremos inclusive.** Tus cuatro campos de
 disjuntos son los cuatro primeros y el quinto es la release que abre la racha,
 asi que dos rachas de una ficha no pueden solaparse por construccion.
+
+El nombre es el tuyo y no el mio. Yo habia escrito `valid_to_version` aqui, y
+con ese nombre tu cargador rechaza la tabla entera diciendo
+`lacks ['valid_until_version']`. Lo he buscado en los dos repositorios y no
+aparece ninguno de los dos nombres en ningun fichero, asi que **tu cargador es
+la unica autoridad sobre el** y se escribe como el lo lee. Falla con ruido y no
+en silencio, pero no es una comprobacion que haya que gastar.
+
+El `qualifier` entra con el mismo `COALESCE(qualifier, '')` que `query_state`,
+para que `''` signifique lo mismo en las dos tablas: "la fila no traia
+relacion", y no "no lo sabemos".
 
 `assigned_by` **no esta**, por lo medido en la nota de estado: el marcador de
 produccion no lo lee nunca, y dentro de la clave multiplica las fichas por
 1,177, que es exactamente el solape que te hace rechazar una tabla.
 
-La forma de una fila por `(vecino, ficha, release)` multiplica por las
-releases que una ficha sobrevive, que son 19,2 de 48 de media medidas. El
-intervalo es del orden de 19 veces mas pequeno y dice lo mismo.
+**La racha es consecutiva en la LISTA ESCANEADA, no en los numeros**, y va
+escrito como regla porque en mi ejemplo de 205 a 211 estaba dado por hecho. Una
+ficha presente en 204, 205 y 211 es **una sola racha, 204 a 211**, porque entre
+205 y 211 no hay ninguna release escaneada. Una ficha ausente en una release
+que SI se escaneo rompe la racha y abre otra. Dicho de una vez: la racha avanza
+sobre `neighbour_state_versions`, que es la lista, y no sobre la aritmetica de
+los numeros de release.
+
+La forma de una fila por `(vecino, ficha, release)` multiplica por las releases
+que una ficha sobrevive. La media que manejamos es de **19,2 de 48**, que es
+una medida del laboratorio sobre el tramo 156 a 205 y no mia: no la he
+reproducido aqui, no esta apuntada con su poblacion en ningun fichero de este
+lado, e **incluye ya el corte de la 202** que se describe abajo. Asi que el
+"factor 19" es un orden de magnitud para decidir la forma, no un numero
+citable. Lo medire sobre la poblacion de esta tabla cuando exista el kNN, en
+las dos formas, y entonces sera un numero.
 
 ### El orden: remapeo, DISTINCT, rachas. En ese orden
 
@@ -449,9 +473,27 @@ Y **192 y 193 son el mismo fichero**, byte a byte. Una racha no se rompe ahi,
 que es lo correcto, pero una cuenta de releases dentro de un intervalo cuenta
 ese tramo dos veces. Va dicho en el manifiesto al lado de la lista.
 
+### El cambio de regimen de la 202 parte las rachas, y esta bien
+
+El `qualifier` de esta serie es una RELACION y no una bandera de negacion, y el
+regimen cambia a mitad de serie, de GAF 2.1 a 2.2, en la release 202. La misma
+anotacion pasa de `''` a `enables`, asi que **su racha se parte en dos ahi**.
+
+No es un defecto y no hay que arreglarlo. Son dos fichas distintas porque el
+`qualifier` esta en la clave, y en cada release solo una de las dos esta activa,
+asi que tus intervalos siguen siendo disjuntos sobre tus cuatro campos. Pero
+tiene dos consecuencias que van dichas:
+
+- una racha que cruza la 202 **no existe** para las anotaciones afectadas: hay
+  una que termina en 201 y otra que empieza en 202. Quien cuente "cuanto duro"
+  sumando una sola racha leera la mitad;
+- el ahorro del intervalo frente a la forma por release ya esta mermado por ese
+  corte en cualquier medida que abarque la 202, que es justo el caso de un
+  barrido de 156 a 211.
+
 ### Las negativas que llevaria
 
-- una racha con `valid_to_version` mayor que `cut_version` se rechaza, igual
+- una racha con `valid_until_version` mayor que `cut_version` se rechaza, igual
   que `refuse_after_the_cut` rechaza una ventana posterior al corte;
 - dos rachas de la misma ficha que se solapan se rechazan al escribir, no solo
   al leer: tu cargador es la segunda red, no la primera;
