@@ -1,4 +1,4 @@
-# El estado, y las cuatro decisiones que no se re-litigan
+# El estado, y las cinco decisiones que no se re-litigan
 
 Escrito el 2026-11-08 por la sesion del portatil. **Sustituye a
 `REVISION-PENDIENTE-PROTEA-1139.md`**, que describia el #1139 como borrador
@@ -20,9 +20,9 @@ vive lo que caduca rapido.
   D56, que lleva la regla de fuga aplicada al construir y que el `window` es la
   clave de union y es el id completo.
 
-## Las cuatro decisiones, que son de Francisco
+## Las cinco decisiones, que son de Francisco
 
-Ninguna de las cuatro la decide una sesion. Si vuelves y te parece obvia, no lo
+Ninguna de las cinco la decide una sesion. Si vuelves y te parece obvia, no lo
 es: cada una tiene un numero medido al lado y ninguna corre prisa.
 
 **1. La retirada de las 125 ventanas del marco superado.** El payload en seco
@@ -63,6 +63,34 @@ tendria que extrapolar a dieciseis meses con un solo ejemplo largo. **Nadie
 sabe como salio la lista de pares que se uso**, asi que no se puede confirmar
 ni desmentir que fuera el diseno de 53.
 
+**5. Importar los vectores de texto del eje.** El artefacto vive en el
+almacen del LABORATORIO y no en el de la plataforma: `text-qwen3-embedding-4b.npz`,
+**224.759.782 bytes**, sha `e32e15907aab0ec7637b6431164b28bf2dad50968ecb226480fcde563d82cbef`.
+Comprobado el 2026-11-08 que no esta aqui: 6.426 objetos en doce prefijos y
+nada que case. Hasta que este, la tabla `terms` **se niega**, que es lo
+correcto: escribir el sha de un mensaje seria un localizador de bytes que nadie
+de este lado puede comprobar.
+
+La ruta existe y hace lo correcto. `POST /model-weights/by-reference` hashea el
+objeto del almacen y solo registra si coincide con el sha dado; para un objeto
+que todavia no esta hay la subida por partes (`POST /model-weights/uploads`,
+`PUT .../{n}`, `POST .../complete`), que es la que haria falta aqui, con un
+`kind` propio del estilo `term_text_vectors`. Rol OPERATOR.
+
+**Dos datos a la vista antes de decidir.** El registro deja fila con `uri`,
+`sha256`, `size_bytes`, `description`, `created_by` y `created_at`, pero **no
+deja job**: cero referencias a `Job` en el router y en el servicio. Eso es una
+excepcion a la regla de que todo pasa por `POST /v1/jobs`, y las dos sesiones
+coinciden en que un registro es una declaracion y no un computo -- pero la
+excepcion esta dicha y no descubierta. Y **ADR-D54 sigue en `Status: Proposed
+(draft for the author's review)`**, fechado 2026-11-03 y firmado por Francisco:
+el registro esta implementado por delante de que su propio ADR este aceptado.
+Asi que la decision es doble: importar este artefacto, y si ese registro deja
+de ser un borrador.
+
+Escribir en el almacen de la plataforma es una accion hacia fuera, asi que
+ninguna de las dos sesiones la hace.
+
 ## Lo que esta hecho y no hay que repetir
 
 - Las **71** ventanas del marco vivo y las que llevan papel estan selladas, con
@@ -77,7 +105,17 @@ ni desmentir que fuera el diseno de 53.
   **distintas**: `ea94e57e` con 63.734 dianas y `ea0f4334` con 40.531. La
   titular es la que reproduce el contrato del laboratorio al bit. Para
   `validacion-larga` se usa solo la titular.
-- De las diez tablas de D56 estan escritas `window_terms_out` y `queries`.
+- De las diez tablas de D56 estan escritas **cuatro**: `window_terms_out`,
+  `queries`, `terms` y `term_ancestors`. Las dos ultimas estan indexadas por
+  `cut` y NADA MAS, asi que no dependen de que ventanas se elijan: 43.558
+  terminos vivos con su aspecto y 595.072 pares de cierre, medidos. El cierre
+  sigue `is_a` y `part_of` **compartiendo la funcion** que cerro las ganancias,
+  no coincidiendo en una lista.
+- El vocabulario de residuos **SI tiene fila** en `model_weights`:
+  `vocabulary-v1-06fed75ca76d17be`, sha `06fed75ca76d`, 260.233.730 bytes,
+  `created_by = sobremesa-embeddings-2026-10`, con descripcion. Se dijo lo
+  contrario en una conversacion de esta noche y era falso: el precedente de
+  importar un artefacto del laboratorio existe y se siguio.
 
 ## Un artefacto que NO se usa
 
