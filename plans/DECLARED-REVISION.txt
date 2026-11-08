@@ -2334,5 +2334,54 @@
 # pin, y se avisa antes para que arranque sus dos trabajadores de embeddings.
 #
 # ---------------------------------------------------------------------------
-coordinator 1a492c7b88d36c36ceb5173cbef055decf450311
-schema-applied 1a492c7b88d36c36ceb5173cbef055decf450311
+#
+# 2026-11-08, segundo salto del dia: 1a492c7 -> c9e9fa1, cuatro commits, Y UNA
+# MIGRACION. Puerta del servidor corrida antes de editar: 0 jobs en QUEUED o
+# RUNNING, 0 prediction_set en los ultimos quince minutos.
+#
+# QUE CARRIES:
+#   1447cb5 (#1162) docs: la profundidad de la cola de muertos no es la medida.
+#           La completitud por configuracion si, y hoy sale completa: tres de
+#           cuatro a 684.048 y la cuarta ya tambien.
+#   4c4cccf (#1163) la poblacion del corpus se declara, con su huella y en el
+#           orden de produccion. LLEVA LA MIGRACION.
+#   94ee1b2 (#1164) el contador del padre no podia salir de NULL.
+#   c9e9fa1 (#1160) query_state: el remapeo antes del DISTINCT, y los dos
+#           colapsos contados aparte.
+#
+# LA MIGRACION, UNA: a4e91c0d5b83, que anade 'corpus_population' al vocabulario
+# cerrado de query_set.source_kind y crea un CHECK para ese tipo. El
+# alembic_version del servidor esta en c5e8d1a30b72, asi que esta por correr, y
+# por eso **schema-applied se mueve con el coordinator en este salto**.
+#
+# ES ADITIVA Y SEGURA, y conviene decir por que y no solo que lo es. Ensancha
+# ck_query_set_source_kind de cuatro valores a cinco, y ensanchar un CHECK no
+# puede romper una fila que ya pasaba ni un codigo que ya corria. El CHECK nuevo
+# solo restringe filas con source_kind = 'corpus_population', y hay CERO. Asi
+# que el orden es el de la vez anterior: mover el arbol, correr alembic y
+# DESPUES reiniciar. Entre alembic y el reinicio los trabajadores vivos corren
+# codigo viejo sobre una base ya migrada, y es correcto porque no ven ni
+# necesitan lo que la migracion anade. CON UNA MIGRACION DESTRUCTIVA EL ORDEN
+# SERIA AL REVES Y HARIA FALTA PARAR; que nadie copie este orden al caso que no
+# aplica.
+#
+# HERMANOS: ninguno se mueve. Ni pyproject.toml ni poetry.lock entran en el
+# diff, asi que **no hay paso de pip en este salto**, al contrario que en el
+# anterior. El frontend no se toca.
+#
+# EL CONTADOR DEL PADRE, por si alguien lee esta linea buscando una regresion.
+# #1164 arregla que NULL + 1 es NULL en SQL, que dejaba a dos de los cinco
+# coordinadores diferidos sin poder cerrar nunca. Lo arregla en el mecanismo con
+# coalesce, asi que a partir de este salto un coordinador que olvide inicializar
+# su contador ya no puede romperlo. Abre una ventana conocida y escrita en el
+# PR: el contador cuenta MENSAJES, asi que una reentrega puede cerrar un padre
+# antes de que acabe su ultimo lote distinto. Es paridad con los otros tres y no
+# una regresion, y el arreglo de verdad es que cuente fragmentos.
+#
+# LO QUE VIENE DETRAS DE ESTE SALTO, y no antes: correr
+# declare_corpus_population una vez, y correr query_state sobre las 65
+# ventanas. Las dos necesitan este codigo servido.
+#
+# ---------------------------------------------------------------------------
+coordinator c9e9fa1f7f8af7b677a2d7a22fa9c87a6279a153
+schema-applied c9e9fa1f7f8af7b677a2d7a22fa9c87a6279a153
