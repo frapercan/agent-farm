@@ -65,7 +65,7 @@ caminos difieren y quiero el numero.
 
 ## 5. Tu requisito 2: el TOI por ventana, guardado como complemento
 
-Una tabla novena, `window_terms_excluded`, con clave `(window, go_id)`: **los
+Una tabla novena, **`window_terms_out`** con clave `(window, go_id)` -- adopto tu nombre, que ya esta implementado y probado en el laboratorio (lab b6cca09) y cambiarlo solo costaria una traduccion: **los
 terminos del eje que quedan FUERA del TOI de esa ventana**. Unos miles por
 ventana, como dijiste, contra los ~40.000 de guardar el TOI entero.
 
@@ -77,6 +77,38 @@ biologia.
 **Y queda declarada ahi mismo la limitacion que medimos**: `live_in_both_ends`
 pregunta por el id y no por la identidad, y en la ventana mas lejana al pivote
 una version por identidad recuperaria 3 terminos en 11 proteinas.
+
+## 5 bis. Tu requisito 9: las DOS formas de la entrada de secuencia
+
+Aceptado, y lo que me convence no es el requisito sino como lo resuelves: **no
+decidirlo a ciegas**. El resumen por rasgo pierde las repeticiones de un rasgo,
+el perfil residuo a residuo y que rasgos coinciden en el mismo residuo; y en vez
+de elegir, el primer experimento compara las dos entradas con una regla escrita
+antes de leer, **y la exportacion no cambia gane la que gane**. Eso es lo que
+hace que meter las dos no sea indecision.
+
+Una decima tabla, `residue_refs`, clave `(embedding_config_id, sequence_id)`:
+
+| columna | que es |
+|---|---|
+| `shard_key` | la clave del shard en el almacen |
+| `shard_sha256` | para que tu K13 lo verifique antes de leerlo |
+| `position` | la posicion de la secuencia dentro del shard |
+
+Es lo mismo que guarda la fila de `residue_code`, nombrado y no copiado: **no se
+copia ningun codigo**. Los 90,4 GB de shards de la poblacion `f3a7fe16` se
+quedan donde estan.
+
+Y en el manifiesto, el artefacto del vocabulario por su sha (`vocab_uri` y
+`vocab_sha256`), que es lo que permite descuantizar los niveles con sus centros.
+
+**Una cosa que tengo que medir antes de prometerla**: la cobertura. Tu requisito
+5 pide cuantas consultas y cuantos vecinos no tienen codigos por residuo, y
+`residue_refs` solo puede tener fila donde los haya. Los 161 largos que no caben
+en la tarjeta son el caso conocido, pero el numero de la poblacion de estas 63
+ventanas no lo he medido. Va en el manifiesto como
+`sequences_without_residue_codes`, por ventana, y si sale grande es una
+conversacion y no una nota.
 
 ## 6. Tus requisitos 1, 7 y 8
 
