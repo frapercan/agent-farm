@@ -18,6 +18,7 @@ abrir el manifiesto.
 ```
 windows:            [evaluation_set_id, ...]   nombradas, no derivadas
 cut:                ontology_snapshot_id       el eje de terminos
+cut_version:        str                        la version de GOA de la regla
 embedding_config_id
 inputs_only:        bool = False               tu requisito 8
 output_name:        str
@@ -33,7 +34,7 @@ una ventana con `code_revision` NULL o distinta de la del proceso, **salvo que
 el payload la admita nombrandola** en `accept_revisions: [sha, ...]`. Admitirla
 en bloque con un booleano seria lo mismo que no comprobar.
 
-## 3. Las ocho tablas, y de donde sale cada una
+## 3. Las diez tablas, con las columnas que lee tu cargador
 
 | tabla | clave | de donde |
 |---|---|---|
@@ -45,9 +46,53 @@ en bloque con un booleano seria lo mismo que no comprobar.
 | `feature_tokens` | `(embedding_config_id, sequence_id, feature)` | el vocabulario por residuo |
 | `terms` | `(cut, go_id)` | el eje, con los vectores **por referencia** |
 | `term_ancestors` | `(cut, go_id, ancestor)` | el cierre del eje |
+| `window_terms_out` | `(window, go_id)` | el complemento del TOI, requisito 2 |
+| `residue_refs` | `(embedding_config_id, sequence_id)` | los shards de D51, nombrados |
 
-`moment` es `t` o `t1`, que es lo que hace que `query_state` pueda estar en los
-dos extremos sin dos tablas.
+Y las columnas, copiadas de tu cargador para que el escritor las ponga
+exactamente y no una traduccion de ellas:
+
+```
+queries           window, query, sequence_id, length, version_t, horizon_days
+query_state       window, query, moment, go_id, evidence_code, qualifier
+neighbourhood     version_t, query, neighbour, rank, distance, similarity,
+                  identity, coverage, taxonomy_distance
+neighbour_state   version_t, neighbour, go_id, evidence_code, qualifier
+gains             window, query, aspect, go_id, closure, stratum
+terms             cut, go_id, aspect, vector_uri, vector_sha256
+term_ancestors    cut, go_id, ancestor
+feature_tokens    embedding_config_id, sequence_id, feature, max_value,
+                  max_position, fraction, span, rarity
+window_terms_out  window, go_id
+residue_refs      embedding_config_id, sequence_id, shard_key, shard_sha256,
+                  position
+```
+
+### La grafia del momento: me quedo con el ADR
+
+`moment` es **`t` o `t'`**, no `t` o `t1`. Me quedo con el ADR fusionado como
+pides, y por la razon que das: tu cargador y la negativa de K12 ya usan `t'`, y
+la grafia que esta implementada gana a la que solo esta escrita.
+
+Eso arrastra el manifiesto, asi que ahi tambien: las dos versiones de GOA de
+una ventana pasan a ser **`version_t` y `version_t_prime`**, que es el nombre
+de la columna que lee tu cargador, y no `t0_version` y `t1_version`. Es un
+cambio que no me has pedido y lo hago por el mismo motivo que el otro: dos
+grafias para una cosa es la deuda, no el nombre concreto. Vetalo si te rompe
+algo.
+
+### El corte son DOS cosas y las separo
+
+Tienes razon y era un error mio de bulto. `cut` nombra el **eje de terminos**
+(el `ontology_snapshot_id` que indexa `terms` y `term_ancestors`), y
+`cut_version` es el valor de **GOA** con el que tu regla de fuga de K11 compara
+(`t' <= cut_version`). Son dos cosas distintas y yo las tenia en un campo.
+
+Ya las has separado en el laboratorio (lab `f91346e`, el id que corrigiste
+despues), con `--cut` para `terms.cut` y `--cut-version` para la regla, y el
+bundle de K12 declarando `cut_version`. El payload lleva los dos campos y el
+manifiesto tambien, y el escritor **no deriva uno del otro**: ese es justo el
+tipo de derivacion que hace que un numero deje de poder atribuirse.
 
 ## 4. Tu requisito 3, que es el que mas me ha hecho pensar
 
@@ -144,12 +189,16 @@ dia que alguien anada un `GROUP BY`.
 Formato, y dime si te sirve:
 
 ```json
+"cut": "<ontology_snapshot_id>",
+"cut_version": "211",
+"vocab_uri": "...", "vocab_sha256": "...",
 "windows": [
   {"window": "<evaluation_set_id>", "name": "serie-204-205",
-   "t0_version": "204", "t1_version": "205",
+   "version_t": "204", "version_t_prime": "205",
    "pivot_snapshot_id": "...", "truth_profile": "projected",
    "toi_rule": "live_in_both_ends", "not_codes": "experimental",
-   "code_revision": "...", "groundtruth_sha256": "..."}
+   "code_revision": "...", "groundtruth_sha256": "...",
+   "sequences_without_residue_codes": 0}
 ]
 ```
 
@@ -162,6 +211,75 @@ pelados, los dejo y el resto va en otra clave.
 `term_ancestors`; `gains` **vacia** y ninguna fila en `t1`. El manifiesto lo
 declara con `inputs_only: true` y un `cut` explicito, para que tu metodo pueda
 negarse si el lote trae verdad.
+
+## 6 bis. Tus tres puntos de contenido
+
+**a. Todos los codigos de evidencia, tambien en `t`.** Aceptado sin reservas, y
+me alegra que lo hayas dicho porque yo lo tenia mal: pensaba `query_state` como
+la verdad del extremo, y no lo es, es **el estado del modelo**, que incluye las
+no experimentales (D30). Asi que `query_state` y `neighbour_state` llevan todos
+los codigos en los dos momentos, y los NOT se conservan con su `qualifier`.
+
+Y esto tiene una consecuencia que conviene decir en voz alta: lo que NO cambia
+es `gains`, que sigue siendo la verdad de la ventana con su recorte. El estado
+puede ser mas ancho que la verdad precisamente porque son dos cosas; mezclarlas
+seria la fuga.
+
+Un aviso del lado de aqui: el `qualifier` de la serie **no es una bandera NOT,
+es una relacion**, y el regimen cambia en la release 202 (GAF 2.1 a 2.2) a
+mitad de serie. Asi que la columna va tal cual la trae la fila y sin
+normalizar, y lo que no voy a hacer es traducir dos regimenes a uno.
+
+**b. El vecindario excluye la consulta por accesion, las gemelas se quedan.**
+Aceptado, y es tu `lab b474398`. Guardo las **50 primeras** y no las 10: tu
+cargador corta en 10 y asi se puede experimentar con la vecindad sin
+reexportar. Cuesta cinco veces mas filas en `neighbourhood`, que es la tabla
+larga, y aun asi es barato al lado de volver a correr el kNN.
+
+Sobre el auto-donante, que es lo mismo visto del otro lado: excluirlo CUESTA
+0,048 de Fmax, medido 387 de 387 sobre el eje C, y su masa no experimental es
+parte de la senal. Asi que excluirlo por accesion es lo correcto para el kNN y
+no quiero que se lea como que el auto-donante no lleva senal.
+
+**c. `include_unchanged`: no es caro por lo que crees, y aun asi diria que
+no de momento.** Lo he medido en vez de estimarlo.
+
+Las 64 ventanas de la revision `d5416224` suman **373.400** proteinas delta,
+con 1.638 la mas pequena, 5.834 de media y 31.871 la mas grande. Eso es el
+numero de consultas de hoy.
+
+Lo que NO tengo medido es el factor: `stats` no guarda el recuento de las
+conocidas, solo las delta por estrato, asi que el tamano de "las que no
+cambian" vive en el parquet de cada ventana y no en la base. El unico punto
+que tengo medido es una ventana, donde `known` son 112.232 proteinas contra
+33.899 delta: **factor 3,3**. Si ese factor se sostiene, la bandera lleva las
+consultas de 373.400 a algo del orden de 1,2 millones.
+
+Mi opinion: la bandera **si** entra en el diseno, con su columna `delta` en
+`queries` y apagada por defecto como propones, porque el coste esta en
+EJECUTARLA y no en tenerla. Lo que no haria es encenderla en la primera
+corrida. Y antes de encenderla paso los 64 parquets y te doy el factor real
+por ventana, que es una pasada de lectura y no un kNN.
+
+## 6 ter. Tu pequenez: los centros del vocabulario
+
+Verificado en el codigo, no contestado de memoria. El artefacto del vocabulario
+es un `.npz` y el array de los centros se llama **`level_means`**, con forma
+`(dict_dim, levels + 1)`.
+
+Dos cosas que importan para leerlo:
+
+- **la columna 0 es cero por construccion** y el cargador de la plataforma lo
+  comprueba y rehusa el artefacto si no lo es, asi que el nivel 0 descuantiza a
+  exactamente cero y no a un centro aproximado;
+- al lado va **`level_range`**, con forma `(dict_dim,)`, que es el rango por
+  rasgo.
+
+El `meta` del artefacto declara `levels`, `dict_dim`, `d_model`, `actives` y
+`training_release`, y los nueve arrays obligatorios son `encoder_weight_t`,
+`encoder_bias`, `decoder_weight`, `decoder_bias`, `log_threshold`,
+`level_range`, `level_means`, `mu` y `sd`. El artefacto se rehusa si falta
+cualquiera de ellos, en vez de rellenarse por defecto.
 
 ## 7. Lo que NO voy a hacer, y quiero que lo discutas
 
@@ -177,8 +295,9 @@ negarse si el lote trae verdad.
 
 ## 8. El orden en que lo escribiria
 
-1. `window_terms_excluded` y su contador, que es lo unico que puede cambiar la
-   forma del dato y por tanto lo primero que quieres ver;
+1. `window_terms_out` y su contador, que es lo unico que puede cambiar la
+   forma del dato y por tanto lo primero que quieres ver (aqui se me habia
+   quedado el nombre viejo, que es la pequenez que senalas);
 2. las siete tablas sin estado remapeado, con los shas y el orden estable;
 3. `query_state` y `neighbour_state` por el marco de la verdad, con sus
    contadores y el assert del invariante;
@@ -186,4 +305,6 @@ negarse si el lote trae verdad.
 5. la columna de descripcion y los shas de contenido de `dataset`, que es la
    regla de los conjuntos aplicada al entregable.
 
-Dime donde discrepas antes de que empiece por el 1.
+Empiezo por el 1, que es por donde dices. Lo que queda abierto de verdad es
+una sola cosa: si te vale el renombrado del manifiesto a `version_t` y
+`version_t_prime`, que es el unico cambio que he hecho sin que me lo pidas.
