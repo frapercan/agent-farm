@@ -2429,5 +2429,60 @@
 # y no esta hecha, y #1165 es exactamente su arreglo.
 #
 # ---------------------------------------------------------------------------
-coordinator 74d3cd0b366560751ee334bb9561f2e7685772e8
-schema-applied 74d3cd0b366560751ee334bb9561f2e7685772e8
+#
+# 2026-11-09, de madrugada: 74d3cd0 -> 1e272d5, seis commits, Y UNA MIGRACION.
+# Puerta del servidor corrida antes de editar: 0 jobs en QUEUED o RUNNING, 0
+# prediction_set en los ultimos quince minutos. El sobremesa pidio este salto
+# despues de revisar las dos PR que lo cierran.
+#
+# QUE LLEVA, y lo que se abre con el es el componente del vocabulario:
+#   c37115c (#1167) el corte por momento de query_state necesitaba las eras de
+#           la ventana, y la frase que #1166 corrigio seguia escrita donde se
+#           emite el campo.
+#   b87a255 (#1168) ADR-D57: los examenes del vocabulario, dentro de la
+#           plataforma. Las tres preguntas que eran del autor, decididas.
+#   36a0b95 (#1169) la seleccion de los examenes de grupo NO es determinista
+#           entre dispositivos, y el registro lo afirmaba. La aceptacion pasa a
+#           MEDIR la coincidencia en vez de exigirla.
+#   d2a257e (#1170) una referencia es una receta con sus semillas y no un
+#           modelo, porque el primer vocabulario es la mas floja de las tres
+#           semillas de su receta en dominios. Y el "v1" de D37 era otro.
+#   43723e7 (#1171) las poblaciones de examen se declaran. LLEVA LA MIGRACION.
+#   1e272d5 (#1172) los ficheros de una poblacion tienen que coincidir ENTRE
+#           ELLOS, que es lo que una huella no cubre.
+#
+# LA MIGRACION, UNA: b7c3f91d2a04, que anade 'exam_population' al vocabulario
+# cerrado de query_set.source_kind, de cinco valores a seis, y crea
+# ck_query_set_exam_is_declared para ese tipo. El alembic_version del servidor
+# esta en a4e91c0d5b83, asi que esta por correr, y por eso schema-applied se
+# mueve con el coordinator en este salto.
+#
+# ES ADITIVA Y SEGURA, por las mismas dos razones que la del salto del corpus:
+# ensanchar un CHECK no puede romper una fila que ya pasaba ni un codigo que ya
+# corria, y el CHECK nuevo solo restringe filas con source_kind =
+# 'exam_population', de las que hay CERO. Asi que el orden es mover el arbol,
+# correr alembic y DESPUES reiniciar. Entre alembic y el reinicio los
+# trabajadores vivos corren codigo viejo sobre una base ya migrada, y es
+# correcto porque no ven ni necesitan lo que la migracion anade.
+#
+# HERMANOS: ninguno se mueve. Ni pyproject.toml ni poetry.lock entran en el
+# diff, asi que no hay paso de pip. El frontend no se toca.
+#
+# LO QUE VIENE DETRAS DE ESTE SALTO, y no antes: declare_exam_population dos
+# veces, una por poblacion, sobre los manifiestos que ya estan en el almacen:
+#   exam-population/sitios/manifest-eabf4f1f5098.json
+#   exam-population/dominios/manifest-89e290833a7c.json
+# Los ficheros se subieron por la ruta de los vectores de los terminos, cada uno
+# bajo una clave derivada de su propia huella, y la operacion los reverifica
+# entera antes de escribir fila.
+#
+# UNA COSA QUE QUEDA DICHA PORQUE SE MIDIO Y CIERRA UN DISENO: la exclusion de
+# las proteinas cuya secuencia se movio va por md5 y no por rango de posiciones.
+# Un control por rango coge 7 de las 50 que se movieron; el md5 coge las 50. Las
+# 38 filas de sitios y 8 instancias de dominios que caen fuera de la secuencia
+# guardada pertenecen todas a un md5 distinto, pero 8 de las 10 de sitios y 35
+# de las 40 de dominios tienen etiquetas que SI caben.
+#
+# ---------------------------------------------------------------------------
+coordinator 1e272d559fe86b859657eab5f2b3c59a1227beb3
+schema-applied 1e272d559fe86b859657eab5f2b3c59a1227beb3
