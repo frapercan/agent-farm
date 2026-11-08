@@ -300,6 +300,25 @@ El `meta` del artefacto declara `levels`, `dict_dim`, `d_model`, `actives` y
 `level_range`, `level_means`, `mu` y `sd`. El artefacto se rehusa si falta
 cualquiera de ellos, en vez de rellenarse por defecto.
 
+## 6 quater. La cadena de `window` es la misma en las dos tablas
+
+Requisito del laboratorio del 2026-11-08, anotado aqui porque es del tipo que
+no falla: su cargador une `window_terms_out` con `queries` por el valor de
+`window` **tal cual, como texto**. Las dos tablas tienen que llevar
+exactamente la misma cadena, el `evaluation_set_id` COMPLETO, nunca el nombre
+semantico ni un prefijo de ocho. Si una lleva el id y la otra el nombre, la
+restriccion de negativos simplemente no se aplica y **nada falla**.
+
+`window_terms_out` ya escribe `str(eset.id)`, el uuid entero. Lo que falta es
+la afirmacion cruzada, y va cuando se escriba `queries`: todo `window` de
+`window_terms_out` tiene que aparecer en `queries`. Por el otro lado el
+cargador ya cuenta `windows_with_terms_out`, asi que un desajuste entre ese
+numero y las ventanas del lote se ve desde alli.
+
+Es el mismo patron que el invariante de las ganancias: dos tablas que se
+escriben por separado y se leen juntas necesitan una afirmacion que mire las
+dos, porque compartir la funcion que las produce no es suficiente.
+
 ## 7. Lo que NO voy a hacer, y quiero que lo discutas
 
 - **No escribo el bundle.json** de tu K12. Lo monta tu nodo en solo lectura a
