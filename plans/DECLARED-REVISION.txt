@@ -2484,5 +2484,40 @@
 # de las 40 de dominios tienen etiquetas que SI caben.
 #
 # ---------------------------------------------------------------------------
-coordinator 1e272d559fe86b859657eab5f2b3c59a1227beb3
-schema-applied 1e272d559fe86b859657eab5f2b3c59a1227beb3
+# 2026-11-09: 1e272d5 -> 9b66f76. Un commit, y solo frontend: PROTEA#1173 quita
+# el aviso de modo CPU del formulario de anotacion. El diff son seis ficheros
+# bajo apps/web y nada mas.
+#
+# NO MUEVE MIGRACION. `git diff --name-only 1e272d5 9b66f76 -- alembic/versions/`
+# esta vacio, asi que schema-applied sigue al coordinator y ningun nodo necesita
+# consultarlo. HERMANOS: ninguno se mueve, ni pyproject.toml ni poetry.lock
+# entran en el diff, asi que no hay paso de pip.
+#
+# LA PUERTA DEL SERVIDOR, corrida antes de esta edicion como exige la cabecera:
+# 0 jobs en QUEUED, RUNNING o PENDING; ninguna cola de trabajo con mensajes ni
+# sin confirmar, siendo lo unico en el broker los 18.816 de la cola de muertos,
+# que no esperan consumidor; el prediction_set mas reciente es de 13:42:54Z, de
+# hace veintidos minutos, y su job terminó.
+#
+# POR QUE SE DECLARA UN CAMBIO QUE NINGUN TRABAJADOR EJECUTA. Por la regla de la
+# cabecera, que la declaracion sigue la punta de develop. Y porque aqui el salto
+# si se nota en un sitio: `code_revision()` se estampa en el import
+# (protea/core/code_revision.py:141), de modo que mover el arbol sin reiniciar
+# deja a la API y a los trabajadores sellando un sha distinto del declarado, que
+# es exactamente la confusion que este fichero existe para evitar. Cuesta un
+# reinicio con nada en vuelo.
+#
+# LO QUE SE ARREGLO HOY Y NO ESTA EN EL DIFF, porque es estado de la maquina y no
+# codigo: la etapa del KNN, `protea.predictions.batch`, llevaba sin consumidor
+# desde el 2026-11-07 11:55 UTC. Se paro a mano tres minutos antes del despliegue
+# de aquel dia y la unidad estaba deshabilitada, asi que no figuraba en
+# protea.target.wants y ni el bucle de reinicio ni un arranque de maquina la
+# devolvian. El fallo es invisible desde la fila del job: el coordinador despacha
+# y hace ack en cinco segundos, y es el ULTIMO lote el que cierra al padre, asi
+# que el job se queda en RUNNING con progreso 0/1 y sin error. El unico sitio
+# donde se ve es la cola, con mensajes y cero consumidores. Ya esta arrancada y
+# habilitada, y con ella el instrumento publico vuelve a responder.
+#
+# ---------------------------------------------------------------------------
+coordinator 9b66f760179b4cff5e304ea8de004a8d47cd067b
+schema-applied 9b66f760179b4cff5e304ea8de004a8d47cd067b
