@@ -2546,5 +2546,39 @@
 # esta en Proposed: fija la convencion y el guardia, y deja tres cosas al autor.
 #
 # ---------------------------------------------------------------------------
-coordinator 9f09e2c396249d31c5dd887433b9d4bf3effbf51
-schema-applied 9f09e2c396249d31c5dd887433b9d4bf3effbf51
+# 2026-11-10, segundo salto: 9f09e2c -> bc60301. Dos commits, PROTEA#1175 y
+# #1176, y lo que traen cambia el procedimiento de este fichero, asi que queda
+# dicho aqui y no solo en los registros.
+#
+# #1175 sugiere al visitante del instrumento que conecte un nodo de computo y
+# le lleva a una guia, docs/source/operate/join-a-compute-node.rst, publicada
+# en el Sphinx de la instancia. El aviso de modo CPU que #1173 quito esta
+# tarde vuelve con contenido que se gana el sitio: antes decia que una
+# secuencia nueva seria mas lenta, informacion con la que nadie puede hacer
+# nada; ahora dice que hacer. Misma condicion, gpu_present en false.
+#
+# #1176 ES EL CAMBIO DE PROCEDIMIENTO: la documentacion se despliega con la
+# revision que documenta, siempre, por scripts/deploy-docs.sh. Hoy no era asi y
+# nadie podia verlo: la API servia 9f09e2c y /sphinx/ un build del 7 de
+# octubre, cinco semanas y ocho ADRs por detras, mientras /health decia
+# revision_matches_declaration true con razon, porque ese campo habla del
+# codigo. A PARTIR DE AHORA EL SALTO TIENE UN PASO MAS, y va despues de mover
+# el arbol: bash scripts/deploy-docs.sh. El build queda sellado con su revision
+# en docs/build/html/_static/protea-revision.txt y /health lo publica como
+# docs_revision con docs_match_code al lado, asi que un build que no se hizo se
+# ve desde fuera. El script no usa el venv de la plataforma, que tiene un torch
+# clavado a mano: arma el suyo con docs/requirements.txt, cuatro paquetes
+# ligeros y el hermano protea-contracts, porque conf.py mockea torch, numpy,
+# transformers y dieciocho mas. Medido: 143 paginas en un minuto.
+#
+# NO MUEVE MIGRACION NI HERMANOS: los dos diffs vacios, asi que schema-applied
+# sigue al coordinator y no hay paso de pip.
+#
+# LA PUERTA DEL SERVIDOR, antes de esta edicion: 0 jobs en QUEUED, RUNNING o
+# PENDING; ninguna cola de trabajo con mensajes ni sin confirmar, salvo los
+# 18.816 de la cola de muertos; el prediction_set mas reciente de hace diez
+# horas y tres cuartos.
+#
+# ---------------------------------------------------------------------------
+coordinator bc603014186a7959f9c9cf1c61ddd4e6e21b6e9d
+schema-applied bc603014186a7959f9c9cf1c61ddd4e6e21b6e9d
