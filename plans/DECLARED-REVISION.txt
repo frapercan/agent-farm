@@ -2519,5 +2519,32 @@
 # habilitada, y con ella el instrumento publico vuelve a responder.
 #
 # ---------------------------------------------------------------------------
-coordinator 9b66f760179b4cff5e304ea8de004a8d47cd067b
-schema-applied 9b66f760179b4cff5e304ea8de004a8d47cd067b
+# 2026-11-10: 9b66f76 -> 9f09e2c. SOLO DOCUMENTACION: PROTEA#1174 anade el
+# registro ADR-D58, que exige a cada entidad citada un descriptor breve y otro
+# largo, y arregla tres filas del indice de ADRs que rompian su tabla. Dos
+# ficheros bajo docs/, ni una linea que un trabajador ejecute.
+#
+# SE DECLARA POR LA REGLA DE LA CABECERA, no por juicio sobre este salto: la
+# declaracion sigue la punta de develop, y el precedente del tercer salto del
+# 2026-09-01 es exactamente este caso, un cambio en un docstring que la movio
+# igual. Decidir por commit si un cambio es suficientemente real es como el
+# fichero se queda atras, porque cada excepcion es defendible por separado y el
+# hueco solo se ve cuando algo depende de el.
+#
+# NO MUEVE MIGRACION NI HERMANOS: los dos diffs estan vacios, asi que
+# schema-applied sigue al coordinator y no hay paso de pip.
+#
+# LA PUERTA DEL SERVIDOR, corrida antes de esta edicion: 0 jobs en QUEUED,
+# RUNNING o PENDING; ninguna cola de trabajo con mensajes ni sin confirmar,
+# siendo lo unico en el broker los 18.816 de la cola de muertos; el
+# prediction_set mas reciente es de hace diez horas.
+#
+# LO QUE ADR-D58 MIDE, y queda aqui porque es el estado de esta base: de las 20
+# entidades que se citan en una frase, solo 5 llevan los dos descriptores. Diez
+# no llevan ninguno, entre ellas las ventanas de evaluacion con 87 filas, los
+# conjuntos de anotacion con 75 y los snapshots de ontologia con 66. El registro
+# esta en Proposed: fija la convencion y el guardia, y deja tres cosas al autor.
+#
+# ---------------------------------------------------------------------------
+coordinator 9f09e2c396249d31c5dd887433b9d4bf3effbf51
+schema-applied 9f09e2c396249d31c5dd887433b9d4bf3effbf51
