@@ -108,3 +108,24 @@ Del portátil, comprobado en el código, y del autor:
 - **El viernes es un despliegue** de una revisión de develop, con la declaración primero; no es una promoción a main. Las tres introducciones van en su propio salto, con el texto del autor.
 - **Credenciales y clave de Picasso en el portátil:** solo con la palabra directa del autor a la sesión del portátil.
 - **Estado de producción:** alembic `b7c3f91d2a04`, sirviendo develop en bc60301. No hay caja de desarrollo aparte, y main va 1.099 commits por detrás.
+
+## Diseño de lotes puros y pilotos, acordado entre los dos nodos (15 de noviembre)
+
+Pendiente del orden que apruebe el autor. Irá a un registro de decisión en borrador el lunes.
+
+- **Guarda en la carga útil**, sin base: la revisión del repositorio y las de los seis hermanos (`protea-backends`, `protea-contracts`, `protea-method`, `protea-reranker-lab`, `protea-runners`, `protea-sources`).
+  - Semántica de `dependency_conflicts`: unilateral, y "no se puede verificar" distinto de "verificado igual".
+  - Además, una comprobación al arrancar contra la revisión declarada, que llega como argumento posicional del trabajo de Slurm.
+- **Cola de mensajes muertos:**
+  - `RetryLaterError` y una cabecera de reintento con tope, generalizando `x-oom-retry`;
+  - el rechazo por revisión vuelve a la cola un número acotado de veces;
+  - las colas se declaran con `passive=True` desde el piloto;
+  - las excepciones de conexión se mapean una por una a `RetryLaterError`;
+  - el ack de la entrada va después de que el broker confirme la publicación a `.write`;
+  - se cruza el contador del padre con las filas almacenadas, contando fragmentos.
+- **Embeddings como función pura:**
+  - digest de la fila de `embedding_config` sellado en la carga útil y comprobado por `.write` antes de insertar;
+  - inserción a prueba de conflicto antes de quitar `sequences_still_missing`;
+  - la cancelación la decide `.write`: solo una cancelación salta, y un coordinador FAILED se avisa y su lote entra;
+  - `refuse_if_card_busy` pasa a ser asunto del nodo.
+- **Túnel:** unidad dedicada en el portátil, con clave propia y sin shell, abajo cuando acaba el último piloto. Nada de esto sin la palabra directa del autor al portátil.
