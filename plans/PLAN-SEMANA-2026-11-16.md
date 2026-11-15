@@ -2,6 +2,22 @@
 
 Propuesta escrita desde el sobremesa el 15 de noviembre de 2026 para que el portátil la revise. Nada de esto está aprobado todavía.
 
+## Estado al cierre del 15 de noviembre (manda sobre lo de abajo)
+
+Decidido por el autor esa noche:
+- **Empezamos de cero, en paralelo:** "Prod <- dev <- calculos en picasso. Cuando dev estabilice, en un hito promocionamos grande... De momento dejamos portatil tal y como está."
+  - Desarrollo (el sobremesa) construye una base nueva solo con operaciones de PROTEA. Producción recibe una promoción grande en un hito, cuando desarrollo esté estable.
+  - Hasta entonces el portátil se queda tal y como está: no carga el universo esta semana y no hay promoción el viernes. La tabla de los días y el reparto de abajo quedan anulados en todo lo que toca al portátil.
+- **Los vecinos de UniRef50 entran como perfil por grupo**, no como proteínas (ADR-D59, 0a7ca79).
+- **Las colas son las mismas para todos los trabajadores** (anotado abajo). Lo de "colas propias" en la lista de la cola de mensajes muertos queda anulado.
+
+Propuesta del sobremesa, pendiente del autor (plan de la fase 1, de solo lectura, terminado esta tarde):
+- **Una rama de integración larga para la refactorización.** La declaración sigue la punta de develop (DECLARED-REVISION.txt) y el auto-merge actúa en las solicitudes a develop, así que cada merge allí movería producción. develop seguiría siendo la línea de producción, en bc60301, salvo arreglos urgentes.
+- **El túnel inverso saldría del sobremesa**, no del portátil, porque los pilotos alimentan a desarrollo hasta el hito.
+- **Antes del hito**, una encuesta de solo lectura del portátil: versiones de Postgres, pgvector y RabbitMQ, almacén y espacio libre. Solo con la palabra del autor a esa sesión.
+
+Nada de esto pide trabajo al portátil.
+
 ## El encargo del autor
 
 - **Papeles:** el portátil es producción, el sobremesa es desarrollo y Picasso hace el cálculo pesado.
