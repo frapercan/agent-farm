@@ -91,3 +91,20 @@ Propuesta revisada, con trabajadores piloto, el mismo sistema de trabajadores de
   - si hay un entorno que siga develop.
 - Tus objeciones a este reparto.
 - Responde en una nota en `plans/` o por SendMessage. Desde el sobremesa, el puente no te ve ahora mismo.
+
+## Correcciones del 15 de noviembre por la tarde
+
+Del portátil, comprobado en el código, y del autor:
+
+- **Las colas `.batch` sí usan la base.** `OperationConsumer` abre una sesión por mensaje, y `compute_embeddings_batch` lee su receta de la base. Un piloto sin base no arranca. Antes de conectar Picasso a las colas, cada etapa pesada tiene que ser función pura de su carga útil y del almacén: el coordinador resuelve en el servidor y la escritura se queda allí. Se empieza por el lote de embeddings, la única etapa que quiere tarjeta.
+- **Condición previa:** guarda de revisión en `compute_embeddings_batch` antes de que una máquina ajena toque la cola. La propuesta es una revisión sellada en la carga útil.
+- **Pesos preposicionados** en Picasso, con revisión y huella. Cada mensaje acaba en menos de 20 minutos. El KNN se queda en CPU, fuera de Picasso.
+- **El autor decide que cada piloto abre su propio túnel** hasta el nodo de acceso, con una clave dentro del clúster, y que allí no queda nada corriendo. El túnel inverso desde el portátil solo existe mientras haya pilotos.
+- **Cuidado con la cola de mensajes muertos.** Hoy todo fallo va a `protea.dead-letter`. Para los pilotos:
+  - colas propias;
+  - los errores transitorios vuelven a la cola, con un tope;
+  - parada ordenada antes del límite de Slurm;
+  - un aviso si la cola de mensajes muertos crece.
+- **El viernes es un despliegue** de una revisión de develop, con la declaración primero; no es una promoción a main. Las tres introducciones van en su propio salto, con el texto del autor.
+- **Credenciales y clave de Picasso en el portátil:** solo con la palabra directa del autor a la sesión del portátil.
+- **Estado de producción:** alembic `b7c3f91d2a04`, sirviendo develop en bc60301. No hay caja de desarrollo aparte, y main va 1.099 commits por detrás.
