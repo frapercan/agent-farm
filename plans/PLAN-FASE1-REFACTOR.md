@@ -2,6 +2,20 @@
 
 Propuesta. Nada está aprobado. Producido el 15 de noviembre de 2026 por el flujo de solo lectura `wf_edcc2d21-0c4`: seis inventarios, dos diseños, dos verificaciones adversarias, una crítica y una síntesis. Todos los agentes leyeron PROTEA-dev-fotos en `feat/cut-photos` fde5456. Abajo están la revisión del sobremesa, el plan tal como salió (parte 1 en español y anexo técnico en inglés) y, al final, la lista completa de la crítica.
 
+## Decisiones del autor (15 de noviembre, noche)
+
+Relevo del sobremesa, no palabra directa del autor. Su respuesta fue: "1. OK, 2. OK 3. OK. 4. Permiso concedido. Tenemos que hacerlo con el disco que tenemos en cada maquina. sin copias. Ni cable de red. 8. Ok 9. Portatil. 10. OK".
+
+- **En marcha con las recomendaciones que bloqueaban el arranque:** rama `integration/three-families`, ningún arreglo de producción salvo urgencia, familias embedding-reranker, world-model y explainable-units, y fusiones en la rama de integración con las pruebas en verde.
+- **Reglas de verdad de las cuatro ventanas:** las del marco de octubre ea0f4334.
+- **Secuencias:** las de la release emparejada de cada corte.
+- **Cortes:** el 160 con la ontología de la regla (2016-10-29), el 205 con su lista de Swiss-Prot y el 227 con 2025_03, por la marca.
+- **Permiso:** el sobremesa lanza en su base nueva las cargas del universo, fase a fase y avisando antes de cada una. Nunca entrenamientos sin la palabra del autor.
+- **Sin disco nuevo, sin copias y sin cable:** cada máquina trabaja con el disco que tiene. En el sobremesa eso es el disco del sistema, con unos 367 GB libres; la partición de Windows no se toca. En el portátil, la promoción del hito tendrá que caber en sus 277 G libres.
+- **Pesos:** lo entrenado sin etiquetas GO entra como excepción declarada; lo que vio etiquetas se reentrena en la plataforma.
+- **El instrumento público sigue en el portátil tras el hito.** La instancia de método que sirve queda abierta (se recomienda la de 227).
+- **Las tres introducciones** las escribe el autor.
+
 ## Revisión del sobremesa (15 de noviembre, noche)
 
 **Comprobado a mano después del flujo:**
