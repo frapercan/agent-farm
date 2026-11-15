@@ -132,7 +132,7 @@ Pendiente del orden que apruebe el autor. Irá a un registro de decisión en bor
 - **Más ajustes del portátil, el mismo día:**
   - el `ON CONFLICT DO NOTHING` ya existe en `store_group_rows`, así que no hace falta esa solicitud;
   - los pilotos solo usan `skip_existing=True`, porque el camino que borra y reemplaza no aguanta la reentrega rutinaria sin revisarlo;
-  - la carga útil lleva solo identificadores de configuración, por configuración: la escala y el digest se resuelven en `.write`, porque izar la escala fuera del bucle da magnitudes equivocadas en silencio;
+  - **corregido después:** la carga útil lleva, por configuración y nunca aplanados, la receta completa y el digest de la fila que leyó el coordinador. Con solo identificadores, el lote volvería a necesitar la base (`load_pass_group` devuelve objetos del ORM). En `.write`, por configuración y dentro del bucle, se resuelven la escala y la comparación del digest con la fila; izar la escala fuera del bucle da magnitudes equivocadas en silencio. Los campos de la receta salen del código, con una prueba que falla si el camino de inferencia lee uno que la carga útil no lleva;
   - la guarda emite `code_revision()` (sellada al importar) y `tree_revision_now()`, y un árbol movido bajo un piloto vivo obliga a reiniciarlo;
   - en Picasso, un árbol de despliegue dedicado, como en el sobremesa;
   - la revisión va como argumento posicional y las credenciales siempre como ruta.
