@@ -144,5 +144,8 @@ Pendiente del orden que apruebe el autor. Irá a un registro de decisión en bor
   - **el piloto declara su cola (`protea.embeddings.batch`) y rechaza cualquier otra**, así que el KNN nunca llega a la tarjeta;
   - **la credencial de RabbitMQ** da consumo en esas colas y publicación a `.write`, nada más;
   - **el consumidor local del portátil sigue vivo**, y hay un aviso si una cola con mensajes se queda sin consumidores;
-  - **la máquina de un brazo** se comprueba con `job_event.fields->>'host'` antes de publicar su número.
+  - **la máquina de un brazo** se comprueba con `job_event.fields->>'host'` antes de publicar su número. **Alcance corregido:** el host solo lo emite `OperationConsumer`, es decir, las etapas `.batch` y `.write` (146.660 eventos con host frente a 970.202 sin él). En los trabajos de `BaseWorker` (coordinadores, evaluación) la consulta no devuelve nada, y nada no significa "todo bien". Hace falta una solicitud pequeña que emita el host también en `BaseWorker`.
 - **El autor, al final de la tarde:** el paso de 211 es fuera de plataforma; "lo queremos todo en la plataforma... deberíamos empezar de 0. Sin conservar absolutamente nada". Está pendiente el alcance: datos o también código. La recomendación del sobremesa es datos de cero en una base nueva, la actual archivada y no borrada, y el código depurado, no reescrito.
+- **Lo que el autor debe saber antes de empezar de cero** (del portátil):
+  - el instrumento público sirve de la base actual, así que empezar de cero son semanas sin datos públicos, salvo que la actual siga sirviendo mientras se construye la nueva;
+  - reconstruir los datos no devuelve la prueba de 227->230, que se gastó el 27 de octubre de 2026.
