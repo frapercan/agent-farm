@@ -5,7 +5,12 @@ Propuesta. Nada está aprobado. Producido el 15 de noviembre de 2026 por el fluj
 ## Revisión del sobremesa (15 de noviembre, noche)
 
 **Comprobado a mano después del flujo:**
-- **La regla de la punta.** `plans/DECLARED-REVISION.txt` dice "THE DECLARATION TRACKS THE TIP OF develop", y `.github/workflows/auto-merge.yml` solo actúa en solicitudes a develop. Un merge en develop movería producción, así que la rama de integración no es opcional mientras el portátil siga intacto.
+- **La regla de la punta, corregida por el portátil.** `plans/DECLARED-REVISION.txt` dice "THE DECLARATION TRACKS THE TIP OF develop", y `.github/workflows/auto-merge.yml` solo actúa en solicitudes a develop. Pero un merge en develop no mueve producción por sí solo, y la parte 1 se equivoca al decirlo:
+  - la declaración se lee de `origin/main:plans/DECLARED-REVISION.txt` de agent-farm (`protea/api/app.py:322`);
+  - producción sirve un árbol de despliegue separado en bc60301;
+  - el despliegue lo hace el portátil.
+
+  La rama de integración sigue haciendo falta, porque la regla de la punta pediría declarar código de la refactorización y los arreglos urgentes tienen que poder salir de una develop limpia. Lo que hay que proteger es la declaración de agent-farm y el acto de despliegue. Por confirmar: si `deploy-keeper-tick.sh`, que llama a `protea_redeploy.sh` ("Idempotent redeploy of origin/develop"), sigue apagado en el portátil.
 - **La ontología del corte 160.** `plans/GOA-ONTOLOGY-PAIRING.md` lo confirma: GOA 160 declara 2016-10-29 y la tabla le da el grafo 2016-09-30.
 - **El perfil por grupo.** El plan ya es coherente con él, porque leyó ADR-D59 en fde5456: ninguna parte mete a los vecinos de UniRef50 como proteínas, y el presupuesto de disco ya cuenta los perfiles (unos 10 GB como mucho). La decisión 7 (secuencias) se estrecha: solo afecta a las proteínas no revisadas de la base, no a los 38 millones de vecinos.
 
@@ -32,6 +37,10 @@ Propuesta. Nada está aprobado. Producido el 15 de noviembre de 2026 por el fluj
   - el segundo tiene la partición de Windows (539 GB) y el archivo (63 GB libres).
   
   El universo pide de 0,4 a 0,55 TB, más un destino de copias.
+- **Del portátil, después:**
+  - **La encuesta ya está hecha.** Versiones fijadas por digest en `docker-compose.yml`: PostgreSQL 18.6 con pgvector 0.8.6, RabbitMQ 4.3.5 y MinIO RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772. Almacén de 96,12 GB, volumen de Postgres de 404 GB y 277 G libres en su disco.
+  - **La pila del sobremesa está vacía:** ni Postgres, ni RabbitMQ, ni MinIO.
+  - **La proyección de `protein_go_annotation`** que cita (de 180 a 399 GB) era para la serie GAF entera. Con las fotos, en 211 el superconjunto tiene 8.521.521 filas, y las proteínas de fuera suman 587.286 filas experimentales o de curador más sus otras filas. Son medidas fuera de la plataforma, solo orden de magnitud.
 
 ---
 

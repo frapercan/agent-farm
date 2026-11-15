@@ -12,9 +12,22 @@ Decidido por el autor esa noche:
 - **Las colas son las mismas para todos los trabajadores** (anotado abajo). Lo de "colas propias" en la lista de la cola de mensajes muertos queda anulado.
 
 Propuesta del sobremesa, pendiente del autor (plan de la fase 1, de solo lectura, terminado esta tarde):
-- **Una rama de integración larga para la refactorización.** La declaración sigue la punta de develop (DECLARED-REVISION.txt) y el auto-merge actúa en las solicitudes a develop, así que cada merge allí movería producción. develop seguiría siendo la línea de producción, en bc60301, salvo arreglos urgentes.
+- **Una rama de integración larga para la refactorización.** Corregido por el portátil: un merge en develop no mueve producción por sí solo.
+  - La declaración se lee de `origin/main:plans/DECLARED-REVISION.txt` de agent-farm (`protea/api/app.py:322`, igual que la guarda de revisión).
+  - Producción sirve un árbol de despliegue separado en bc60301, y el despliegue lo hace el portátil.
+  - La rama sigue haciendo falta por otra razón: la regla de la punta pediría declarar código de la refactorización, y los arreglos urgentes de producción tienen que poder salir de una develop limpia.
+  - Lo que hay que proteger hasta el hito es la declaración de agent-farm y el acto de despliegue.
+  - Por confirmar: si `scripts/services/deploy-keeper-tick.sh`, que llama a `protea_redeploy.sh`, sigue apagado en el portátil.
 - **El túnel inverso saldría del sobremesa**, no del portátil, porque los pilotos alimentan a desarrollo hasta el hito.
-- **Antes del hito**, una encuesta de solo lectura del portátil: versiones de Postgres, pgvector y RabbitMQ, almacén y espacio libre. Solo con la palabra del autor a esa sesión.
+- **La encuesta del portátil ya está hecha.** La hizo él, en solo lectura sobre su máquina.
+  - Versiones fijadas por digest en `docker-compose.yml`: PostgreSQL 18.6 con pgvector 0.8.6, RabbitMQ 4.3.5 y MinIO RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772.
+  - Almacén: 96,12 GB.
+  - Volumen de Postgres: 404 GB (`protea` 255 GB, `protea_old` 120 GB).
+  - Disco: 937 G, con 277 G libres.
+- **Disco del sobremesa.** El portátil avisa de que la proyección declarada de `protein_go_annotation` (180 GB en el caso bajo, 399 GB en el alto) no cabe entera en los 367 GB libres.
+  - Esa proyección era para cargar la serie GAF entera. Con las fotos solo entran las filas de la base, y los vecinos van en perfiles.
+  - En 211, medido fuera de la plataforma (orden de magnitud): el superconjunto tiene 8.521.521 filas. Las proteínas de fuera suman 587.286 filas experimentales o de curador, más sus otras filas, sin medir. Para las seis cargas sale del orden de decenas de GB.
+  - El sobremesa no tiene hoy nada de la pila: ni Postgres, ni RabbitMQ, ni MinIO. El plan los levanta con podman y Quadlet, con los mismos digests.
 
 Nada de esto pide trabajo al portátil.
 
