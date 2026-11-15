@@ -55,7 +55,7 @@ Medido por el portátil después, sobre su máquina y su base viva:
 
   | Tabla | Bytes por fila | Índices |
   |---|---|---|
-  | `protein_go_annotation` | 355,1 | 58 % de la tabla |
+  | `protein_go_annotation` | unos 350 (estimación del planificador, entre 349 y 355) | 58 % del total, 1,37 veces la tabla |
   | `sequence_embedding` | 10.478 | casi nada |
   | `go_prediction` | 496,5 | |
 
