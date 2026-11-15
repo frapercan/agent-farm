@@ -138,3 +138,11 @@ Pendiente del orden que apruebe el autor. Irá a un registro de decisión en bor
   - la revisión va como argumento posicional y las credenciales siempre como ruta.
 - **El autor, el mismo día: "No quiero que las colas sean específicas de Picasso".** Los pilotos consumen las mismas colas que cualquier otro trabajador. Las protecciones frente a la cola de mensajes muertos, la guarda de revisión y la confirmación antes del ack se aplican, por tanto, a todos los consumidores, no solo a Picasso. Las definiciones de cola siguen siendo del servidor, y el piloto declara con `passive=True`.
 - **La red para la receta ya tiene patrón:** `tests/test_count_backend_parameters.py:179` (`test_every_declared_submodule_still_appears_in_its_backend_forward_path`) lee el fuente del backend instalado con `inspect.getsource`. Comprueba cadenas, no lecturas reales: la receta se construye desde un único sitio, y la prueba hace de red, no de contrato.
+- **Colas compartidas, riesgos del portátil:**
+  - **un piloto con revisión ajena cancela su consumidor y sale.** El mensaje vuelve a la cola sin contar contra el tope; si no, un nodo rancio vaciaría la cola entera hacia los mensajes muertos tras cada despliegue;
+  - **la parada ordenada no gasta tope**, porque se marca con un motivo distinto;
+  - **el piloto declara su cola (`protea.embeddings.batch`) y rechaza cualquier otra**, así que el KNN nunca llega a la tarjeta;
+  - **la credencial de RabbitMQ** da consumo en esas colas y publicación a `.write`, nada más;
+  - **el consumidor local del portátil sigue vivo**, y hay un aviso si una cola con mensajes se queda sin consumidores;
+  - **la máquina de un brazo** se comprueba con `job_event.fields->>'host'` antes de publicar su número.
+- **El autor, al final de la tarde:** el paso de 211 es fuera de plataforma; "lo queremos todo en la plataforma... deberíamos empezar de 0. Sin conservar absolutamente nada". Está pendiente el alcance: datos o también código. La recomendación del sobremesa es datos de cero en una base nueva, la actual archivada y no borrada, y el código depurado, no reescrito.
