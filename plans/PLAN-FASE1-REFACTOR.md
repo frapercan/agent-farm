@@ -42,6 +42,26 @@ Propuesta. Nada está aprobado. Producido el 15 de noviembre de 2026 por el fluj
   - **La pila del sobremesa está vacía:** ni Postgres, ni RabbitMQ, ni MinIO.
   - **La proyección de `protein_go_annotation`** que cita (de 180 a 399 GB) era para la serie GAF entera. Con las fotos, en 211 el superconjunto tiene 8.521.521 filas, y las proteínas de fuera suman 587.286 filas experimentales o de curador más sus otras filas. Son medidas fuera de la plataforma, solo orden de magnitud.
 
+Medido por el portátil después, sobre su máquina y su base viva:
+- **El proceso que redespliega develop está apagado.** No hay unidad, temporizador, cron ni proceso que lo arranque. El código existe (`scripts/services/lib/protea_redeploy.sh`), pero nada lo invoca. `coord-keeper.service` sigue habilitado y muerto: arranca con una ruta que no existe y sale con 78. Es ruido del registro antiguo, no un camino a producción.
+- **Hay un perro guardián: `protea-vigila-consumidor.timer`**, cada 15 minutos. Reinicia el trabajador de `protea.jobs` solo si se cumplen a la vez cuatro condiciones, comprobadas dos veces con 90 s de separación:
+  - la cola se puede leer;
+  - tiene 0 consumidores;
+  - tiene mensajes;
+  - hay 0 trabajos en RUNNING.
+
+  No toca las colas `.batch`. Con el padre en RUNNING mientras los lotes están fuera, el diseño de pilotos queda del lado seguro de esa guarda.
+- **Coste por fila en producción:**
+
+  | Tabla | Bytes por fila | Índices |
+  |---|---|---|
+  | `protein_go_annotation` | 355,1 | 58 % de la tabla |
+  | `sequence_embedding` | 10.478 | casi nada |
+  | `go_prediction` | 496,5 | |
+
+  Las seis cargas de fotos salen del orden de 20 GB, y como mucho 40 GB si se duplica lo que no se ha medido. El presupuesto del sobremesa lo fijan los embeddings, no las anotaciones.
+- **En el sobremesa está podman 5.7.0**, pero no hay ningún Quadlet escrito y nada escucha en los puertos de la pila.
+
 ---
 
 # PARTE 1. Plan para el autor (español)
