@@ -39,15 +39,17 @@ Lo medido el 15 de noviembre:
 - **Los trabajos con `--export` los cancela root**, así que los argumentos van por posición.
 - **El almacenamiento de trabajo tiene un límite blando de 0,93 TB** y va por 0,89 TB.
 
-Propuesta, en modo empuje: un trabajador de PROTEA con cola propia, por ejemplo `protea.picasso`, en un nodo con la clave SSH de Picasso. Para cada trabajo:
-- **prepara:** sube solo el código de la revisión fijada y los datos declarados;
-- **descarga** las fuentes públicas en el nodo de acceso;
-- **envía** trabajos de 2 h como máximo, con reanudación exacta si hace falta más;
-- **vigila y recoge** los resultados;
-- **comprueba** sus huellas;
-- **registra** los artefactos y los eventos del trabajo en PROTEA.
+Medido después, a propuesta del autor ("del nodo de cálculo al nodo de sistema sí se podrían redirigir las colas"):
+- **Desde un nodo de cálculo (sd041) se llega por TCP al nodo de acceso**, en el puerto 22 y en uno alto cualquiera (27998), por sus cuatro direcciones internas. Trabajo 3674967.
+- **Desde aquí se puede abrir un túnel inverso hasta el nodo de acceso.** Escucha en su 127.0.0.1, así que hace falta un relevo de usuario en su dirección interna, o una clave SSH dentro del clúster.
 
-En Picasso no hay credenciales de PROTEA y no hace falta conexión entrante. La guarda de la marca (nada posterior a 227) se aplica antes de enviar nada. El modo tirón, con un agente en el nodo de acceso que consulte la API pública, queda como alternativa: exige una clave de PROTEA en una cuenta compartida y un proceso largo en el nodo de acceso.
+Propuesta revisada, con trabajadores piloto, el mismo sistema de trabajadores de PROTEA:
+- **El túnel.** Un túnel inverso desde producción (el portátil, con su propia clave de Picasso) hasta el nodo de acceso, más un relevo ligero allí. Los nodos de cálculo llegan así a RabbitMQ y al almacén de artefactos de producción.
+- **Los pilotos.** Trabajos de 2 h como máximo que arrancan trabajadores de PROTEA sobre colas pesadas sin base de datos (las `.batch`). Dejan de tomar mensajes antes del límite; RabbitMQ reparte de nuevo lo que un trabajo cortado deja sin confirmar. La escritura sigue en el servidor, como ya hacen las colas `.write`.
+- **Credenciales mínimas:** un usuario de RabbitMQ limitado a esas colas, un usuario del almacén limitado a un prefijo y nada de Postgres.
+- **La guarda de la marca 227** va en la validación de cada carga útil.
+- **Los datos pesados** se descargan en el nodo de acceso desde sus fuentes públicas, no por el túnel, porque la subida de una red doméstica es lenta.
+- **El modo empuje** (orquestar Slurm por SSH desde un trabajador) queda como alternativa sin credenciales en Picasso.
 
 ## Los días
 
@@ -78,7 +80,7 @@ En Picasso no hay credenciales de PROTEA y no hace falta conexión entrante. La 
 1. El entorno de desarrollo: su propia base, con una copia de producción o un subconjunto, o un esquema aparte en la base de producción.
 2. Quién sirve la GPU de producción si el sobremesa pasa a desarrollo.
 3. La lista de lo que se quita, cuando esté el inventario del lunes.
-4. Picasso en modo empuje (recomendado) o tirón.
+4. Picasso con trabajadores piloto por túnel (recomendado tras la prueba) o en modo empuje; y si un relevo ligero en el nodo de acceso es aceptable para el centro.
 
 ## Qué te pido
 
