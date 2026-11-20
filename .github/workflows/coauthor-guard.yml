@@ -1,61 +1,34 @@
 name: coauthor-guard
-
-# Server-side guard against Claude / Anthropic / AI-attribution
-# commit-message trailers and PR body. Second layer of defense after
-# FARM-1.1's client-side pre-push hooks.
-#
-# Trigger model: callers invoke this via workflow_call in their own
-# pull_request workflow, so the PR event payload is available in the
-# caller context and reflected here through the github context.
-# This workflow also accepts direct pull_request triggers for agent-farm
-# itself.
-#
-# Security note: PR body and commit messages are passed via env-vars,
-# NOT via inline ${{ }} interpolation, to prevent shell injection.
-# Base commit range uses github.event.pull_request.base.sha (a SHA),
-# not github.base_ref (a branch name that may not resolve locally).
-#
-# Slice: FARM-1.1a (farm-platform loop).
-
 on:
-  workflow_call: {}
   pull_request:
     types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
-
 jobs:
   scan:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head with full history
-        uses: actions/checkout@v4
+      # No `ref:`. The default is the merge commit this workflow was read
+      # from, so scripts/check_coauthor.py comes from the same tree as the
+      # steps that call it. Checking out the head would run whatever copy the
+      # branch carries, and a branch cut before the script existed carries
+      # none. The scan names its range by sha and fetches both ends below, so
+      # it does not depend on what is checked out.
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Fetch base commit
+      - name: Fetch the scanned range
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          if [[ -z "${BASE_SHA:-}" ]]; then
-            echo "::warning::Not a PR context; skipping base fetch."
-            exit 0
-          fi
           git fetch --no-tags --depth=200 origin "${BASE_SHA}"
-
-          # The scan below excludes what is already on a long-lived branch, so
-          # those refs have to be present locally for the exclusion to mean
-          # anything. A missing ref is not an error: a repository may have
-          # collapsed to a single branch, and one that never had a develop is
-          # ordinary. Failing to fetch silently would make the exclusion a
-          # no-op and the guard would fire on history again.
-          for ref in main master develop; do
-            git fetch --no-tags --depth=200 origin "${ref}:refs/remotes/origin/${ref}" 2>/dev/null \
-              || echo "  no ${ref} branch in this repository, nothing to exclude from it"
-          done
+          # The head by sha too: the merge commit checked out above normally
+          # carries it as a parent, but the scan must not rest on that.
+          git fetch --no-tags origin "${HEAD_SHA}"
+          # also need origin/main so the scan can exclude commits already on
+          # the mainline (we never re-flag released history we cannot rewrite)
+          git fetch --no-tags origin main
 
       - name: Scan commit messages for forbidden attribution
         env:
@@ -63,44 +36,16 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          if [[ -z "${BASE_SHA:-}" ]]; then
-            echo "::warning::Not a PR context; skipping commit scan."
-            exit 0
-          fi
           range="${BASE_SHA}..${HEAD_SHA}"
-
-          # Anything already reachable from a long-lived branch is history,
-          # not something this pull request is proposing. Scanning it makes
-          # the guard fire on commits the author has already decided to keep,
-          # and a guard that fails on work nobody can change is a guard people
-          # learn to route around. This matters most for a pull request that
-          # merges one long-lived branch into another, where the range spans
-          # every commit of the incoming side.
-          #
-          # Refs that do not exist are skipped rather than assumed, because a
-          # repository that has collapsed to a single branch has no second one
-          # and must not fail on the lookup.
-          excludes=()
-          for ref in origin/main origin/master origin/develop; do
-            if git rev-parse --verify --quiet "${ref}" >/dev/null; then
-              excludes+=("${ref}")
-            fi
-          done
           echo "Scanning commit range: ${range}"
-          if [[ ${#excludes[@]} -gt 0 ]]; then
-            echo "Excluding what is already on: ${excludes[*]}"
-          fi
           tmp="$(mktemp)"
-          git log --format='commit %H%n%B%n---END---' "${range}" \
-            ${excludes[@]:+--not "${excludes[@]}"} > "${tmp}"
-          pattern='co-authored-by:[[:space:]]*.*(claude|anthropic|noreply@anthropic)|generated[[:space:]]+with[[:space:]]+\[?claude|generated[[:space:]]+by[[:space:]]+\[?anthropic|^[[:space:]]*claude[[:space:]]+(code|opus|sonnet|haiku)\b|\bby[[:space:]]+anthropic\b'
-          if grep -iEn "${pattern}" "${tmp}"; then
-            echo ""
-            echo "ERROR: commit message in this PR contains forbidden"
-            echo "Claude/Anthropic/AI attribution. See matches above."
-            echo ""
-            echo "Fix: rebase the offending commit(s) to strip the"
-            echo "attribution, then force-push the PR branch."
+          # exclude commits already reachable from origin/main: only NEW commits
+          # introduced by this PR are subject to the guard.
+          git log --format='commit %H%n%B%n---END---' "${range}" --not origin/main > "${tmp}"
+          # The patterns live in the script, the same ones the body scan reads.
+          if ! python3 scripts/check_coauthor.py "${tmp}"; then
+            echo "ERROR: commit message contains forbidden Claude/Anthropic attribution."
+            echo "Fix: rebase the offending commit(s) and force-push the PR branch."
             exit 1
           fi
           echo "OK: no forbidden attribution found in ${range}"
@@ -110,8 +55,11 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
-          if printf '%s' "${PR_BODY:-}" | grep -iE "(co-authored-by:[[:space:]]*.*(claude|anthropic)|generated[[:space:]]+with[[:space:]]+claude|generated[[:space:]]+by[[:space:]]+anthropic)" > /dev/null; then
-            echo "::error::PR body contains Claude/Anthropic co-author mention. Project policy forbids AI attribution in PR bodies."
+          # Piped through the environment, never interpolated into the script.
+          if ! printf '%s' "${PR_BODY:-}" | python3 scripts/check_coauthor.py -; then
+            echo "::error::PR body contains Claude/Anthropic attribution."
             exit 1
           fi
           echo "OK: no forbidden attribution found in PR body."
+
+# (re-trigger CI after PR-body cleanup)
