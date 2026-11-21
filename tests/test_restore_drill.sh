@@ -94,7 +94,16 @@ assert_contains "error mentions PATH" "PATH" "$NB_OUT"
 
 # --- 5. --backup PATH for missing file -> die --------------------------
 echo "## 5. --backup with missing file -> die"
-MF_OUT=$(bash "$DRILL" --backup /nonexistent/protea-fake.dump 2>&1)
+# --dry-run for the same reason case 6 gives: without it this never reaches the
+# branch under test. The script's pre-flight requires docker unless --dry-run,
+# so on a host with no docker it dies at the pre-flight with "docker not on
+# PATH" and never looks at the file. Measured on the compute node, which has no
+# docker: rc was 1 either way, because die() always exits 1, so
+# `assert_rc ... 1` PASSED on the wrong branch and only the message assertion
+# caught it. The exit code cannot distinguish these two failures, and a case
+# that asserted only the code would be green on a host where the branch it
+# claims to test is unreachable.
+MF_OUT=$(bash "$DRILL" --dry-run --backup /nonexistent/protea-fake.dump 2>&1)
 MF_RC=$?
 assert_rc "missing --backup file exits 1" 1 "$MF_RC"
 assert_contains "die mentions missing file" "missing" "$MF_OUT"
