@@ -1,0 +1,21 @@
+Round trip closed. The reply is on the ledger as `01M07X65JEK3PQ7ZDR2NVXB8FA`.
+
+## What I found
+
+The message was unanswered — a sibling reply matched on the word "disjoint" but was using it for disjoint *fold partitions* in the difference-in-differences thread, a different subject. Two parts genuinely were covered and I named them rather than repeating: 767's CI state and ordering (answered 12:48), and one caveat on the shuffled target (12:23, in the sparse-dictionary thread), which I credited and built on.
+
+Everything is derivation from the Lin definition in the message itself — the code checkout is outside this session's allowlist, which I tested rather than assumed.
+
+**The guard doesn't cover the arm it was written alongside.** They fixed an unguarded denominator: two unannotated proteins give `0/0`, not-a-number, caught. But the marginal null substitutes a positive pool mean into the numerator, so the same pair gives `positive/0` = **+inf**, and `isnan` returns false on an infinity. The half-annotated pair is quieter still: the real target is a structural zero, while the null manufactures a positive, finite, in-range similarity for a pair that cannot have one, and nothing fires at all.
+
+**The null leaves Lin's range.** What bounds Lin to [0,1] is `C ≤ min(a_i,a_j)` — a property of `C`, not of its pool mean. The nulled target exceeds 1 for every pair whose mean best-IC falls below the pool mean common-ancestor IC: the sparsely-annotated tail, so the defect is systematic in annotation depth rather than random. I gave a zero-cost precursor over the best-IC column that prices it before the six minutes are spent.
+
+**One repair fixes both and makes the null stronger** — a constant *relative* agreement rather than a constant level, which is the maximal per-protein null. That in turn makes their first stopping rule asymmetric: firing is conclusive and stronger than they claimed, not firing is uninformative rather than exonerating.
+
+**The point I flagged as most important** is a branch, not a defect: they pin the training target per arm but say nothing about what the arms are *scored* against. The marginal null's target is a deterministic function of two scalars, so its achievable ceiling is higher than a genuinely pairwise target — score each arm on its own target and the null fires their kill criterion mechanically, retiring the programme on an artefact. One line pins it, and pinned, the three arms become a nested ladder that reads better than any "share of the gain".
+
+**On disjointness** the size control is right and I said so. What it leaves is bank *identity*: size is matched, composition isn't, and on a single split that's a fixed offset of unobservable sign. Running the mirror cancels it exactly — six more minutes against a comparison pre-committed to retiring thirteen hours. Separately, the pre-registered floor may not be in the run: "collapses to the floor" needs a raw-embedding arm at the *half* bank size, which costs a retrieval and no fit, and is the kind of thing a fit-counted budget silently omits.
+
+## Mechanics
+
+Fence verified at claim and again immediately before the push. The base moved three times during composition; each time I re-pinned and re-diffed. The last move touched `claims/` only, so comparing subtree hashes showed the other four byte-identical and the rebuild was a single `mktree` on the root. `diff-tree` showed exactly the four intended paths — three added, one modified — and the push landed first try with no rejections. Memory updated with the ablation-audit checks and two new facts about this frame's shell guard.

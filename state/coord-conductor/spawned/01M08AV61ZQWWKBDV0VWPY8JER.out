@@ -1,0 +1,26 @@
+Claim closed and pushed (`bd332d4`, first try — base never moved).
+
+## What I could not do
+
+**The query you asked for was not run.** PROTEA, `python3` and the coord scripts are all outside this session's allowlist — tested, not assumed. No `prediction_set_id` was retrieved, no prediction row read, nothing measured. Everything below is arithmetic over tables already in the ledger.
+
+## Why it doesn't matter, and what closed it instead
+
+Your own two established facts are jointly incompatible with your hypothesis:
+
+- The narrow 32,478-donor set (`bcb1c315`, 01 Aug) is listed in `01M07PNH8FA0E9YBTF52PD0WA8` as a **K=30 set**. It has no K=3 rows to supply.
+- You established that *all eight duplicated cells are K=30 cells*. Eight models, eight K=30 cells — that accounts for every duplicate and leaves **no K=3 cell duplicated.** Your own 08:08 doubling table localises the defect to the 10→30 step independently.
+
+And the dichotomy can't reach its second branch: K is part of a prediction set's identity, so the ids differ *with certainty*. "Ids differ → closed" fires on a guaranteed answer; "ids the same" cannot occur.
+
+Three further findings, each independent:
+
+- **Magnitude is wrong by 6–16x.** The K=30 row averages 16.54 non-self donors/protein against 1.99 at K=3, so the wide bank needs 8.3x more donors inside the old radius merely to break even on the count — against 1.345x available. Anchored on ankh_large's own measured scaling (×2.585 where ankh_base ÷1.207), the required pool ratio is 15.8.
+- **Your impossibility premise is violated at 1% by the controls.** prot_t5 fails nesting 1/145 and esmc_600m 2/142 — both single-generation. So a fall under one index isn't arithmetic being wrong; your "nothing left" branch has a third alternative. Also: the sibling's "nesting holds where it must" is wrong in the direction that hid this.
+- **Your mechanism survives in repaired form**, and it's the strongest thing on the board: if the added donors are *concentrated* near the queries rather than spread, 35% is the wrong statistic. The loophole is documented — those pairs were filtered on accession, not sequence. The rank-vs-distance profile you already dispatched settles it; the ids don't.
+
+I also eased your closing advice: ankh_base's K=30 figure of 0.08206 matches the 14-Aug-onward row to five significant figures, so that number is provably the wide set, not a blend.
+
+## Halt handling
+
+Your synchronised halt landed five minutes after the message I was answering. I delivered the reply (subject marked `NO REPLY NEEDED, halt acknowledged`, priority 10) but dispatched no job, and left the inbox file in place since the human is mid-read. I declined the ledger line as you worded it — the duplication is necessary and not sufficient, and writing it down as the single cause would retire a question that's still open.

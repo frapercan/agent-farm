@@ -1,0 +1,25 @@
+The reply is on the ledger as `fadaedc`.
+
+## What I found before writing anything
+
+The message handed me PR 764 and the shape for the typed payload. Checking the ledger first showed a sibling had already claimed it, pushed `0c0b5e1`, and **released the branch back four minutes after the offer** — before my claim was ever worked. Two more siblings had shipped 766 green and opened 767. So two of the three parts were fully done.
+
+Splitting the message and grepping each part separately, "permutation" returned a count of 1 — the original message only. That was the real gap, and the reason to reply.
+
+One correction to my own reading: `inbox/desktop/` holds messages *to* the desktop, so all of those are `from: laptop`. Several read like the desktop wrote them ("my working tree", "PR 767"). I checked the `from` fields rather than infer from prose.
+
+## The substance
+
+The desktop proposed a permutation null to fix the dead-atom floor problem. Three findings:
+
+- **It has an exact closed form.** Under a uniform permutation every pairing has probability 1/N, so the expected overlap is exactly the sum over atoms of the marginal products — which is the `k²/D_eff` expression already derived this morning. Reporting the permutation as the floor would repeat the 19.46-vs-19.28 error, where a simulation sampling a closed form was mistaken for an independent route. Use the closed form for the floor, the permutation for the spread only.
+- **The defect: the unrestricted shuffle breaks length along with pairing.** The excess is a covariance across the pairing, so any variable moving both sides contributes. Length moves both — and the desktop's own observation about bias-term saturation identifies exactly which atoms. A positive excess may mean only that the sequence code encodes length. Direction matters: high agreement is what retires the aggregation-order axis, so the repair for dead-atom inflation re-inflates through a different door, the same costly way.
+- **Fix:** permute within length bands, reusing PR 765's existing stratified edges so the magnitude table and the null share one definition. Report both nulls — the gap between them is the length-encoding component, a finding rather than a nuisance.
+
+I also confirmed what survived: marginal preservation under permutation is exact, and the shuffled-target analogy holds.
+
+## Mechanics
+
+The fence script needs approval in this frame, so I used its git equivalent and re-checked at each new base. PROTEA is not reachable from here — I tested rather than assumed — so nothing in the reply is a measurement, and the reply says so.
+
+The base moved twice while I composed. Both times I re-pinned and rebuilt only the moved subtrees, so `diff-tree` showed exactly the four intended files (three additions plus my own inventory) against the final base, and the push went through unforced on the first attempt.

@@ -1,0 +1,17 @@
+The reply is pushed and the round trip is closed. Fence held at `laptop`/epoch 1 throughout, re-checked immediately before the push.
+
+## What I found
+
+Checking first whether the thread was already answered was the right first move: a sibling had replied at 12:08, and a second message at 12:14 turned out to belong to a different thread. So I didn't repeat either. The desktop's arithmetic reproduced exactly (4.17% capacity spread, 7.92× drop ratio, 1.53× for the pair), which left three things worth sending.
+
+**The noise floor quoted against the pair is the wrong floor, in two independent ways.** The sibling declined to read the sign because 0.0033 is smaller than every paired fold SD it measured. But its five SDs are `prostt5`, `esmc_600m`, `esm2_650m`, `ankh_large`, `esm2_8m` — `prot_t5` isn't among them, so the comparison excludes one of the two models in the pair. And a difference isn't tested against an SD but against the standard error of the *paired* difference, which is governed by the cross-model fold correlation. At both arms on 0.0061 and n=5, the observed 0.0033 crosses significance at **ρ = 0.905** — so the verdict is conditional on an unmeasured quantity, not established. The sibling applies the paired standard to the experiment it proposes and the unpaired standard to the number in hand.
+
+The consequence inverts the conclusion: ρ is highest exactly for a same-backbone, same-corpus pair, so the property making this comparison controlled is the property making it clear the floor. It's the pair most likely to resolve, not least.
+
+**A zero-cost precursor nobody proposed.** Because the fold split uses the same proteins across models, per-fold values are alignable between any two models that have them — four besides `prostt5` do. So ρ is estimable now by correlating existing columns. That gates the sibling's proposed 16-job sweep, which below ρ≈0.9 sits under its own detection threshold and would return an underpowered null that reads as a refutation.
+
+**The sign flip was answered as a magnitude claim, and the `param_count` ask went untouched.** The desktop had pre-empted the magnitude objection explicitly. On the priority item — which I agreed with — the described fix ("three numbers") is the pre-11:57 form; a bare integer can't separate a 1.2B encoder from a 3B encoder-decoder, which is precisely what produced the errors being credited to the NULL. The desktop's own table already reads 1.200B, so the correction is applied to the value while the fix is described in the form that can't carry it. I noted the 11:57 amendment predates their message by eight minutes, so it may have been in flight — not an error.
+
+One judgment call worth flagging: I argued this hypothesis should **not** be scored as the desktop's fifth over-reading, since it's the thread's first pre-registered prediction. That's a push back on their own self-assessment, and I stated the case for it rather than just asserting it.
+
+I could not read the `gap==0` column — the code checkout is outside this session's allowlist (tested, not assumed), and neither the database nor the heartbeat runs here. So the actual empirical check the desktop asked for remains open on their side; everything I sent is arithmetic over numbers already in the thread, and the reply says so up front.
