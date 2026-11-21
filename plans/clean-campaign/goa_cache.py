@@ -23,6 +23,7 @@ import re
 import sys
 import threading
 import time
+import socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib import request
 
@@ -165,12 +166,30 @@ def _range_resume_start(rs: int, re: int, holes: list[tuple[int, int]]) -> int |
     return None
 
 
-MAX_LINEA = 1 << 20
+MAX_LINEA = 64 << 20
 """Longitud maxima admisible de una linea de GAF, en bytes.
 
-Medido sobre este corpus: una linea son ~187 bytes y la mas larga vista en 16
-millones fueron 1.278. Un MiB deja ochocientas veces de margen, asi que no
-rechaza nada legitimo, y aun asi cae de inmediato en el caso que importa.
+Una linea son ~187 bytes y la mas larga vista en 16 millones fueron 1.278. Con
+eso el tope era 1 MiB, ochocientas veces de margen, y parecia no rechazar nada
+legitimo. Rechazaba la release 203.
+
+MEDIDO el 2026-10-08, y por triplicado:
+
+1. La 203 falla en la linea 340.299.635, que mide 6.788.717 bytes. Dos descargas
+   independientes, a horas distintas y por rutas de red distintas, dan la MISMA
+   linea y el MISMO recuento de bytes. La corrupcion de transporte no se
+   reproduce byte a byte: es contenido publicado.
+2. La muestra de 16 millones de lineas que fijo el MiB no alcanzaba la 340
+   millones, asi que el margen de 800x se calculo sobre un tramo que no contenia
+   el caso.
+3. La campana anterior CARGO la 203 el 2026-09-21 y produjo 5.527.537
+   anotaciones, entre las 5.624.464 de la 202 y las 5.536.651 de la 204. Esa
+   linea no envenena nada: el cargador la digirio y el resultado es normal.
+
+El caso que esta funcion existe para cazar es de otra escala. La corrupcion real
+decodifico a una linea de GIGABYTES y mato al worker a 25 GB; esto son 6,79 MB,
+tres ordenes de magnitud por debajo. 64 MiB sigue cazando la bomba con margen de
+sobra y deja de rechazar una release legitima de la serie.
 """
 
 
@@ -365,8 +384,51 @@ def fetch(url: str, dest: str, connections: int = 24) -> None:
     _publicar(part, dest, url)
 
 
+#: Tope de envio por conexion, en bytes/s. 0 = sin tope, que es el
+#: comportamiento historico y el que conserva un servidor ya arrancado.
+#:
+#: POR QUE EXISTE. Medido el 2026-10-08 con los dos nodos cargando: el nodo
+#: remoto anuncia ventanas de recepcion de 4-8 MB (rcv_ssthresh hasta 18 MB) y
+#: este servidor las llena a rafagas mucho mas rapidas de lo que su loader
+#: drena. El resultado son 11-24 MB de GAF sin leer en su recv_q, bytes que YA
+#: cruzaron la cola del router, y sus round trips a Postgres hacen cola detras:
+#: rtt de 114-222 ms con minrtt de 2-4. Cada pagina paga ~150 ms en vez de ~3,
+#: y sus ocho workers rendian 65-123k lineas/s con la CPU al 6-13%, esperando a
+#: una base de datos que no era el problema.
+#:
+#: Descartado que fuera caudal: la radio llevaba 18,9 MB/s de 76-90 nominales,
+#: al 25%. Y descartado que fuera la descarga de EBI de esta maquina: pausarla
+#: EMPEORO el ping al router, de 19 a 56 ms, porque el caudal liberado lo
+#: ocuparon los propios flujos de GAF.
+#:
+#: Es un tope, no una reserva: no garantiza caudal, solo impide la rafaga. Se
+#: aplica con SO_MAX_PACING_RATE, asi que pacea el kernel y no hay sleeps en
+#: Python. No necesita privilegios ni un qdisc fq: desde Linux 4.13 TCP pacea
+#: internamente cuando el qdisc no es fq, y aqui es noqueue.
+_PACING_BYTES = int(os.environ.get("GOA_CACHE_PACING_BYTES", "0"))
+
+#: SO_MAX_PACING_RATE. Python no expone la constante; en Linux es 47.
+_SO_MAX_PACING_RATE = getattr(socket, "SO_MAX_PACING_RATE", 47)
+
+
 class _Handler(BaseHTTPRequestHandler):
+    def _pace(self) -> None:
+        """Acota el ritmo de ESTA conexion, si hay tope configurado.
+
+        Un fallo no es fatal: servir mas rapido de lo deseable es peor que
+        servir, pero no servir es peor que las dos cosas.
+        """
+        if _PACING_BYTES <= 0:
+            return
+        try:
+            self.connection.setsockopt(
+                socket.SOL_SOCKET, _SO_MAX_PACING_RATE, _PACING_BYTES
+            )
+        except OSError:
+            pass
+
     def do_GET(self) -> None:  # noqa: N802 - stdlib name
+        self._pace()
         path = os.path.join(os.getcwd(), self.path.lstrip("/"))
         path = os.path.normpath(path)
         if path.endswith(".part"):
