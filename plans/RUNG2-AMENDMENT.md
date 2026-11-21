@@ -1,0 +1,604 @@
+# Amendment: rung 1.5, rung 2, and the stratification that was never applied
+
+Written 2026-08-12 against `CAMPAIGN.md`. It strikes two false statements from
+rung 2, inserts a rung between 1 and 2, and turns the declared four-axis
+stratification into something that touches a result.
+
+Every number is measured or cited to a receipt. Where a claim is an estimate it
+says so.
+
+**Three adversarial reviews of the first draft are folded in, and every place
+they changed the design is marked.** They changed it in four ways, and the
+changes are the interesting part: the fixed-representation ceiling turned out to
+be measured and larger than the head; the rule excluding incomplete backbones
+turned out to exclude the one that would falsify the rung; the boundary between
+the rungs turned out not to hold; and the cost that justified every pruning
+turned out to be an accounting artefact with an arithmetic error on top.
+
+## Why this exists
+
+Rung 1 sweeps backbones, neighbourhood sizes and score weightings while holding
+the dense substrate at one recipe: last layer, no chunking, mean pooled,
+L2-normalised, truncated at 2048. Rung 2 puts a learned sparse encoder on that
+frozen substrate and asks whether learning beats tuning.
+
+If rung 2 wins, the campaign as written credits learning. The gain could instead
+come from the substrate, and **that exact error has already happened once with a
+receipt**.
+
+The layer ablation of 2026-07-08 reported the learned encoder beating the best
+fixed representation by 61 percent. The same-base control three days later
+decomposed it: the base embedding was worth about +0.075 mean-of-nine and the
+learned head **+0.0111** on a matched base. The headline had credited the head
+with the substrate's gain. It was caught only because somebody held the base
+fixed.
+
+That is the whole argument for the rung in between.
+
+## Three facts measured on this machine
+
+### The substrate rung 2 assumes does not exist
+
+`CAMPAIGN.md` states, in rung 2:
+
+> A chunked substrate already exists at a longer maximum length with overlap,
+> which is what the chunk variants read.
+
+False. Every one of the eight embedding configurations is `use_chunking=False`,
+`layer_indices=[0]`, `max_length=2048`.
+
+| backbone | complete |
+|---|---|
+| esm2_650m, esm2_8m, ankh_large, prot_t5, ankh_base, esmc_600m | 100% |
+| prostt5 | 42.7% |
+| protst | 25.6% |
+
+Five of six rung 2 arms have no substrate. **Strike the sentence rather than
+correct it**, because a plan that believes it owns an input will not schedule its
+production.
+
+### The stratification module has no callers
+
+`protea/core/strata.py` implements the four axes with bands, and a `pooled_mean`
+that refuses to run without population sizes because pooling has been reported
+wrongly before. Its only importer in the tree is its own test.
+
+Declared, tested, and touching nothing. The same shape as the first-appearance
+module and the seven artifacts with no producer.
+
+### The homology axis was never populated because nobody priced it
+
+It needs sequence identity, and retrieval gives cosine in a learned code space,
+which is a different quantity. The machinery exists:
+`protea/core/feature_engineering.py` computes global and local identity through
+parasail with BLOSUM62, and `identity_nw` and `identity_sw` are already consumed
+by the scoring router, the metrics helpers and the reranker schema.
+
+Measured here, 300 alignments over sequences of mean length 654:
+
+| | |
+|---|---|
+| per alignment | **0.9 ms** |
+| one core | 1058 per second |
+| k=30 over 7,401 targets of one LAFA window | **3 minutes** |
+| k=30 over the whole 528,294 corpus | 4.2 hours on one core |
+
+Twelve cores put the corpus at half an hour. The axis was not omitted for cost.
+It was omitted because the cost was never measured. A per-pair cache is worth
+adding: the bank holds 88,306 rows duplicating another row's sequence, so a
+conserved protein is aligned against its forty-one identical twins forty-one
+times.
+
+## Rung 1.5: the fixed-representation ceiling
+
+Question: what retrieval does a non-learned transformation of the dense substrate
+reach, at fixed backbone?
+
+It is a rung and not a warm-up. Rung 2's claim, without it, is that a learned
+head beats **the one recipe the project happened to serve**, which is a claim
+about a default.
+
+Two facts make the confound fatal rather than merely present:
+
+- The best measured fixed-substrate gain, an early-mid layer with per-dimension
+  standardisation and fixed k-WTA, was **+0.0124** mean-of-nine over the served
+  recipe, on eight of nine cells.
+- The clean learned-head benefit at matched base was **+0.0111**.
+
+**Same order of magnitude.** Freezing the substrate would be defensible if the
+head were worth ten times it. At parity, an unablated substrate does not
+attenuate the head's effect, it can invent it.
+
+There is a sharper reason specific to the sparse arms. The negative verdict on
+naive sparse representation was substantially an artefact of applying top-k to
+raw hidden states, where a few massive-activation dimensions dominate selection.
+Standardising first reversed it. **Run the sparse ablations before fixing the
+dense substrate and the layer and the normalisation enter the measurement as
+properties of the sparsifier.** That is the same error one rung later, on the
+author's own lead lever.
+
+### Axes, at fixed backbone and fixed scoring
+
+| axis | values | where it lives |
+|---|---|---|
+| depth | five points across the stack, last included | `layer_indices`, platform |
+| chunking | off, and 512 residues with 64 overlap | `use_chunking`, platform |
+| residue pooling | mean, max | `pooling`, platform |
+| standardisation | raw, per-dimension z-score | lab-side, no compute |
+| fixed sparsification | dense, k-WTA at 128 and 256 | lab-side, no compute |
+
+The z-score is fitted **on the reference pool only, never on the query set**. The
+prior measurement of this lever used a transductive fit and flagged it, and the
+project has a standing decision against transductive projection.
+
+### Corrected after review: the selection protocol
+
+The first draft drew the boundary at "fits parameters to GO labels" and put rung
+1.5 on the free side. **That line does not hold.** Rung 1.5 chooses depth,
+chunking, pooling, standardisation and k by maximising a GO-derived retrieval
+metric. That is fitting to GO by discrete search. The partition is between two
+forms of GO supervision, not between supervised and unsupervised.
+
+And the budgets are wildly unequal. The lab-side axes are free in compute and
+therefore invisible in the cost table, but they multiply the arm count sixfold:
+the argmax runs over roughly **120 arms**, not 20. Against the declared noise
+floor of 0.0034, the expected maximum of 120 null arms is about 0.0094. **The
+selection bias alone is the size of the entire clean head effect the case rests
+on.** The head, meanwhile, is one configuration with no search.
+
+`CAMPAIGN.md` section 8 disqualifies exactly this practice, for exactly this
+reason, in the project's own past. Promoting it to the baseline would be doing
+the thing the campaign already refused.
+
+So rung 1.5 carries a selection protocol, and it is not optional:
+
+1. **Two windows.** The argmax runs on a selection window. The reported ceiling
+   is measured on a second, untouched window, and it is that second number rung 2
+   is compared against.
+2. **The search budget is reported** with the ceiling: how many arms were
+   compared, so the number can be read as what it is.
+3. **The head gets the same treatment.** If the substrate is chosen by search,
+   the head's hyperparameters are chosen by an equally sized search on the same
+   selection window, or the comparison is between a maximum and a single draw.
+
+### Corrected after review: the ceiling is not unmeasured
+
+The first draft called the fixed-representation ceiling unmeasured. It is not,
+and the record cuts against the head.
+
+`SIGNAL-REGISTRY.md` section 5 holds `protst_zscore` at **+0.0335 mean-of-nine,
+winning nine of nine**, with a receipt, described there as the largest
+unexploited measured lever. A per-dimension z-score over a dense substrate **is
+rung 1.5's own standardisation axis**. So a fixed, non-learned transformation is
+already on record at three times the clean head benefit.
+
+The registry also holds that a learned k-WTA head on that same substrate **loses
+to the raw substrate**, negative on eight of nine cells, at two dictionary sizes.
+The head was refitted there and still lost.
+
+Both facts belong in the amendment rather than in a footnote, because together
+they change what rung 2 is asking.
+
+## The carrier, and what "best average model" means
+
+The author's phrase names an object the campaign forbids. Section 2 states that
+an unweighted mean across the nine cells is itself a reweighting, that it moves
+in the flattering direction, and that no number is reported pooled. Rung 1
+produces a per-cell winner by design.
+
+**There is no best average model.** Rungs 1.5 and 2 do not need one. They need a
+frozen backbone to build substrate variants on. That object deserves its own name
+and its own criterion.
+
+**The object is the ablation carrier. The criterion is dominance, not mean.** A
+carrier is a backbone not significantly beaten in any of the nine cells. If none
+dominates, the tie-break is declared before the table is read and it is not an
+average.
+
+### Corrected after review: completion is not a carrier criterion
+
+The first draft said an incomplete configuration cannot be a carrier, which
+disqualifies ProtST at 25.6 percent. **ProtST is the one backbone whose record
+would falsify rung 2**, since the registry holds it winning nine of nine as a
+fixed transformation and the learned head losing on it.
+
+A rule that excludes it on operational grounds selects the substrate that
+protects the lever. That is not hygiene, it is the shape of a result being
+arranged.
+
+So: **completing ProtST is a precondition of the carrier decision, not an excuse
+to skip it.** If the campaign cannot afford to complete it, the carrier is chosen
+without it and the amendment records that the choice excluded the strongest
+counter-candidate, in those words.
+
+## The substrate, and what it costs
+
+### Three facts that invert the assumption
+
+**Chunking is free at the accelerator.** `chunk_and_pool` in
+`protea-backends/_chunk_helpers.py` slices an already-computed residue tensor. A
+chunked configuration costs the same accelerator time and differs only in rows
+written.
+
+**Every layer is already in memory during that pass.** The backends run with
+`output_hidden_states=True`. All depths come out of one forward pass. The
+platform bills one job per configuration, so five depths cost five passes today,
+and there is no technical reason they must.
+
+**So the binding constraint is the write stage and the server's disk, not the
+card.** That inverts what the campaign has been assuming. It matters because the
+write stage is the one that ran out of memory before, and the database now lives
+on the memory-constrained laptop.
+
+### The layer axis, with its indexing trap
+
+Platform convention counts from the output: `[0]` is the last layer. The prior
+ablation counted from the input. For an encoder with 48 blocks, depth `d` from
+the input is `layer_indices=[48-d]`. The prior credible winner at depth 10 is
+`layer_indices=[38]`. **The hidden-state count differs per backbone and the
+mapping must be recomputed, not copied.** The input layer itself is excluded: its
+own receipt flags it as amino-acid composition.
+
+**A precondition, not an optimisation.** Ankh loads in bfloat16 deliberately,
+because half precision collapses its normalisation to NaN. T5 and ESM load in
+float16. Mid-layer activations on ankh-base were measured near 490,000 against a
+float16 ceiling of 65,504. So mid-layer configurations are safe on ankh and
+**unvalidated everywhere else**: run a hundred-sequence probe and assert every
+value finite before any mid-layer job on a T5 or ESM backbone. Storage is half
+precision too, and overflow there is avoided only because `normalize=True` puts
+the pooled vector on the unit sphere before the cast. **Normalisation stays on.
+It is a guard, not a preference.**
+
+### Corrected after review: hold the context window fixed
+
+Rung 2's text has the whole-sequence arms truncate at 2048 while the chunk arms
+read a longer limit, and asks the run to report coverage per arm. That plans a
+confound rather than removing it: it measures chunking and coverage at once, and
+the length stratum is where the two are indistinguishable.
+
+**Every arm in rungs 1.5 and 2 holds `max_length=2048`.** The longer window
+becomes a separate, labelled experiment on the tail above 2048 residues, which is
+about 1 percent of the corpus. It answers a different question, it costs nothing,
+and it removes a confound the current plan would have paid for.
+
+### Sizing and pruning
+
+Corpus is 528,294 sequences: mean length 399, median 318, ninety-fifth 969.
+
+At 512 with 64 overlap and a 2048 cap, chunks per sequence is about **1.42**, so
+a chunked configuration writes roughly 750,000 rows against 528,294. At 768
+dimensions in half precision that is about 1.2 gigabytes against 0.85, before
+indexes. **Estimated from the length distribution, not measured.**
+
+One full-corpus pass on a mid-weight backbone took about **fifteen hours** on the
+pair. The instantaneous rate implies closer to seven, so roughly half goes to
+write, queueing and interruption. That gap is unmeasured and should not be
+planned around.
+
+### Corrected after review: the bill is an accounting artefact, not a cost
+
+The first draft priced the naive grid at thirty configurations and 450 hours and
+used that number to justify four prunings. **Five depths by two chunkings by two
+poolings is twenty, not thirty**, so at fifteen hours per pass it is 300 hours,
+not 450. The figure carrying the words "not affordable" was inflated by half.
+
+The structural error underneath is worse. The draft established that chunking is
+free at the accelerator, then pruned **pooling** on cost grounds. Pooling is free
+by the identical mechanism: `chunk_and_pool` receives an already-computed `[L, D]`
+tensor and both the chunk spans and the pooling reduction are slices over it, and
+`_aggregate_layers` indexes out of one `output_hidden_states=True` pass.
+
+**All three axes of the grid come out of one forward pass.** The 300 hours is the
+cost of running that same forward pass twenty times, because the platform bills
+one job per `EmbeddingConfig` row. It is an accounting artefact, and the draft
+pruned real science to pay a bill physics does not send. Worse, it defunded max
+and `mean_max` citing a prior about **learned attention pooling**, which is a
+different mechanism.
+
+Of a corrected 90-hour substrate budget, roughly **65 hours is billing rather
+than computation**. And there is no parallelism to recover instead:
+`compute_embeddings` serialises jobs deliberately, one at a time, because the
+card is shared.
+
+So the prunings are restated:
+
+| pruning | status |
+|---|---|
+| screen on the stratified subsample the campaign already mandates | **kept**, but see the residue caveat below |
+| only survivors go to full corpus | **kept and recounted**: rung 2's two-factor design needs four configurations at full corpus, not two, and one of them already exists at 100%. Three new passes, 45 hours without fan-out, **one pass with it** |
+| pooling goes first if anything must go | **withdrawn.** It costs nothing at the accelerator and `mean_max` costs about 200 MB of write on the subsample. Keep all three and let the measurement decide, which is what this amendment demands everywhere else |
+| the second backbone is a transfer check, not a grid | kept, two configurations on the subsample |
+
+**And the screening unit is optimistic.** Transformer cost scales with residues,
+not sequences, and the campaign's screening set is *stratified*, so it balances
+length buckets and its mean length sits well above the corpus mean of 399. The
+two-hour unit should be treated as roughly half of what it will be until it is
+measured.
+
+There is no headroom to buy the time back on this card: `batch_size` defaults to
+one because anything higher runs the 12 GB device out of memory.
+
+**The residue arms cannot be stored, and that is arithmetic.** 528,294 sequences
+by 399 mean residues is about 211 million rows and 324 gigabytes in half
+precision. They stream inside the ablation and are never written.
+
+### Corrected after review: fan-out emit is on the critical path
+
+All depths, chunkings and poolings derive from a single forward pass. An
+`embed_chunks_multi` in the backends plus a multi-configuration payload in
+`compute_embeddings` takes the grid from twenty passes to one.
+
+The first draft called this off the critical path and set its trigger at "more
+than two configurations need full-corpus materialisation". **That trigger is
+already tripped by this amendment's own two-factor rung 2**, which needs four.
+It was never off the path; the draft had miscounted.
+
+So it moves ahead of the screen. With it the 40-hour screen becomes two or three
+hours plus write, and the full-corpus step becomes one pass instead of three.
+
+**Run the forward-pass-share probe first**, before writing it. The whole argument
+rests on the forward pass dominating the job, and that has not been measured on
+this hardware.
+
+## Rung 2, restated
+
+The A to F table stands. It gains one axis and two constraints:
+
+- Every arm runs at the substrate rung 1.5 selects, not at the last layer by
+  assumption.
+- Arm A is re-run over that substrate, so the comparison is at equal input.
+- **Rung 2 is a two-factor design.** The head is trained and evaluated on both
+  the rung 1.5 winner and the rung 1 incumbent. The head's effect is a paired
+  difference at fixed substrate, the substrate's effect is at fixed head, and
+  **the interaction is reported**. The claim that the two are redundant was drawn
+  across two extraction pipelines whose same-protein cosine was about 0.28, so it
+  is not evidence. Treat additivity as unmeasured.
+
+What is configuration and what is new code, against
+`protea-reranker-lab/src/protea_reranker_lab/encoder_ablation.py`:
+
+| axis | status |
+|---|---|
+| dictionary size, top_k, objective, hard negatives, epochs, pairs, seed | parameterised in `ArmSpec` and `EncoderAblationSpec` |
+| which embedding configuration to read | a single field, so a depth sweep is a loop over specs |
+| chunk-level input | **new code**, the spec assumes one vector per protein |
+| residue-level input, streamed | **new code** |
+| aggregation order, sparsify before or after pooling | **new code**, and it is the whole question |
+
+Two defects to fix in that module before it runs: its default
+`embedding_config_id` is a hardcoded esm2_150m identifier that no longer exists
+after the rebuild, and its default ground-truth path still points at
+`/home/frapercan`, the pre-reinstall username.
+
+**Transfer is checked, not assumed.** The registry's strongest counter-evidence
+is that the learned sparse head does not transfer between base models. The rung 2
+winner is replicated on exactly one second backbone, on the screening subsample.
+If it transfers, the finding is a recipe. If it does not, the finding is that it
+is a recipe fitted to a base, which the campaign already says it must state
+rather than discover twice.
+
+## The stratification, wired and extended
+
+Five axes. Two are new and one of them is free.
+
+**Homology band, populated.** Priced above at three minutes for a LAFA window.
+The axis the campaign has always declared and never carried.
+
+**Kingdom.** The `protein` table already holds `organism` and `taxonomy_id` for
+**575,503 of 575,503 canonical proteins**, because `fetch_uniprot_metadata` has
+always requested them. There are 14,898 distinct organisms, so the band is the
+kingdom derived from the taxonomy identifier, not the organism string. Four or
+five bands, each with population enough to cross with the others.
+
+**Neighbourhood coherence, defined so it does not measure k.** Two failed
+definitions are recorded so they are not proposed again:
+
+- *Maximum agreement over terms* is degenerate. Over 7,401 queries, **91.2%
+  reach exactly 1.000**, because every annotated neighbour carries the ontology
+  roots.
+- *Any count-based fraction* moves with the neighbourhood size: at k=5 one
+  disagreeing neighbour costs a fifth, at k=30 a thirtieth. Rung 1 sweeps k, so
+  such a measure reports the parameter.
+
+What survives both is the **mean pairwise information-content-weighted Lin
+similarity among the k neighbours' propagated closures**. A mean over pairs does
+not scale with k, and it reuses `lin_pairwise`, the function the encoder is
+trained against.
+
+Coherence and homology are different questions and must not be merged. **A
+neighbourhood of close homologues that disagree functionally is where homology
+transfer misleads**, and the campaign cannot currently see that cell. Coherence
+is also a per-protein confidence signal, which is the shape of thing the
+calibration wall needs and does not have.
+
+### The wiring is the deliverable
+
+Adding axes to a module nobody calls makes it worse. The work:
+
+1. Extend `protea/core/strata.py` with kingdom and coherence.
+2. Give the evaluation path a producer for each axis value, so a result carries
+   its stratum rather than being labelled afterwards.
+3. Make `assert_stratified` load-bearing where results are recorded, so an
+   unstratified number cannot be published.
+
+Without step 3 this repeats in three months.
+
+## Order of work
+
+1. Land the open container work and clean `develop`.
+2. Wire the stratification, homology band populated. No new substrate needed, and
+   it changes how everything after is reported.
+3. Finish rung 1, **including ProtST**, for the carrier decision.
+4. Screen rung 1.5 on the subsample, with the two-window selection protocol.
+5. Materialise the two surviving substrates at full corpus.
+6. Write the chunk and residue readers in the ablation module.
+7. Run rung 2 as a two-factor design over both substrates.
+
+Steps 2 and 3 are independent and can run on the two machines in parallel.
+Everything from 4 is serial.
+
+## What is uncertain, stated as such
+
+- Whether an intermediate layer helps this backbone. The prior ablation says the
+  last layer won, under a different pooling and without chunking.
+- Whether chunking helps retrieval or only coverage. It certainly helps coverage:
+  216 of 7,401 targets of one LAFA window exceed 2048 residues, 2.9%, and the
+  longest loses 77% of itself. Whether recovering that tail moves the metric is
+  unknown.
+- The forward-pass share of a job, on which the fan-out argument depends.
+- Whether the fifteen-hour full-corpus figure survives the current write path.
+
+## One thing the campaign cannot do as written
+
+**There is no mechanism for the two machines to message each other.** No queue,
+no mailbox, no remote trigger. Every agent-spawning script in the farm is
+single-machine. `TOPOLOGY.md` says it: git is the only channel that crosses, and
+nothing pulls.
+
+So a plan that depends on real-time coordination has no mechanism behind it. What
+works is this file: committed here, pulled there, read by whoever runs. Any
+instruction that must reach the other machine belongs in a repository, and
+somebody has to pull.
+
+## Reconciliation 2026-08-23: what eleven days did to this file
+
+Written against the state of 2026-08-12. Rung 2 has since run, the layer axis has
+been varied, and one of the file's own load-bearing numbers has been withdrawn.
+Nothing above is deleted. Each claim is marked.
+
+### Confirmed, and now load-bearing
+
+**The selection floor is the explanation for rung 2.** The file prices the
+expected maximum of 120 null arms at about 0.0094 against a declared noise floor
+of 0.0034, and uses it to argue that choosing depth, pooling and k by maximising
+a GO metric is fitting by discrete search. Calibrated to the grid that actually
+ran: about 0.0093 for the 104 arms in one cell, about 0.0108 for the 528 in the
+whole grid. Every margin rung 2 measured:
+
+| margin | value |
+|---|---|
+| largest first-to-second across the nine cells | 0.0015 |
+| best backbone over the second | 0.0021 |
+| spread between the four encodings at K=1 | 0.0019 |
+
+Five to seven times below the floor. So the absence of a winner in rung 2 is the
+outcome this grid should have been expected to produce. The rung closes with an
+explanation and not only with evidence, and the explanation was written eleven
+days before the rung ran.
+
+**The homology price held.** 0.9 ms per alignment survived contact: all 3,031
+no-knowledge targets of the current window are banded from `identity_nw`, and the
+band cut is what separates the encoder arms at all. The per-pair cache note
+turned into a measured confound rather than an optimisation: the cache is keyed
+on the sequence pair alone, with no backbone and no k, so run timings taken
+across arms measure the cache and not the run.
+
+### Overtaken
+
+**The stratification module has callers now, and the guard still does not.**
+`protea/core/strata.py` is imported by `operations/stratify_evaluation.py`,
+`operations/_run_cafa_strata.py` and `operations/_run_cafa_data_helpers.py`.
+Steps 1 and 2 of the wiring landed. `assert_stratified` still has no importer
+outside its own test, so step 3, the one the file says stops this repeating, is
+undone eleven days on.
+
+**The intermediate layer question is answered at one depth, and it is no.** On
+retrieval over 85,982 donors, depth 10 of 48 loses to the last layer by 0.042 to
+0.045 with a separating interval, and loses worst in the twilight band where the
+backbone matters most. Learned mixing weights over the stack are monotone in
+depth. The uncertainty as stated is discharged downward.
+
+**The two machines can now talk, above the farm.** The claim is still true of the
+farm's scripts, which remain single-machine. It is no longer true of the work:
+this reconciliation exists because the other machine sent its rung 2 closure and
+its own split of the leakage test. Git remains the only channel that crosses
+between the repositories, and the file's advice stands for anything that must
+survive a session.
+
+### The indexing trap fired, in this study, in this week
+
+The file warns that the hidden-state mapping must be recomputed and not copied.
+It was copied. Two conventions are live in the same study:
+
+| surface | expression | `10` means |
+|---|---|---|
+| platform backends | `hidden_states[-(li + 1)]` | depth 38 of 48 |
+| lab residue probe | `states[i]` | depth 10 of 48 |
+
+The platform convention is stated at `_chunk_helpers.py:46` and implemented the
+same way in all four backends. The lab convention is at
+`residue_extract.py:109`. So the corpus-scale run that completed this morning,
+528,294 sequences and seventeen hours of card, sits at depth 38, and the
+retrieval result quoted above sits at depth 10. **They are different layers.**
+Neither checks the other, and the depth the expensive run actually measured is
+one nothing else in the study has touched.
+
+Two consequences. The layer axis is varied at three points and not two, which is
+better than intended rather than worse. And the float16 guard was load-bearing
+exactly where the file said: depth 38 is the massive-activation region measured
+near 490,000 against a ceiling of 65,504, and the run survives because
+`normalize=True` puts the pooled vector on the unit sphere before the cast.
+
+### ProtST: the refusal was right and the record it rested on is withdrawn
+
+The file refuses to exclude ProtST on operational grounds, because it is the one
+backbone whose record would falsify rung 2. That refusal was correct and is now
+correct for a second reason: excluding it would have hidden what it was carrying.
+
+But the record cannot be used as written. ProtST is pretrained on ProtDescribe,
+which pairs sequences with Swiss-Prot text describing their **function**. All the
+targets are reviewed Swiss-Prot entries, so exposure is total, and 81.9 per cent
+of them carry a `function_cc` comment today. The temporal rule does not catch it:
+the model predates the window on the annotation axis, but no-knowledge means no
+experimental evidence at t0, and a comment inferred by similarity commonly
+predates the experiment that confirms it.
+
+Split on whether UniProt describes the protein, ProtST's reachability advantage
+separates nine of nine among the 2,468 described targets and **zero of nine**
+among the 547 undescribed, inverting against the two strongest rivals. The design
+is conservative rather than favourable: the text read is the current load, so
+"has a comment" over-states what was readable in 2022, while "has no comment now"
+guarantees none existed then.
+
+So `protst_zscore` at +0.0335 winning nine of nine is a measurement of a model
+that had read the answer, and the section titled "the ceiling is not unmeasured"
+does not stand as written. It is flagged rather than struck, because the argument
+shape survives without the number: a fixed transformation may still beat the
+head, and the registry's second fact, a learned head losing to the raw substrate
+on eight of nine cells, is not a ProtST-only result.
+
+The other machine ran the same split on the task metric and found ProtST leading
+neither half, which is consistent rather than contradictory: the weighting that
+wins most cells carries a weight of exactly 0.0 on embedding similarity, so a
+consumer that does not read the embedding cannot see what the embedding carries.
+A null on a disconnected channel is not a refutation.
+
+**Not established, and required before publication:** the ProtDescribe snapshot
+date is absent from the model card, the arXiv abstract and the repository README.
+It has to be cited from the paper's methods section.
+
+### Rung 1.5 loses its premise and keeps its place
+
+The argument for the rung is a parity: the best measured fixed-substrate gain at
++0.0124 against the clean head benefit at +0.0111, same order, therefore an
+unablated substrate can invent the head's effect rather than merely attenuate it.
+
+Both numbers sit at the selection floor this same file prices at 0.0094, and the
+first of them is itself a maximum over a search. The reading that survives is not
+that the substrate might be inventing the head's effect. It is that **neither
+effect has been shown to clear the floor of its own search.**
+
+Rung 1.5 still earns its place, and its two-window protocol is now the only part
+of the design that could tell the difference. What changes is what it is for: not
+a referee between two established effects, but the measurement of whether either
+of them exists.
+
+### Still open
+
+- **`assert_stratified` load-bearing where results are recorded.** Step 3, undone.
+- **The finite probe before any mid-layer T5 or ESM job.** The completed run is
+  ankh, which loads in bfloat16, so the precondition is untested where it bites.
+- **`encoder_ablation.py:102`** still defaults to embedding configuration
+  `500a0c59`, which is not in the database. Verified 2026-08-23. The
+  pre-reinstall path default is fixed.
+- **Additivity between substrate and head**, still unmeasured.
