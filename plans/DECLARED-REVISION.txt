@@ -2721,6 +2721,47 @@
 # El nodo mantuvo su consumidor en protea.training al ciclo siguiente de
 # fusionar la declaracion, asi que se resincronizo sin quedarse caido.
 #
+# 2026-11-23, SEGUNDA DEL DIA: 7edfb68f -> 798210f2. Tres commits, 11 ficheros,
+# CERO migraciones y CERO cambios en los pines de los hermanos, asi que el
+# despliegue es arbol, doc, frontend y reinicio: ni alembic ni pip. `coordinator`
+# y `schema-applied` suben JUNTOS por eso mismo: el esquema aplicado ya es el de
+# esta revision, porque no trae ninguna.
+#
+# QUE ENTRA. #1296 arregla photo_io._HEADER_FIELD, que era `^!([a-z][a-z-]*):` y
+# no capturaba las claves en mayuscula de los GAF 2.1; ahora es
+# `^!([A-Za-z][A-Za-z-]*):` y baja la clave con .lower() y setdefault. Medido
+# antes del arreglo: ningun emparejamiento se movia (cero ontologias entre el
+# grafo y la cota en las doce ventanas de los seis cortes), pero los manifiestos
+# de 160, 177 y 194 llevaban date_generated, go_version y declared_go_release
+# vacios y la regla en cut_date. Con el arreglo esos cuatro campos se rellenan,
+# asi que SUS TRES sha256 CAMBIAN: las fotos de esos tres cortes hay que
+# reconstruirlas con esta revision, y la documentacion que los cita (#1293) va
+# despues. #1297 completa los tests del lado de la foto.
+#
+# ESTA MAQUINA SIRVE AHORA DOS INSTANCIAS DEL MISMO ARBOL, y conviene que este
+# escrito porque el arbol es uno:
+#   * la publica, base `protea`, vhost `/`, cubo `protea`, API en el 8000 por
+#     127.0.0.1, con el frontend y el tunel. Es la que el publico ve.
+#   * `universo`, base `protea_universo`, vhost `universo`, cubo
+#     `protea-universo`, API en el 8001 atada a la direccion del tailnet. Se
+#     construye desde cero por operaciones declaradas, cada pieza comparada con
+#     su digesto del sobremesa, y los trabajos pesados los corren los
+#     trabajadores del sobremesa, que leen sus ficheros alli. Mi trabajador de
+#     ese vhost se mantiene SIN CONSUMIR mientras ellos cargan, para que un
+#     trabajo pesado no caiga aqui ni calcule en el portatil.
+# Las dos corren esta misma revision porque el arbol es compartido: mover el
+# arbol las mueve a las dos, y por eso se declara una sola.
+#
+# LO QUE YA HAY EN `universo`, verificado contra lo que declara el universo del
+# sobremesa: las seis ontologias cargadas Y selladas, con los seis obo_sha256
+# identicos y los seis recuentos de terminos iguales al termino (282.846); y las
+# seis versiones de Swiss-Prot, seis de seis identicas en cuenta Y digesto. La
+# base vieja de produccion no se ha tocado: sigue en 242 GB.
+#
+# LA PUERTA, antes de esta edicion: 0 trabajos en QUEUED, RUNNING o PENDING de
+# 787; ninguna cola de trabajo con mensajes ni sin confirmar salvo los 18.816 de
+# la cola de muertos; y 0 prediction_set.
+#
 # ---------------------------------------------------------------------------
-coordinator 7edfb68fe1a5d508cc784813fe45c8d88be49e68
-schema-applied 7edfb68fe1a5d508cc784813fe45c8d88be49e68
+coordinator 798210f29972762c83530237e58098a0fa8bc9a4
+schema-applied 798210f29972762c83530237e58098a0fa8bc9a4
