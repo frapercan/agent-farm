@@ -56,9 +56,15 @@ La publica se configura por `PROTEA_DB_URL`, `PROTEA_AMQP_URL` y
    maquina. Sin eso, `POST /v1/jobs` devuelve 401 en cuanto se cambie.
    **Hueco conocido**: no hay camino para emitir una clave por consumidor,
    porque el alta exige papel `admin` y el arranque minta `operator`.
-3. **El historial de visitas y la auditoria son de cada base.** La publica
-   tiene 62.912 `visitor_event` y 5 `auth_audit` que la nueva no trae. Si
-   interesan, se migran a mano: estan en un volcado de solo esas tres tablas.
+3. **El historial de visitas y la auditoria son de cada base**, y el autor ya
+   ha decidido que viaja y que no (relatado por la sesion del sobremesa el
+   2026-11-23, con sus palabras):
+   - **las 62.912 `visitor_event` de la publica NO viajan**: "nos la sudan las
+     visitas";
+   - **las 5 filas de `auth_audit` SI**: "auditoria de la publica ok".
+   Las tres tablas estan en un volcado de solo esas tres, hecho antes de tocar
+   nada, asi que restaurar `auth_audit` en el cambio es una orden y no un
+   rescate.
 4. **Un solo arbol, dos instancias.** Un despliegue mueve las dos a la vez. Si
    los trabajadores del sobremesa estan a media construccion en una revision,
    mover el arbol los descoloca: hay que acordar el sha antes, no despues.
