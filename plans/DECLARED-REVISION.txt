@@ -2696,6 +2696,31 @@
 # fusionar esta declaracion y mover el arbol se espera un ciclo, para que se
 # resincronice solo en vez de quedarse sirviendo codigo viejo.
 #
+# 2026-11-23, DESPUES DE DESPLEGAR: `schema-applied` sube a 7edfb68f. Las 24
+# migraciones corrieron aqui en 1 min 13 s y la base queda en la cabeza
+# 5d2e8c1b4a73, la misma que corre el sobremesa. Ninguna toca una tabla grande:
+# la unica que altera una ya existente anade columnas nulables a
+# protein_uniprot_metadata, que esta vacia, asi que fue cambio de catalogo. La
+# que escribe datos (e0399c98f515) solo describe conjuntos creados por
+# load_cut_photo, y aqui no hay ninguno: cero filas tocadas.
+#
+# Los siete hermanos verificados por el commit_id de su direct_url.json, siete
+# de siete, que es la comprobacion que pip no da. La doc se construyo y se
+# cambio con la revision, 151 paginas selladas. El API y los diez trabajadores
+# reiniciados uno a uno, los once activos, y /health da code_revision,
+# declared_revision y docs_revision iguales, con revision_matches_declaration y
+# docs_match_code en cierto. deploy-check.sh sale con codigo 0: once procesos
+# mas nuevos que su arbol, 17 recursos del frontend a 200, todos los prefijos de
+# router en el spec servido y cinco endpoints que cruzan las tablas nuevas a
+# 200. El diario del API, sin un solo error.
+#
+# OJO, UN RESTO: deploy-check.sh sigue sondeando /es/instrument/benchmark por
+# defecto, y esa ruta se retiro en esta revision. Hay que pasarle
+# PROTEA_PROBE_PATH hasta que se arregle el valor por defecto.
+#
+# El nodo mantuvo su consumidor en protea.training al ciclo siguiente de
+# fusionar la declaracion, asi que se resincronizo sin quedarse caido.
+#
 # ---------------------------------------------------------------------------
 coordinator 7edfb68fe1a5d508cc784813fe45c8d88be49e68
-schema-applied bc603014186a7959f9c9cf1c61ddd4e6e21b6e9d
+schema-applied 7edfb68fe1a5d508cc784813fe45c8d88be49e68
