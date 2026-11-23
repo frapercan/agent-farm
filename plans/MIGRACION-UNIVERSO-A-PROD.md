@@ -122,7 +122,26 @@ Cuatro de las 87 ventanas referencian ese conjunto, pero no queda ni un
 `evaluation_result` vivo, asi que son declaraciones sin resultados y nada
 publicado se apoya en el emparejamiento viejo.
 
-## sha256 de los manifiestos entregados
+## sha256 de los manifiestos: los de la entrega y los de la reconstruccion
+
+Los de la izquierda son los de la entrega del 2026-11-23, construidos a
+4a052d2. Los de la derecha, las mismas fotos reconstruidas a 798210f2: mismos
+datos byte a byte, manifiesto distinto.
+
+| corte | entrega (4a052d2) | reconstruida (798210f2) |
+|---|---|---|
+| 160 | 0313f1d3fcc5 | 4fcb367044b6 |
+| 177 | 30681e0deee1 | c5edf9ac4e1c |
+| 194 | 16b768310221 | 937687865cac |
+| 205 | 352bc18d5d69 | 7e5ed25b3273 |
+| 211 | 377675277753 | 0683600e745e |
+| 227 | 65710a9f9e26 | b3a8cad144f7 |
+
+**Los que valen para la base limpia son los de la derecha**, porque son los de
+las fotos que se cargan. Los de la izquierda quedan como lo que eran: el
+contrato de una entrega ya verificada.
+
+## sha256 de los manifiestos entregados, completos
 
 | corte | tipo | sha256 |
 |---|---|---|
@@ -193,9 +212,21 @@ los seis, porque **no hay ninguna ontologia cargada entre el grafo y la cota en
 ninguna de las doce ventanas** (cero en las doce). `check_graph` de
 `load_cut_photo` acepta las seis fotos bajo las dos reglas.
 
-**Lo que si cambia, y es el aviso para la migracion.** El arreglo rellenara esos
-cuatro campos, cambiara el JSON de 160, 177 y 194 y con el sus **tres sha256**.
-Los digestos de la tabla de arriba solo se reproducen con el codigo de hoy.
+**Lo que si cambia. Escribi tres y son los seis, por un motivo que no habia
+contado.** El arreglo rellena esos cuatro campos y mueve el JSON de 160, 177 y
+194; pero el manifiesto guarda tambien **la revision que lo construyo**
+(`build.manifest_pass`), asi que reconstruir con otra revision mueve los seis
+digestos aunque los datos no cambien. Medido el 2026-11-23 sobre las seis fotos
+reconstruidas a 798210f2: **todos los ficheros de datos son identicos byte a
+byte** --members, rows, sequences, unreviewed_sequences, unknown_evidence y el
+md5 del flujo de la knowledgebase-- y de `photo.json` solo cambian la revision
+en los seis y, ademas, la cabecera GOA en los tres GAF 2.1. Cero diferencias
+inesperadas en las seis.
+
+Corolario, mas fuerte que el aviso original: **el sha256 de una foto es una
+propiedad de (datos, revision), no de los datos.** Dos fotos con digesto
+distinto pueden tener los mismos bytes de datos, y eso se comprueba salida a
+salida, no por el manifiesto.
 
 **Y una condicion, no una prohibicion.** Volver a medir las doce ventanas si se
 carga cualquier ontologia nueva dentro de ellas; la de 211 abarca dos meses y
