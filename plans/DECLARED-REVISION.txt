@@ -2579,6 +2579,123 @@
 # 18.816 de la cola de muertos; el prediction_set mas reciente de hace diez
 # horas y tres cuartos.
 #
+# 2026-11-23: bc603014 -> 7edfb68f. EL SALTO MAS GRANDE DE LA CAMPANA: 114
+# commits, 615 ficheros, +57.788 y -21.711. Lo pidio el autor con estas
+# palabras: que este entorno sea el de produccion, subir ya lo que tenemos, e
+# irlo actualizando cada noche.
+#
+# LO QUE NADIE HABIA PROBADO, y por eso hubo un paso previo. Los 114 entraron
+# uno a uno por pull request verde contra integration/three-families, pero la
+# PUNTA no tenia ni una ejecucion de CI: la suite se dispara en los pull request
+# y en los push a develop y main, y una rama de integracion no es ninguno de
+# los dos. Es el hueco que el comentario de integration.yml describe. #1295
+# existe para cerrarlo y se abrio EN BORRADOR a proposito: auto-merge.yml hace
+# `gh pr merge --auto --squash` sobre los pull request que apuntan a develop, y
+# al primer verde habria aplastado los 114 mensajes en uno y habria dado otro
+# sha, que el nodo rechazaria por no ser 7edfb68f. Su guarda es draft == false,
+# asi que en borrador el auto-merge sale skipping y la suite si corre.
+#
+# EL RESULTADO: 19 de 22 en verde, y las NUEVE obligatorias de develop pasan
+# todas (lint, test, integration, openapi matches code, deploy slice builds and
+# smokes, lint / scan, scan, audit, critical user flows). Lo que no pasa:
+# codecov/project/core en 83,97% contra un objetivo de 85,00%, un punto por
+# debajo, y no es obligatoria; codecov/patch dice "coverage not affected", asi
+# que el parche no baja la cobertura, es el componente el que ya rozaba el
+# umbral. Queda como deuda anotada, no como sorpresa. mutation seguia corriendo.
+#
+# develop ESTA PROTEGIDA y solo acepta pull request, asi que el avance no se
+# puede empujar: va por #1295 con commit de merge, NUNCA squash ni rebase, y
+# 7edfb68f queda ancestro de develop, que es lo que el nodo exige. Antes de
+# fusionar se empujo respaldo/tres-familias-antes-de-fusionar a 7edfb68f,
+# porque el repositorio tiene delete_branch_on_merge en true y la rama de
+# integracion desaparece al fusionar.
+#
+# MUEVE MIGRACION Y HERMANOS, al contrario que el salto anterior.
+#
+# EL ESQUEMA: 24 migraciones nuevas, cabeza 5d2e8c1b4a73 segun la base del
+# sobremesa, que ya esta en ella; se verifica con `alembic heads` sobre el arbol
+# movido antes de subir. Medidas como catalogo y no como reescritura: 21
+# create_table, 17 columnas, 15 indices y 12 execute de los que SOLO UNO toca
+# datos, un UPDATE sobre evaluation_set, 87 filas. El unico toque a
+# sequence_embedding es una columna nullable sin default mas su clave ajena, asi
+# que no se mueve ninguna de sus 2.679.674 filas, y protein_go_annotation no se
+# toca. Por eso `schema-applied` NO sube en esta edicion: sube cuando alembic
+# haya corrido de verdad.
+#
+# LOS HERMANOS: seis de los siete se mueven. contracts dd335182 -> f7008c90,
+# method 75ba91a3 -> 69ea8af4, sources fa42f596 -> f28af5b0, runners fb8ae81b ->
+# c70335a7, backends 2cb6b479 -> 1d0e5bc4, reranker-lab 434cc6db -> b296a3a7.
+# cafaeval-protea se queda en 203af0a2.
+#
+# Y AQUI ESTA EL RIESGO DEL SALTO, que no son las migraciones. Las versiones de
+# los hermanos son semver planas (contracts 1.7.0, method 0.3.1, sources 0.2.1,
+# runners 0.0.1, backends 0.1.0, reranker-lab 0.2.0) y no llevan la revision
+# dentro, asi que `pip install --no-deps` de un pin cuya version coincide con la
+# instalada NO INSTALA Y DEVUELVE CERO. Con poetry install tampoco, que ademas
+# se lleva el torch clavado a mano. Dos cosas, entonces:
+#
+#   1. la instalacion va con pip --no-deps y --force-reinstall, nunca con
+#      poetry install y nunca sin forzar;
+#   2. la verificacion NO es la salida de pip ni `__version__`, que aqui miente
+#      (protea_method.__version__ dice 0.0.1 y pip dice 0.3.1). Es el
+#      commit_id de .venv/lib/python3*/site-packages/<paquete>.dist-info/direct_url.json,
+#      que para un pin de git guarda el sha resuelto. Antes del salto los siete
+#      coincidian exactamente con los pines de bc603014, asi que el fichero
+#      sirve y esta comprobado que sirve.
+#
+# UN DEFECTO CONOCIDO QUE VIAJA DENTRO, medido hoy contra los ficheros.
+# photo_io._HEADER_FIELD es `^!([a-z][a-z-]*):` y solo acepta claves en
+# minuscula; los GAF 2.1 escriben `!GO-version` y `!Generated` con mayusculas.
+# Las claves no se capturan, go_release_rule cae a la rama cut_date y los
+# cortes 160, 177 y 194 emparejan por fecha de corte y no por lo que el GAF
+# declara. El mismo repositorio lee esa cabecera dos veces y solo una lo hace
+# bien: _gaf_header.declared_release compara con line.lower(), asi que el
+# cargador de anotaciones SI ve lo declarado y su guarda sigue viva; la de la
+# foto, no.
+#
+# Lo que el defecto cambia y lo que no, leido de los seis ficheros del archivo
+# de EBI y de las ontologias cargadas aqui, no de un informe:
+#   * los tres GAF 2.1 declaran: 160 releases/2016-10-29, 177 2018-04-20 y 194
+#     2019-11-09. Los tres 2.2 (205, 211 y 227) escriben la clave en minuscula
+#     y sus manifiestos la registran bien;
+#   * NINGUN emparejamiento se mueve. Con la cota declarada y con la fecha de
+#     corte el grafo elegido es el mismo en los seis, porque no hay ninguna
+#     ontologia cargada entre el grafo y la cota: cero en las doce ventanas;
+#   * lo que si cambia es el registro. Los manifiestos de 160, 177 y 194 llevan
+#     date_generated, go_version y declared_go_release vacios y go_release_rule
+#     en cut_date. El arreglo los rellena, cambia el JSON y con el los TRES
+#     sha256 acordados, que solo se reproducen con el codigo de hoy.
+# Asi que no hay prohibicion de construir fotos: hay una condicion. Volver a
+# medir las doce ventanas si se carga cualquier ontologia nueva dentro de
+# ellas -- la de 211 abarca dos meses y medio --, porque entonces cut_date si
+# elegiria una mas nueva que la declarada y la guarda de la foto no lo veria.
+#
+# Y plans/GOA-ONTOLOGY-PAIRING.md TENIA RAZON. La cabecera de GOA 160 dice
+# `!Generated: 2016-10-31` y `!GO-version: .../releases/2016-10-29/go.owl`,
+# leida hoy del fichero. El gaf_header vacio de los manifiestos era el defecto
+# de arriba, no la nota. Su fila marcada con (*) ya explicaba por que esta base
+# emparejo 160 con 2016-09-30: el grafo declarado esta archivado bajo la
+# etiqueta de carpeta 2016-11-01 y la campana comparaba etiquetas. Resuelto a
+# favor de la nota, y goa_campaign_driver.parse_plan sigue leyendo bien.
+# Las cabeceras leidas, las doce ventanas medidas y los criterios de la carga
+# estan en plans/MIGRACION-UNIVERSO-A-PROD.md, fusionado en main como #430.
+#
+# EL PASO DE LA DOC, que este fichero exige desde #1176: va despues de mover el
+# arbol, bash scripts/deploy-docs.sh, y /health lo publica como docs_revision
+# con docs_match_code al lado.
+#
+# LA PUERTA DEL SERVIDOR, antes de esta edicion: 0 jobs en QUEUED, RUNNING o
+# PENDING, de 782 en total; ninguna cola de trabajo con mensajes ni sin
+# confirmar, salvo los 18.816 de la cola de muertos; y 0 prediction_set, porque
+# los 28 anteriores, sus 33.424.046 filas de prediccion y sus 21
+# evaluation_result se borraron esta noche por decision del autor, lo que bajo
+# la base de 255 a 242 GB.
+#
+# EL NODO: su unico trabajador sobre estas colas es protea.training, gobernado
+# por protea-node-sync.timer, que lee este fichero cada tres minutos. Entre
+# fusionar esta declaracion y mover el arbol se espera un ciclo, para que se
+# resincronice solo en vez de quedarse sirviendo codigo viejo.
+#
 # ---------------------------------------------------------------------------
-coordinator bc603014186a7959f9c9cf1c61ddd4e6e21b6e9d
+coordinator 7edfb68fe1a5d508cc784813fe45c8d88be49e68
 schema-applied bc603014186a7959f9c9cf1c61ddd4e6e21b6e9d
