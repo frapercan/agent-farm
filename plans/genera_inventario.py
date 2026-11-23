@@ -51,10 +51,10 @@ QUE_ES = {
                 "9 `replaced_by` y su proyeccion 2.610/3.821 son numeros publicados",
     "44cd7a5b": "**La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; "
                 "sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION`",
-    "cb46395a": "**EL HOLDOUT. Su pase se gasto el 2026-10-26 EN EL LABORATORIO** (0,4471 "
-                "contra 0,2605), no aqui, por eso tiene cero resultados en PROTEA. El "
-                "silencio de esta tabla no dice nada sobre el mundo. NO se reconstruye y NO "
-                "se borra",
+    "cb46395a": "**LA VENTANA DE PRUEBA RESERVADA.** Se lee UNA vez, con el metodo "
+                "congelado y por palabra del autor, y no se esta decidiendo nada en torno "
+                "a ella: lo que se compara vive en 211->227. Cero resultados aqui, y asi "
+                "sigue. NO se reconstruye y NO se borra",
     "ea94e57e": "La MISMA 211->227 con el marco viejo, tambien marcada `valid`. Quien lea "
                 "\"la de validacion\" sin mirar el perfil puede coger esta",
     "7aa37929": "Otra 211->227 vieja marcada `valid`, `as_closed` a 39.885, y **nunca fue "

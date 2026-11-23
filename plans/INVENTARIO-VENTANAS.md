@@ -19,11 +19,11 @@ Colisiones ahora: **0** (la etiqueta identifica).
 
 | etiqueta | id | tramo | papel | resultados | delta | que es |
 |---|---|---|---|---|---|---|
-| `211-227.viejo.15f002ea.B` | `ea94e57e` | 211->227 | **valid** | 2 | 63,734 | La MISMA 211->227 con el marco viejo, tambien marcada `valid`. Quien lea "la de validacion" sin mirar el perfil puede coger esta |
+| `211-227.viejo.15f002ea.B` | `ea94e57e` | 211->227 | **valid** | 0 | 63,734 | La MISMA 211->227 con el marco viejo, tambien marcada `valid`. Quien lea "la de validacion" sin mirar el perfil puede coger esta |
 | `211-227.viejo.15f002ea.A` | `7aa37929` | 211->227 | **valid** | 0 | 39,885 | Otra 211->227 vieja marcada `valid`, `as_closed` a 39.885, y **nunca fue el titular**. Cero resultados, y aun asi lleva papel: no se borra |
-| `211-227.campana.15f002ea.A` | `ea0f4334` | 211->227 | **valid** | 12 | 40,531 | **LA ventana de validacion larga.** El laboratorio la reproduce al bit; sus 9 `replaced_by` y su proyeccion 2.610/3.821 son numeros publicados |
-| `227-230.viejo.28c785ca.B` | `cb46395a` | 227->230 | **test** | 0 | 21,996 | **EL HOLDOUT. Su pase se gasto el 2026-10-26 EN EL LABORATORIO** (0,4471 contra 0,2605), no aqui, por eso tiene cero resultados en PROTEA. El silencio de esta tabla no dice nada sobre el mundo. NO se reconstruye y NO se borra |
-| `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | **test** | 4 | 28,220 | **La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION` |
+| `211-227.campana.15f002ea.A` | `ea0f4334` | 211->227 | **valid** | 0 | 40,531 | **LA ventana de validacion larga.** El laboratorio la reproduce al bit; sus 9 `replaced_by` y su proyeccion 2.610/3.821 son numeros publicados |
+| `227-230.viejo.28c785ca.B` | `cb46395a` | 227->230 | **test** | 0 | 21,996 | **LA VENTANA DE PRUEBA RESERVADA.** Se lee UNA vez, con el metodo congelado y por palabra del autor, y no se esta decidiendo nada en torno a ella: lo que se compara vive en 211->227. Cero resultados aqui, y asi sigue. NO se reconstruye y NO se borra |
+| `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | **test** | 0 | 28,220 | **La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION` |
 
 ## El marco vivo: 83 ventanas `campana`
 
@@ -117,13 +117,13 @@ Colisiones ahora: **0** (la etiqueta identifica).
 
 Construidas del 8 al 11 de octubre con el codigo que tardaba **74 minutos por ventana**, cada una pivotando en **su propia era** en vez de en un pivote comun, con `as_closed` (un termino que el pivote no puede nombrar lo tira el cierre) y `not_codes = any` (un `NOT|IBA` quita verdad a positivos experimentales).
 
-**Ninguna corrida de la campana debe nombrar una de estas.** De las 4, **0 no tienen ni resultados ni papel** y serian las candidatas si alguna vez se decide limpiar. Borrarlas es una decision aparte: deja sus parquets huerfanos en MinIO y cuesta unas 6 horas deshacer con el codigo de hoy.
+**Ninguna corrida de la campana debe nombrar una de estas.** De las 4, **1 no tienen ni resultados ni papel** y serian las candidatas si alguna vez se decide limpiar. Borrarlas es una decision aparte: deja sus parquets huerfanos en MinIO y cuesta unas 6 horas deshacer con el codigo de hoy.
 
 | etiqueta | id | tramo | pivote | papel | resultados | delta | dia |
 |---|---|---|---|---|---|---|---|
-| `211-227.viejo.15f002ea.B` | `ea94e57e` | 211->227 | releases/2022-07-01 | valid | 2 | 63,734 | 2026-10-27 | **NO BORRAR**
+| `211-227.viejo.15f002ea.B` | `ea94e57e` | 211->227 | releases/2022-07-01 | valid | 0 | 63,734 | 2026-10-27 | **NO BORRAR**
 | `211-227.viejo.15f002ea.A` | `7aa37929` | 211->227 | releases/2022-07-01 | valid | 0 | 39,885 | 2026-10-27 | **NO BORRAR**
-| `219-220.viejo.2ba77c97.B` | `c35ee267` | 219->220 | releases/2024-01-17 | - | 3 | 5,810 | 2026-10-11 | **NO BORRAR**
+| `219-220.viejo.2ba77c97.B` | `c35ee267` | 219->220 | releases/2024-01-17 | - | 0 | 5,810 | 2026-10-11 |
 | `227-230.viejo.28c785ca.B` | `cb46395a` | 227->230 | releases/2025-07-22 | test | 0 | 21,996 | 2026-10-27 | **NO BORRAR**
 
 ## Y lo que el inventario no puede decir
