@@ -49,8 +49,8 @@ def etiqueta(f):
 QUE_ES = {
     "ea0f4334": "**LA ventana de validacion larga.** El laboratorio la reproduce al bit; sus "
                 "9 `replaced_by` y su proyeccion 2.610/3.821 son numeros publicados",
-    "44cd7a5b": "**La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; "
-                "sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION`",
+    "44cd7a5b": "**La banda PROSPECTIVA.** Empieza despues de la ventana de prueba y no "
+                "selecciona nada; sus puntuaciones llevaban `PROSPECTIVE_DECLARATION`",
     "cb46395a": "**LA VENTANA DE PRUEBA RESERVADA.** Se lee UNA vez, con el metodo "
                 "congelado y por palabra del autor, y no se esta decidiendo nada en torno "
                 "a ella: lo que se compara vive en 211->227. Cero resultados aqui, y asi "
@@ -104,9 +104,11 @@ def main() -> None:
     con_papel = [f for f in filas if f[12]]
     out("## Las que NO se tocan: las cinco con papel declarado\n\n")
     out("**El recuento de resultados NO sirve para decidir si una ventana es desechable**, "
-        "y esta es la prueba: el holdout tiene cero. Su unica mirada se tomo en el "
-        "laboratorio, y las tablas de la plataforma no ven el laboratorio. Un filtro de "
-        "\"sin resultados\" lo habria incluido en un borrado.\n\n")
+        "y esta es la prueba: la ventana de prueba reservada tiene cero, y lo tiene por "
+        "diseno, porque se lee una vez y esa lectura no se ha pedido. Un filtro de "
+        "\"sin resultados\" la habria incluido en un borrado. Y desde el 2026-11-23 "
+        "NINGUNA ventana tiene resultados vivos, asi que ese filtro se llevaria el "
+        "inventario entero.\n\n")
     out("| etiqueta | id | tramo | papel | resultados | delta | que es |\n")
     out("|---|---|---|---|---|---|---|\n")
     for f in con_papel:

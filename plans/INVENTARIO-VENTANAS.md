@@ -15,7 +15,7 @@ Colisiones ahora: **0** (la etiqueta identifica).
 
 ## Las que NO se tocan: las cinco con papel declarado
 
-**El recuento de resultados NO sirve para decidir si una ventana es desechable**, y esta es la prueba: el holdout tiene cero. Su unica mirada se tomo en el laboratorio, y las tablas de la plataforma no ven el laboratorio. Un filtro de "sin resultados" lo habria incluido en un borrado.
+**El recuento de resultados NO sirve para decidir si una ventana es desechable**, y esta es la prueba: la ventana de prueba reservada tiene cero, y lo tiene por diseno, porque se lee una vez y esa lectura no se ha pedido. Un filtro de "sin resultados" la habria incluido en un borrado. Y desde el 2026-11-23 NINGUNA ventana tiene resultados vivos, asi que ese filtro se llevaria el inventario entero.
 
 | etiqueta | id | tramo | papel | resultados | delta | que es |
 |---|---|---|---|---|---|---|
@@ -23,7 +23,7 @@ Colisiones ahora: **0** (la etiqueta identifica).
 | `211-227.viejo.15f002ea.A` | `7aa37929` | 211->227 | **valid** | 0 | 39,885 | Otra 211->227 vieja marcada `valid`, `as_closed` a 39.885, y **nunca fue el titular**. Cero resultados, y aun asi lleva papel: no se borra |
 | `211-227.campana.15f002ea.A` | `ea0f4334` | 211->227 | **valid** | 0 | 40,531 | **LA ventana de validacion larga.** El laboratorio la reproduce al bit; sus 9 `replaced_by` y su proyeccion 2.610/3.821 son numeros publicados |
 | `227-230.viejo.28c785ca.B` | `cb46395a` | 227->230 | **test** | 0 | 21,996 | **LA VENTANA DE PRUEBA RESERVADA.** Se lee UNA vez, con el metodo congelado y por palabra del autor, y no se esta decidiendo nada en torno a ella: lo que se compara vive en 211->227. Cero resultados aqui, y asi sigue. NO se reconstruye y NO se borra |
-| `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | **test** | 0 | 28,220 | **La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION` |
+| `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | **test** | 0 | 28,220 | **La banda PROSPECTIVA.** Empieza despues de la ventana de prueba y no selecciona nada; sus puntuaciones llevaban `PROSPECTIVE_DECLARATION` |
 
 ## El marco vivo: 83 ventanas `campana`
 
@@ -111,7 +111,7 @@ Colisiones ahora: **0** (la etiqueta identifica).
 | `223-224.campana.15f002ea.A` | `06b58140` | 223->224 | releases/2022-07-01 | A | - | 4,200 | `d5416224` | 2026-11-08 |  |
 | `224-225.campana.15f002ea.A` | `a9685579` | 224->225 | releases/2022-07-01 | A | - | 3,498 | `d5416224` | 2026-11-08 |  |
 | `225-226.campana.15f002ea.A` | `5d44f0aa` | 225->226 | releases/2022-07-01 | A | - | 11,683 | `d5416224` | 2026-11-08 |  |
-| `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | releases/2026-01-23 | A | test | 28,220 | `NULL` | 2026-10-27 | **La banda PROSPECTIVA.** Empieza despues del holdout y no selecciona nada; sus cuatro puntuaciones llevan `PROSPECTIVE_DECLARATION` |
+| `230-235.campana.2146c369.A` | `44cd7a5b` | 230->235 | releases/2026-01-23 | A | test | 28,220 | `NULL` | 2026-10-27 | **La banda PROSPECTIVA.** Empieza despues de la ventana de prueba y no selecciona nada; sus puntuaciones llevaban `PROSPECTIVE_DECLARATION` |
 
 ## El marco superado: 4 ventanas `viejo`
 
