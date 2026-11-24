@@ -136,6 +136,62 @@ Estado del corpus al cerrar esta fase: 2.758.480 proteinas, 2.523.987
 secuencias, 6 conjuntos de anotacion, 7.699.626 miembros con taxon de 7.830.125,
 base en 40 GB y 428 G libres en disco.
 
+## COMPLETO: el campeon y los ocho bancos, el 2026-11-24
+
+**El campeon reproduce el resultado publicado.** La cadena entera corrio en
+`protea_universo` --homologia de 211, colocacion de objetivos, registro del
+metodo, ingesta de las 2.746.719 filas del mismo fichero, evaluacion en bruto y
+estratificacion-- y el sobremesa comparo cada paso con su trabajo equivalente en
+dev. Las nueve celdas salen **cifra a cifra, incluidos los umbrales**, y
+**todos los artefactos son identicos byte a byte salvo tres**: las rejillas por
+proteina de NK, LK y PK, que tienen los mismos datos columna a columna y solo
+difieren en metadatos de procedencia (los ids de cada base y el sha de la
+revision que las escribio).
+
+La media de las nueve celdas es **0,3543**, verificada aqui. Y conviene decir de
+que metrica es, porque confunde: es la media de **`f_micro_w`**, la micro-F
+ponderada. La de `fmax` es 0,4258, la de `fmax_w` 0,3958 y la de `f_micro`
+0,4193. Citar "la media" sin nombrar la metrica es pedir que alguien compare dos
+numeros distintos.
+
+**Los ocho bancos de PLM, cargados sin recalcular un solo vector.** El
+sobremesa los resello para las fotos reconstruidas: la preparacion con las seis
+fotos nuevas da las mismas 2.523.987 secuencias, los mismos 157 ficheros y el
+mismo `sequences.parquet` byte a byte, y de cada manifiesto cambian 13 campos
+--el sha256 y la revision de las seis fotos, mas la revision propia-- y nada
+inesperado.
+
+| banco | vectores | manifiesto |
+|---|---|---|
+| ankh_base | 2.523.987 | a1c12bd795df |
+| ankh_large | 2.523.987 | 119979087157 |
+| esm2_150m | 2.523.987 | e227275a9542 |
+| esm2_650m | 2.523.987 | f0c3d3f626ee |
+| esm2_3b | 2.523.987 | 155d33c521b0 |
+| esmc_600m | 2.523.987 | 3bf6b505f789 |
+| prostt5 | 2.523.987 | c3ba8c571911 |
+| prot_t5 | 2.523.987 | 136da4aa079b |
+
+**20.191.896 vectores, un vector por secuencia y banco**: las 2.523.987
+secuencias cubiertas enteras, sin ninguna partida. Las columnas de trozo estan
+rellenas con el tramo completo, que no es lo mismo que trocear.
+
+Y dos notas de coste, medidas: `sequence_embedding` **no tiene ningun indice de
+vector** --cuatro btree y ni hnsw ni ivfflat--, asi que cargar 20 millones de
+filas no reconstruye ninguna vecindad; si alguien anade uno algun dia, hay que
+crearlo DESPUES de cargar los bancos. Y la carga fue a unos 11.000 vectores por
+segundo con el techo de WAL en 8 GB y `synchronous_commit = off` solo en esta
+base.
+
+**Estado de la instancia al completarse**: 2.758.480 proteinas, 2.523.987
+secuencias, 113.487.299 anotaciones, 7.830.125 miembros de foto, 20.191.896
+vectores, 8 bancos, 1 evaluacion, **103 GB**. La publica sigue intacta en 242 GB
+y quedan 364 G libres.
+
+**Lo que falta para que esto sea produccion** esta en
+`plans/CAMBIO-A-LA-INSTANCIA-UNIVERSO.md`, y la trampa 5 de esa nota es la que
+caduca aqui: `synchronous_commit` vuelve a `on` en el momento del cambio.
+
 ## La cuenta almacenada es funcion de (fichero, snapshot)
 
 Consecuencia que el contrato no nombraba: el colapso bajo esa identidad y las
