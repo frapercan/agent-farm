@@ -27,10 +27,10 @@ Trajectories (the decisions, mechanisms, and their measured place) are what
 survives, in the thesis + the signal registry + memory.
 
 It SUPERSEDES, for the definition of the scientific run, the June roadmaps
-(`archive/ROADMAP-THESIS-10.md`, `archive/THESIS-FINISH.md`, `archive/beat-lafa-1/`). Those carried the
-old window convention (SELECT 220->227 / FINAL 227->230, a mixed-metric story)
-and the pre-scale corpus. They move to `plans/archive/` for provenance; their
-governing principles are inherited verbatim below.
+(ROADMAP-THESIS-10, THESIS-FINISH and beat-lafa-1). Those carried an old window
+convention, a mixed-metric story and the pre-scale corpus. They were retired with
+`plans/archive/` on 2026-11-24 and stay in git history; their governing principles
+are inherited verbatim below.
 
 ## 0. Pre-flight (format gate, non-negotiable before wiping the box)
 
@@ -327,8 +327,8 @@ blend of the same signals (memory: sparse-contrastive #2, temporal datasets).
   sse_* except the receipt, regen_headline, text_scorer, layer_ablation, ...).
   Carry to the clean machine only raw inputs (`protea-frozen-v227`, `obo_cache`)
   and the code. Nothing derived travels.
-- `plans/`: move the superseded June roadmaps to `plans/archive/`; this file is
-  the single authoritative scientific-run spec. Update `archive/CATALOG.md` accordingly.
+- `plans/`: this file is the single authoritative scientific-run spec; the superseded
+  June roadmaps were retired with `plans/archive/` (2026-11-24, kept in git history).
 
 ## 8. Exit criteria (what "done" means)
 
