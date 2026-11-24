@@ -10,8 +10,8 @@
 Author: Francisco Miguel Perez Canales. Written 2026-07-27.
 
 Fourth and operative companion to `E2E-CANONICAL-RUN.md` (axes and principles),
-`archive/SIGNAL-REGISTRY.md` (what each signal is worth) and `archive/GENESIS-STATE.md` (what the
-new machine needs). Those three say what is true and what is missing. **This one
+the signal registry (what each signal is worth) and the genesis state (what the new
+machine needs), both retired with `plans/archive/` on 2026-11-24 and kept in git history. Those three say what is true and what is missing. **This one
 says what we are going to run, in what order, and what each step has to answer.**
 
 ---
