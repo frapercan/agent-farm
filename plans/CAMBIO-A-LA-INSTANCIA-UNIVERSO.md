@@ -5,6 +5,46 @@ construir. **No es una orden de cambiar**: es el procedimiento y lo que hay que
 comprobar, recogido mientras los hechos estan frescos, porque el cambio lo pide
 el autor y no esta pedido.
 
+## HECHO el 2026-11-24, y las tres cosas que esta nota no decia
+
+El cambio se ejecuto con la palabra del autor pedida en la sesion del portatil,
+no por relevo. La publica sirve la base limpia, `protea_anterior` queda **entera
+y apartada** con sus 242 GB y sus 63.094 visitas dentro, y la vuelta atras
+siguen siendo dos renombrados.
+
+Verificado despues: `/health` con las tres revisiones iguales, `deploy-check.sh`
+con codigo 0 y 22 comprobaciones en verde, las once colas con su consumidor
+--incluida `protea.training`, la del sobremesa-- y las paginas publicas entre
+0,26 y 0,62 s. Lo que ve el publico: 2.758.480 proteinas, 113.487.299
+anotaciones, 6 fotos, 8 bancos, 20.191.896 vectores, 1 ventana y 1 evaluacion.
+
+**Las tres cosas que esta nota no decia y ahora dice:**
+
+1. **`synchronous_commit` viaja con el renombrado.** El ajuste esta pegado al
+   OBJETO base de datos, no a su nombre, asi que al renombrar `protea_universo`
+   a `protea` la base que sirve al publico se quedaba en `off`. Hay que
+   `ALTER DATABASE protea RESET synchronous_commit` **despues** de renombrar, y
+   comprobarlo leyendo `pg_settings` dentro de esa base.
+2. **Las cuentas de usuario tampoco viajan, y son las que llevan `admin`.** La
+   base limpia tenia CERO filas en `user` y la vieja una, la del autor, con
+   papel `admin`. Al cambiar, el instrumento se quedo sin esa cuenta y **4 de
+   las 5 filas de `auth_audit` se negaron a entrar** porque la referenciaban. Se
+   arregla trayendo `user` de la base apartada antes de `auth_audit`. Cuidado
+   con el patron: `pg_dump -t user`, sin comillas, porque `-t '"user"'` no
+   encuentra la tabla y falla en silencio.
+3. **Corrige el hueco que esta nota daba por cierto.** Decia que no hay camino
+   para emitir una clave por consumidor porque el alta exige `admin` y el
+   arranque minta `operator`. **El camino existe: `admin` vive en las cuentas de
+   usuario, no en las claves.** Con la cuenta del autor en la base, se pueden
+   emitir claves por consumidor desde la API.
+
+**Y un cabo que se ata al final**: la unidad de la API de pruebas
+(`protea-universo-api.service`) apunta por fichero de entorno a
+`protea_universo`, un nombre que ya no existe. Queda **parada y deshabilitada**,
+porque con `Restart=always` habria entrado en bucle en el primer reinicio. Si
+hace falta otra puerta para que el sobremesa cargue, se monta contra la base que
+sirve, con su propio vhost y su propia clave.
+
 ## Las dos instancias que sirve esta maquina
 
 Comparten **un solo arbol de codigo**, asi que mover el arbol las mueve a las
