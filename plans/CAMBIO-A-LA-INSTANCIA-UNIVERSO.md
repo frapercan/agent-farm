@@ -45,7 +45,43 @@ porque con `Restart=always` habria entrado en bucle en el primer reinicio. Si
 hace falta otra puerta para que el sobremesa cargue, se monta contra la base que
 sirve, con su propio vhost y su propia clave.
 
-## Las dos instancias que sirve esta maquina
+## LA FORMA DE HOY, 2026-11-24 por la tarde: una base, dos puertas
+
+Despues del cambio ya no hay dos instancias: hay **una sola base** y **dos
+puertas** contra ella, separadas por vhost para que nadie coja el trabajo del
+otro.
+
+| | la publica | la puerta del sobremesa |
+|---|---|---|
+| API | 8000, en 127.0.0.1, con frontend y tunel | 8002, atada a la direccion del tailnet |
+| base | `protea` (la reconstruida) | la misma |
+| cubo | `protea-universo` | el mismo |
+| vhost | `/`, con los diez trabajadores de esta maquina | `sobremesa`, con los tres del sobremesa |
+| para que | lo que ve el publico y lo ligero | **lo pesado, que se calcula alli** |
+
+Medido al cerrar: vhost `/` con **10 consumidores** y vhost `sobremesa` con
+**3**, los suyos. El camino quedo probado sin coordinacion: se dejo un `ping`
+esperando en la cola de la puerta y corrio solo en cuanto conectaron sus
+trabajadores.
+
+**Por que la puerta y no la cola de la publica.** Los diez trabajadores de esta
+maquina consumen esas colas por nombre. Si el sobremesa publicara en el mismo
+vhost, su trabajo lo cogeria quien llegase primero y lo pesado podria caer en el
+portatil, que es justo lo que el reparto evita.
+
+**Dos restos y una cosa que no esta.** Los vhosts `universo` y `limpia` quedan
+vacios, de cuando la base limpia se construia aparte; no se borran sin que el
+autor lo diga, aunque no contengan nada. Y la API de pruebas del 8001 esta
+parada y deshabilitada, porque su fichero de entorno nombra una base que ya no
+existe.
+
+**La clave propia de la puerta la crea el autor**, desde la pagina de
+administracion del instrumento. No hay forma de mintarla desde aqui sin
+saltarse la puerta del propio proyecto: el alta por API exige `admin`, que vive
+en las cuentas de usuario, y el guion de arranque se niega cuando ya hay claves.
+Mientras no exista, el conductor usa la clave compartida.
+
+## Las dos instancias que sirve esta maquina (como se monto, 2026-11-23)
 
 Comparten **un solo arbol de codigo**, asi que mover el arbol las mueve a las
 dos y `plans/DECLARED-REVISION.txt` declara una sola revision para ambas.
