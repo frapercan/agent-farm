@@ -2762,6 +2762,36 @@
 # 787; ninguna cola de trabajo con mensajes ni sin confirmar salvo los 18.816 de
 # la cola de muertos; y 0 prediction_set.
 #
+# 2026-11-24: 798210f2 -> 3bdd66c9. UN commit, dos ficheros, cero migraciones y
+# cero cambios en los pines: arbol, doc y reinicio. Las dos lineas suben juntas
+# porque el esquema aplicado ya es el de esta revision.
+#
+# QUE ENTRA. #1300, "a prediction reads the graph of its donor set": el router de
+# anotacion leia el grafo equivocado al describir una prediccion. Toca
+# protea/api/routers/annotate.py y sus tests, y nada mas.
+#
+# LA DOC SE REDESPLIEGA AUNQUE NO CAMBIE NINGUNA FUENTE, porque su sello lleva la
+# revision y /health compara docs_revision con code_revision. Sin ese paso,
+# docs_match_code se vuelve falso sin que nada este roto, que es justo la clase de
+# aviso que luego nadie cree.
+#
+# LA BASE QUE SIRVE YA ES LA RECONSTRUIDA. Desde el cambio del 2026-11-24 la
+# publica sirve `protea` = la base limpia (2.758.480 proteinas, 113.487.299
+# anotaciones, 20.191.896 vectores, el campeon en 211->227), y la vieja esta
+# apartada y entera como `protea_anterior`. El cubo de objetos es
+# `protea-universo`. Procedimiento y trampas en
+# plans/CAMBIO-A-LA-INSTANCIA-UNIVERSO.md; inventario verificado en
+# plans/MIGRACION-UNIVERSO-A-PROD.md.
+#
+# EL NODO: al fusionar esta declaracion, protea-node-sync.timer sincronizara el
+# worker de la GPU a 3bdd66c9 en su ciclo siguiente. Su fichero de entorno ya
+# apunta al cubo `protea-universo`, cambiado por la sesion del sobremesa en el
+# cambio de base.
+#
+# LA PUERTA, antes de esta edicion: 0 trabajos en QUEUED, RUNNING o PENDING de
+# 67; ninguna cola con mensajes ni sin confirmar salvo los 18.816 de la cola de
+# muertos.
+#
 # ---------------------------------------------------------------------------
-coordinator 798210f29972762c83530237e58098a0fa8bc9a4
-schema-applied 798210f29972762c83530237e58098a0fa8bc9a4
+coordinator 3bdd66c94e8c10172cb9d67cb842f2a7f5296593
+schema-applied 3bdd66c94e8c10172cb9d67cb842f2a7f5296593
