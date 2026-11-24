@@ -2792,6 +2792,44 @@
 # 67; ninguna cola con mensajes ni sin confirmar salvo los 18.816 de la cola de
 # muertos.
 #
+# 2026-11-24, TERCERA DEL DIA: 3bdd66c9 -> 4e6031d4. Cuatro commits, CERO
+# migraciones y CERO cambios en los pines, pero ESTA SI RECONSTRUYE EL FRONTEND:
+# son 11 ficheros de apps/web, los primeros desde el cambio de base.
+#
+# QUE ENTRA, en el orden en que se decidio y por ese motivo:
+#   * #1301, la descripcion de un conjunto nombra su metodo y no el registro del
+#     productor. Va PRIMERO porque es el arreglo de origen de lo que se habia
+#     corregido a mano por SQL en la base que sirve: sin el, el siguiente
+#     conjunto ingerido vuelve a nacer con un diccionario de Python dentro;
+#   * #1304, la API lee el nombre, el organismo, la longitud y el estado de
+#     revision de protein_uniprot_metadata. Las columnas homonimas de `protein`
+#     estan vacias en el universo reconstruido --nunca se rellenaron-- y la ficha
+#     de proteina devolvia nulos teniendo los datos al lado: 2.384.996 con nombre
+#     de entrada, organismo y longitud, y 574.058 revisadas;
+#   * #1303, link_protein_sequences, que enlaza cada proteina con la secuencia de
+#     su foto (cut_photo_member.sequence_md5 -> sequence.sequence_hash) sin
+#     ninguna llamada de red. Es la operacion, no su ejecucion: la corre el
+#     sobremesa por la puerta del 8002;
+#   * #1302, la portada nueva: la herramienta primero, despues las cifras en vivo
+#     --leidas de esta base--, un registro de novedades y los planes, en cinco
+#     idiomas.
+#
+# LA PORTADA SE SALVA DE UN RIDICULO POR QUE ENDPOINT LEE. Cuenta modelos y
+# vectores con `embedding_count` de /v1/embeddings/configs, que cuenta
+# sequence_embedding POR CONFIGURACION: 8 modelos y 20.191.897 vectores. El campo
+# with_embeddings de /v1/proteins/stats pasa por protein.sequence_id, que es NULO
+# en las 2.758.480 proteinas, y habria publicado una portada diciendo que no hay
+# vectores. Eso lo arregla #1303 cuando se ejecute, no cuando se despliegue.
+#
+# EL ENLACE, CONTADO DE ANTEMANO EN LA BASE QUE SIRVE: 2.758.264 enlazables y 216
+# que se quedaran sin enlace por construccion, porque aparecen en fotos sin
+# ningun sequence_md5. En dev la pasada real enlazo esas mismas 2.758.264 en 183
+# s. Si al correr aqui sale otra cifra, no es el disco: es un fallo.
+#
+# LA PUERTA, antes de esta edicion: 0 trabajos en QUEUED, RUNNING o PENDING;
+# ninguna cola con mensajes ni sin confirmar salvo los 18.816 de la cola de
+# muertos.
+#
 # ---------------------------------------------------------------------------
-coordinator 3bdd66c94e8c10172cb9d67cb842f2a7f5296593
-schema-applied 3bdd66c94e8c10172cb9d67cb842f2a7f5296593
+coordinator 4e6031d4b18a2179062ee5dea29acbf386dc857f
+schema-applied 4e6031d4b18a2179062ee5dea29acbf386dc857f
