@@ -88,6 +88,54 @@ y las filas de su `rows.parquet`. El 113,5 M que circulaba antes era
 
 El colapso esta repartido en los seis, no concentrado en uno.
 
+## CARGADO Y VERIFICADO: las seis fotos, el 2026-11-24 a las 01:36
+
+Las seis estan dentro de `protea_universo`, cargadas por los trabajadores del
+sobremesa contra la API de pruebas de esta maquina, y **cada cifra comparada con
+la que se escribio ANTES de cargar**. Los dos totales del contrato salen
+identicos: **113.487.299 filas** en `protein_go_annotation` y **7.830.125**
+miembros en `cut_photo_member`.
+
+Y la diferencia entre lineas y filas guardadas queda **partida en sus dos causas
+reales**, que el cargador cuenta por separado (`rows_already_present` y
+`rows_with_unknown_term`). Esto corrige la tabla de mas arriba, que llamaba
+"colapsado" a la suma de las dos:
+
+| corte | lineas | guardadas | colapsadas | rechazadas | suma |
+|---|---|---|---|---|---|
+| 160 | 15.127.014 | 14.698.123 | 428.891 | 0 | cierra |
+| 177 | 15.223.386 | 14.728.210 | 495.176 | 0 | cierra |
+| 194 | 20.495.791 | 19.844.139 | 651.652 | 0 | cierra |
+| 205 | 9.607.172 | 9.124.036 | 483.124 | 12 | cierra |
+| 211 | 23.600.054 | 22.496.815 | 1.102.171 | 1.068 | cierra |
+| 227 | 33.707.963 | 32.595.976 | 1.111.784 | 203 | cierra |
+| **total** | **117.761.380** | **113.487.299** | **4.272.798** | **1.283** | **cierra** |
+
+Las **1.283 rechazadas** son filas cuyo termino GO no esta en el grafo de su
+corte, y el mecanismo esta probado, no supuesto: `GO:0140718`, el unico termino
+que rechaza el 205, **no existe en `releases/2021-10-26` y si existe en
+`releases/2022-07-01` y en `releases/2025-07-22`**. Nacio entre la fecha del
+grafo (2021-10-26) y la del fichero (2021-11-09). Se rechazan y se cuentan;
+nunca se tiran en silencio.
+
+**Dos contadores que se parecen y no son el mismo**, y confundirlos paro dos
+veces el conductor del sobremesa:
+- `unknown_evidence_keys` / `unknown_evidence_rows` viven en el **manifiesto**,
+  son una propiedad del fichero contra la tabla de canales declarada, y dan
+  **0 en los seis**;
+- `unknown_terms` / `rows_with_unknown_term` los devuelve el **trabajo de
+  carga**, dependen del grafo de la base que recibe y por eso no pueden estar en
+  el manifiesto. Hoy: 0 en 160, 177 y 194; 1 termino en 205; 19 en 211; 10 en
+  227. Coinciden con dev termino a termino.
+
+**Las seis dicen `go_release_rule: declared`**, incluidos los tres GAF 2.1, asi
+que el arreglo de la cabecera esta verificado de punta a punta sobre datos
+reales y el grafo elegido sigue siendo el mismo que se midio de antemano.
+
+Estado del corpus al cerrar esta fase: 2.758.480 proteinas, 2.523.987
+secuencias, 6 conjuntos de anotacion, 7.699.626 miembros con taxon de 7.830.125,
+base en 40 GB y 428 G libres en disco.
+
 ## La cuenta almacenada es funcion de (fichero, snapshot)
 
 Consecuencia que el contrato no nombraba: el colapso bajo esa identidad y las
