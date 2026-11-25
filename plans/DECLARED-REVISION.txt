@@ -2886,6 +2886,31 @@
 # Cero migraciones y cero cambios en los pines; nueve ficheros de apps/web, asi
 # que se reconstruye el frontend.
 #
+# 2026-11-25, TERCERA: 78363149 -> 8035fb78. #1307: el panel abre con lo que
+# la ventana tiene. Solo apps/web, nueve ficheros, cero en protea/.
+#
+# EL PANEL PUBLICO ABRIA VACIO, y lo vio el autor en el movil antes que nadie:
+# "0 de 0 brazos" en una ventana con 90 resultados. No era la pantalla. Eran DOS
+# valores por defecto que describian una campana anterior:
+#   * PANEL_DEFAULTS.reading era `percentile_rank` y los 90 resultados de esta
+#     ventana son `raw`. Cero coincidencias;
+#   * el pool escondia todo brazo con exclude_self === false salvo con
+#     superseded=1, y 88 de los 90 son asi. Eso no es un ajuste superado: es LA
+#     configuracion que esta campana eligio, porque esta medido que excluir el
+#     auto-donante cuesta 0,048. El panel llamaba "superado" a lo vigente.
+# Contado antes de arreglarlo: con los valores por defecto, 0 brazos; con
+# lectura raw y superados, 90.
+#
+# EL ARREGLO ES MEJOR QUE CAMBIAR EL DEFECTO POR OTRO. La lectura por defecto
+# pasa a `raw` pero ademas el panel se mueve a la lectura que la ventana tenga,
+# asi que no volvera a vaciarse si manana solo hay percentiles. Y un brazo se
+# considera superado SOLO si la ventana contiene ademas brazos que si excluyen
+# la proteina (`replaced`): deja de estar superado lo que nada supera.
+#
+# LA PUERTA, por la regla de quien carga el codigo: cero ficheros fuera de
+# apps/web, asi que ninguna operacion ni el trabajador cargan nada de esto. Se
+# declara con la ablacion del sobremesa corriendo, a proposito.
+#
 # ---------------------------------------------------------------------------
-coordinator 7836314958573ae629fb541167d554335bfcdefa
-schema-applied 7836314958573ae629fb541167d554335bfcdefa
+coordinator 8035fb78f8f905586b22c873ba8540675aea77ac
+schema-applied 8035fb78f8f905586b22c873ba8540675aea77ac
