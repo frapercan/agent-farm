@@ -2859,6 +2859,33 @@
 # hagan CUANDO la ablacion termine, no a mitad, aunque el codigo sea el mismo:
 # reiniciar un consumidor con un mensaje sin confirmar no es gratis.
 #
+# 2026-11-25, SEGUNDA: 91f87cc9 -> 78363149. UN commit, #1306: un brazo lleva
+# su politica de donantes, y los estratos tienen una entrada clara.
+#
+# EL DEFECTO QUE ARREGLA NO ERA COSMETICO. El resumen de la ventana describia un
+# brazo por modelo, puntuacion, profundidad y exclusion, y NO por su politica de
+# donantes. Asi que los brazos con donantes experimentales y los que usan todas
+# las evidencias del MISMO modelo salian como una sola serie y con la misma
+# etiqueta: quien mirara el panel comparaba dos cosas distintas creyendo que era
+# una. Es la clase de defecto que este proyecto ya tiene nombrada --un nivel hay
+# que nombrarlo por TODOS los campos que varian-- y aqui estaba en un grafico
+# publico. Ahora `_window_summary` lee meta.donor_policy.evidence_codes del
+# conjunto de candidatos y el brazo lleva `donors`, y el panel separa por
+# "modelo - exp" en filtros, series, columnas y etiquetas.
+#
+# LA PUERTA, otra vez juzgada y otra vez escrita. Al declarar seguia corriendo la
+# ablacion de PLM del sobremesa (157 trabajos sin fallos, siete modelos con todas
+# las evidencias completos, ESM-2 3B en marcha). Esta vez el cambio SI toca
+# Python: protea/services/_window_summary.py. Comprobado quien lo carga:
+# SOLO protea/api/routers/annotations/evaluation_results.py y
+# protea/services/annotations_service.py. Ninguna operacion y no scripts/worker.py,
+# verificado con grep sobre protea/core/operations y el trabajador. Es camino de
+# LECTURA: resume lo que ya esta escrito. Los trabajos de la ablacion no lo
+# ejecutan, asi que la ventana de despliegue no les alcanza.
+#
+# Cero migraciones y cero cambios en los pines; nueve ficheros de apps/web, asi
+# que se reconstruye el frontend.
+#
 # ---------------------------------------------------------------------------
-coordinator 91f87cc9e7fe046c35673c43b4e9d906ad5bce67
-schema-applied 91f87cc9e7fe046c35673c43b4e9d906ad5bce67
+coordinator 7836314958573ae629fb541167d554335bfcdefa
+schema-applied 7836314958573ae629fb541167d554335bfcdefa
