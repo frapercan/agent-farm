@@ -2830,6 +2830,35 @@
 # ninguna cola con mensajes ni sin confirmar salvo los 18.816 de la cola de
 # muertos.
 #
+# 2026-11-25: 4e6031d4 -> 91f87cc9. UN commit, #1305, la tarjeta de proteina:
+# cada prediccion se marca como ya conocida (experimental), implicita por otro
+# termino o ya anotada, las nuevas van primero, y los conocidos sin predecir van
+# bajo su propio aspecto. En los cinco idiomas.
+#
+# SOLO WEB, Y ESO DECIDE LA PUERTA. Los siete ficheros que cambian estan todos
+# bajo apps/web: CERO en protea/, CERO en scripts/, CERO en alembic/ y CERO en
+# pyproject.toml y poetry.lock, comprobado con git diff --name-only y no de
+# memoria. Asi que este despliegue es arbol, doc y frontend; ni alembic ni pip.
+#
+# LA PUERTA SE JUZGA DISTINTO HOY, Y CONVIENE QUE ESTE ESCRITO POR QUE. Al
+# declarar habia DOS trabajos vivos, los dos de la ablacion de PLM del sobremesa
+# corriendo en SUS trabajadores sobre el vhost `sobremesa`: un predict_go_terms
+# de ESM C 600M en 7/37 y un score_prediction_set de Ankh base. La regla de "cero
+# trabajos vivos" existe por lo que esta escrito mas arriba en este fichero: un
+# trabajo nacido dentro de una ventana de despliegue corre codigo viejo. Aqui el
+# codigo que ejecuta un trabajo es byte a byte el mismo antes y despues, porque
+# no se toca ni un fichero de Python, asi que esa ventana no existe. Se declara
+# con la ablacion corriendo A PROPOSITO, no por descuido.
+#
+# EL FRONTEND SI SE RECONSTRUYE, que es el unico efecto real: el build en disco
+# deja de corresponder a su fuente en cuanto el arbol se mueve, y deploy-check lo
+# dice. Son unos diez minutos con vuelta atras automatica si el build falla.
+#
+# EL CLON DE LA PUERTA LO MUEVE EL SOBREMESA, no el temporizador: sus
+# trabajadores del vhost `sobremesa` los reinician ellos. Se les avisa de que lo
+# hagan CUANDO la ablacion termine, no a mitad, aunque el codigo sea el mismo:
+# reiniciar un consumidor con un mensaje sin confirmar no es gratis.
+#
 # ---------------------------------------------------------------------------
-coordinator 4e6031d4b18a2179062ee5dea29acbf386dc857f
-schema-applied 4e6031d4b18a2179062ee5dea29acbf386dc857f
+coordinator 91f87cc9e7fe046c35673c43b4e9d906ad5bce67
+schema-applied 91f87cc9e7fe046c35673c43b4e9d906ad5bce67
