@@ -2911,6 +2911,33 @@
 # apps/web, asi que ninguna operacion ni el trabajador cargan nada de esto. Se
 # declara con la ablacion del sobremesa corriendo, a proposito.
 #
+# 2026-11-25, CUARTA: 8035fb78 -> 08f2f447. #1308: la tabla del panel y su
+# pool leen UNA regla, no dos. Solo apps/web.
+#
+# LA LECCION, que vale mas que el arreglo. El panel seguia abriendo con un brazo
+# de 114 DESPUES de arreglarlo, porque la regla de "superado" estaba escrita dos
+# veces: en el `pool` de WindowPanel.tsx y en `visibleResults()` de
+# lib/windowPanel.ts. El arreglo anterior toco la primera; la tabla la arma la
+# segunda. Las dos copias divergieron y gano la que no se habia tocado.
+# Este arreglo BORRA la copia en vez de corregirla: la regla vive dentro de
+# `visibleResults`, que ya recibe todos los resultados y calcula por si misma si
+# algo en la ventana excluyo la consulta, y el pool llama a esa misma funcion.
+#
+# LO QUE LA AUDITORIA ENCONTRO DETRAS, pedida por el autor y medida, no opinada:
+#   * 27 de los 131 ficheros .tsx de la interfaz NUNCA piden el idioma. No faltan
+#     traducciones --las cinco lenguas tienen las 2193 claves completas--: esos
+#     ficheros escriben el texto a pelo. Los cuatro de la vista de estratos
+#     (StrataPanel, StrataChart, StratumMembers, RunReceipt) tienen CERO llamadas
+#     al traductor, y por eso media pantalla sale en ingles dentro de /es/;
+#   * el mismo concepto vive varias veces: TRES funciones `armLabel` con tres
+#     firmas, y DOS vistas de estratos alcanzables desde la misma pagina;
+#   * el aviso "did not finish" no era de idioma sino de servidor: `_finished`
+#     devuelve falso cuando no hay total de lotes, y un trabajo sin trocear nunca
+#     lo tiene, asi que todo conjunto puntuado salia como no terminado. Lo
+#     arregla el sobremesa en su propio PR.
+# El reparto acordado: el idioma de esos cuatro componentes y el aviso, el
+# sobremesa; las tres `armLabel` y las dos vistas, mas adelante y con calma.
+#
 # ---------------------------------------------------------------------------
-coordinator 8035fb78f8f905586b22c873ba8540675aea77ac
-schema-applied 8035fb78f8f905586b22c873ba8540675aea77ac
+coordinator 08f2f44740f66916aee82b79c806398800a4fd7d
+schema-applied 08f2f44740f66916aee82b79c806398800a4fd7d
